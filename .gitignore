@@ -1,0 +1,25 @@
+# ── Secrets — NEVER commit real keys ──────────────────────────────
+.env
+.env.*
+!.env.example
+.dev.vars
+*.pem
+*.key
+
+# ── NexusCRM (Node) ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Voice Studio (Python) ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Voice model weights are large binaries — download via setup_voices.py
+voice-studio/models/
+*.onnx
+
+# ── OS junk ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
