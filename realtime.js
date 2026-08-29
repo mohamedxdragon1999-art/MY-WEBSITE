@@ -223,12 +223,6 @@
       this._recent.push({ rms: d.rms, zcr: d.zcr, voiced: d.voiced, t: now() });
       if (this._recent.length > 60) this._recent.shift();
 
-      // A visual level for the UI (the orb), throttled to every 3rd frame
-      // (~60ms). One property set per event; it can never touch the audio
-      // path, and the worklet has already paid for the RMS computation.
-      this._lvlN = (this._lvlN || 0) + 1;
-      if (this._lvlN % 3 === 0) this.onEvent({ type: "level", rms: d.rms || 0 });
-
       if (this.agentSpeaking && !this.bargeSent && this.voicedRun >= BARGE_FRAMES) {
         this.bargeSent = true;
         this._send({ t: "barge" });

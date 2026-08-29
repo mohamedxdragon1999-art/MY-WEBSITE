@@ -3,66 +3,68 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Voice Studio — Talk to us</title>
-<meta name="description" content="A voice agent that listens, thinks and speaks — live, on your own hardware." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='38%25' cy='32%25'%3E%3Cstop offset='0%25' stop-color='%238fa7ff'/%3E%3Cstop offset='100%25' stop-color='%235b4bd6'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='28' fill='url(%23g)'/%3E%3C/svg%3E" />
+<title>Voice Studio — Talk to Support</title>
 <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-<div class="bg-aurora" aria-hidden="true"></div>
-
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo"><span class="logo-orb"></span></div>
+      <div class="logo">◉</div>
       <div>
         <h1>Voice Studio</h1>
-        <p class="sub">Speak. It listens, thinks and answers — out loud.</p>
+        <p class="sub">Talk to our support agent — it listens and replies out loud.</p>
       </div>
     </div>
     <div class="controls">
-      <label class="ctl">Voice
+      <label>Voice
         <select id="voice"><option value="">(default)</option></select>
       </label>
-      <button id="brainBtn" class="ghost" type="button">AI brain</button>
-      <button id="settingsBtn" class="ghost" type="button" title="Voice, speed, pitch &amp; shortcuts">Settings</button>
-      <button id="stopBtn" class="ghost" type="button" title="Stop the agent talking">Stop</button>
-      <button id="resetBtn" class="ghost" type="button" title="Start a new conversation">New</button>
+      <button id="brainBtn" class="ghost" type="button">🧠 AI Brain</button>
+      <button id="settingsBtn" class="ghost" type="button" title="Voice, speed, pitch & shortcuts">⚙ Settings</button>
+      <button id="stopBtn" class="ghost" type="button" title="Stop the agent talking">⏹ Stop</button>
+      <button id="resetBtn" class="ghost" type="button" title="Start a new conversation">↺ New</button>
     </div>
   </header>
 
-  <section class="brainpanel glass" id="brainPanel" hidden>
+  <section class="brainpanel" id="brainPanel" hidden>
     <div class="bp-grid">
-      <label>AI brain
+      <label>AI Brain
         <select id="brainSel">
           <option value="auto">Auto (server config, else offline)</option>
           <option value="nvidia">NVIDIA NIM models</option>
         </select>
       </label>
       <label class="grow" id="nimKeyWrap" hidden>NVIDIA NIM API key(s)
-        <input type="password" id="nimKey" placeholder="nvapi-…  (several, comma separated = more speed)" autocomplete="off" />
+        <input type="password" id="nimKey" placeholder="nvapi-…  (paste several separated by commas = more speed)" autocomplete="off" />
       </label>
       <button id="nimSave" type="button" hidden>Save &amp; test</button>
       <button id="nimClear" type="button" class="ghost" hidden>Clear</button>
     </div>
     <div class="bp-grid" id="nimModelRow" hidden>
       <label class="grow">NVIDIA NIM model
-        <input type="text" id="nimModelSearch" placeholder="Search models…" autocomplete="off" />
+        <input type="text" id="nimModelSearch" placeholder="Search models… (loads live from your key)" autocomplete="off" />
         <select id="nimModel" size="6"></select>
       </label>
-      <button id="nimRefresh" type="button" class="ghost">Reload live models</button>
+      <button id="nimRefresh" type="button" class="ghost">↻ Reload live models</button>
     </div>
     <p class="bp-status" id="brainState"></p>
     <p class="bp-status" id="poolState"></p>
     <div class="bp-grid" id="keyMgrRow" hidden>
-      <button id="keyRefresh" type="button" class="ghost">Check key health</button>
+      <button id="keyRefresh" type="button" class="ghost">↻ Check key health</button>
       <button id="keyReset" type="button" class="ghost">Clear cooldowns</button>
     </div>
     <p class="bp-status" id="keyMgr"></p>
-    <p class="bp-hint">Paste several free keys separated by commas and the server rotates across them — 5 keys ≈ 5× the requests per minute, still free. Get one at <b>build.nvidia.com</b>; it lives only in this browser and your own server.</p>
+    <p class="bp-hint bp-speed"><b>Want it faster, and reliable when lots of people call at once?</b>
+    Free tiers are rate limited <b>per key</b>, not per person — one key is exactly why a busy site starts showing errors.
+    Paste <b>several free keys separated by commas</b> and the server rotates across them automatically:
+    5 free keys ≈ 5× the requests per minute, still £0. If one key hits its limit it's benched for a few seconds
+    and the next takes over, so callers never hear an error. Repeat questions are answered from an
+    <b>instant cache</b> — no API call at all, so they come back immediately and cost no quota.</p>
+    <p class="bp-hint">Get a free key at <b>build.nvidia.com</b>. It's stored only in this browser and sent to your own local server, which calls NVIDIA NIM for you (no CORS/proxy needed). Once your key is saved the model list loads <b>live from NVIDIA</b> — every chat model your key can use, searchable above. With a key you can also pick the <b>NVIDIA Magpie</b> voice. The NVIDIA NIM brain works with <b>any</b> voice mode.</p>
   </section>
 
-  <section class="brainpanel glass" id="settingsPanel" hidden>
+  <section class="brainpanel" id="settingsPanel" hidden>
     <div class="bp-grid">
       <span class="rate">Speed
         <input type="range" id="rate" min="0.7" max="1.3" step="0.05" value="1.0" />
@@ -84,98 +86,69 @@
           <option value="hold">Hold to talk (walkie-talkie)</option>
         </select>
       </label>
-      <label>Talk shortcut
+      <label>Talk shortcut (toggle)
         <input type="text" id="hotkeyTalk" placeholder="Press keys… e.g. Space" readonly />
       </label>
       <label>Stop shortcut
         <input type="text" id="hotkeyStop" placeholder="Press keys… e.g. Escape" readonly />
       </label>
       <button id="hotkeyReset" type="button" class="ghost">Reset shortcuts</button>
-      <label class="grow">Boost these words (comma separated)
+      <label>Boost these words (comma separated)
         <input type="text" id="hotwords" placeholder="e.g. Acme, Zendesk, RMA, Okonkwo" />
       </label>
     </div>
-    <p class="bp-hint">Boosting biases the recogniser toward names and codes it keeps mishearing — the cheapest accuracy win available.</p>
+    <p class="bp-hint">Add names, products or codes the recogniser keeps mishearing. Boosting biases speech recognition toward those exact words without affecting anything else &mdash; it is the cheapest accuracy win available, and needs no retraining.</p>
+    <p class="bp-hint">Click a shortcut box, then press the key combo you want (e.g. <b>Space</b>, <b>Ctrl+M</b>). The talk shortcut starts/stops listening; the stop shortcut interrupts the agent. Shortcuts are ignored while you're typing in the text box.</p>
   </section>
-
-  <main class="hero" id="hero">
-    <div class="orb-stage glass">
-      <div class="orb-halo" aria-hidden="true"></div>
-      <div class="orb-shell" id="orbShell">
-        <canvas id="orbCanvas" aria-label="Voice presence"></canvas>
-      </div>
-      <div class="orb-readout">
-        <div class="chips">
-          <span class="chip" id="healthChip"><i class="hdot" id="healthDot"></i><b id="healthText">checking…</b></span>
-          <span class="chip chip-lat" id="latencyChip" hidden title="Time from the end of your sentence to the first sound of the reply">first audio&nbsp;<b id="latencyVal">—</b></span>
-        </div>
-        <p class="status" id="status"></p>
-        <p class="status dim" id="engineInfo"></p>
-      </div>
-
-      <div class="dock">
-        <div class="callbar">
-          <button id="callBtn" class="call" type="button" title="Open the line and keep the mic on until you end the call"><span class="call-ico"></span>Start call</button>
-          <button id="muteBtn" class="ghost" type="button" hidden title="Mute without dropping the call">Mute</button>
-          <span class="calltimer" id="callTimer" hidden>00:00</span>
-          <span class="levelwrap" title="Live microphone input"><span class="level" id="micLevel"></span></span>
-        </div>
-
-        <button class="mic" id="mic" aria-label="Click to talk">
-          <svg class="mic-svg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>
-          <span class="mic-label">Click to talk</span>
-        </button>
-
-        <div class="typerow">
-          <input type="text" id="textInput" placeholder="…or type a message and press Enter" />
-          <button id="sendBtn" type="button">Send</button>
-        </div>
-
-        <div class="options">
-          <label class="chk"><input type="checkbox" id="autoListen" /> Continuous conversation</label>
-          <label class="chk"><input type="checkbox" id="browserFallback" checked /> Browser voice fallback</label>
-        </div>
-
-        <div class="livecap glass" id="liveCap" hidden>
-          <span class="livecap-tag">Hearing you</span>
-          <p class="livecap-text" id="liveCapText"></p>
-        </div>
-      </div>
-    </div>
-
-    <aside class="caller glass" id="callerPanel" hidden>
-      <header class="caller-head">
-        <h2>Caller</h2>
-        <span class="caller-state" id="callerState">listening…</span>
-      </header>
-      <dl class="caller-grid">
-        <div class="cf" data-field="first_name" data-state="empty"><dt>First name</dt><dd id="callerFirst">—</dd></div>
-        <div class="cf" data-field="last_name" data-state="empty"><dt>Last name</dt><dd id="callerLast">—</dd></div>
-        <div class="cf" data-field="phone" data-state="empty"><dt>Phone</dt><dd id="callerPhone">—</dd></div>
-        <div class="cf" data-field="email" data-state="empty"><dt>Email</dt><dd id="callerEmail">—</dd></div>
-        <div class="cf" data-field="service" data-state="empty"><dt>Needs</dt><dd id="callerService">—</dd></div>
-        <div class="cf" data-field="account" data-state="empty"><dt>Account</dt><dd id="callerAccount">—</dd></div>
-      </dl>
-      <p class="caller-hint" id="callerHint">Details are captured as you talk — nothing to type.</p>
-    </aside>
-  </main>
 
   <section class="modes" id="modes"><!-- mode cards injected here --></section>
 
-  <section class="stage glass">
-    <header class="stage-head"><h2>Conversation</h2></header>
+  <section class="stage">
     <div class="conversation" id="conversation">
-      <div class="msg bot"><div class="bubble">Hi! Start a call and just talk — you can interrupt me any time.</div></div>
+      <div class="msg bot"><div class="bubble">Hi! Pick a voice mode above, then click the mic once and start talking. Click again (or press your shortcut) to stop.</div></div>
+    </div>
+
+    <div class="dock">
+      <div class="callbar">
+        <button id="callBtn" class="call" type="button" title="Open the line and keep the mic on until you end the call">Start call</button>
+        <button id="muteBtn" class="ghost" type="button" hidden title="Mute your mic without dropping the call">Mute</button>
+        <span class="calltimer" id="callTimer" hidden>00:00</span>
+        <span class="levelwrap" title="Live microphone input"><span class="level" id="micLevel"></span></span>
+      </div>
+
+      <button class="mic" id="mic" aria-label="Click to talk">
+        <span class="mic-icon">🎤</span>
+        <span class="mic-label">Click to talk</span>
+      </button>
+
+      <div class="typerow">
+        <input type="text" id="textInput" placeholder="…or type a message and press Enter" />
+        <button id="sendBtn">Send</button>
+      </div>
+
+      <div class="options">
+        <label class="chk"><input type="checkbox" id="autoListen" /> Continuous conversation</label>
+        <label class="chk"><input type="checkbox" id="browserFallback" checked /> Browser voice fallback</label>
+        <span class="hint-inline">In a call the mic stays open until you press End call · Shortcuts &amp; voice tuning are in ⚙ Settings</span>
+      </div>
+
+      <!-- v0.0.34 - the full live transcript, not a 64-character tail. -->
+      <div class="livecap" id="liveCap" hidden>
+        <span class="livecap-tag">Hearing you</span>
+        <p class="livecap-text" id="liveCapText"></p>
+      </div>
+
+      <p class="status" id="status"></p>
+      <p class="status" id="engineInfo"></p>
     </div>
   </section>
 
-  <footer class="foot">Runs on your CPU · offline modes available · always talks back</footer>
+  <footer class="foot">Runs on your CPU • offline modes available • always talks back</footer>
 </div>
-
-<!-- orb.js: the 3D presence (~8KB, no libraries). realtime.js: full-duplex
-     engine. Both load BEFORE app.js; app.js works without either, so a
-     stripped-down browser still gets a working page. -->
-<script src="/orb.js"></script>
+<!-- Realtime full-duplex engine (v49). Loaded BEFORE app.js so app.js can
+     detect window.RealtimeVoice and use the socket when it is available.
+     app.js keeps its original HTTP path as the fallback, so nothing breaks on
+     a browser without AudioWorklet or behind a proxy that blocks WebSockets. -->
 <script src="/realtime.js"></script>
 <script src="/app.js"></script>
 </body>

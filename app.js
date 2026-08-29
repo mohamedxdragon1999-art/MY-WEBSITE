@@ -1313,8 +1313,6 @@ function _vadLoop() {
     meter.style.width = pct + "%";
     meter.classList.toggle("hot", pct > 70);
   }
-  // The orb breathes with the caller's real loudness on the HTTP path too.
-  if (window.VoiceOrb) window.VoiceOrb.mic(state.muted ? 0 : rms);
   requestAnimationFrame(_vadLoop);
 }
 
@@ -2103,30 +2101,6 @@ function wire() {
 }
 document.addEventListener("DOMContentLoaded", wire);
 
-/* v54 visuals. Kept OUT of wire() on purpose: a failure here must never take
-   the voice path down, and wire() must never wait on cosmetics. */
-document.addEventListener("DOMContentLoaded", function () {
-  try {
-    if (window.VoiceOrb) window.VoiceOrb.mount(document.getElementById("orbCanvas"));
-  } catch (e) { /* the CSS fallback orb still renders */ }
-  try {
-    fetch("/api/voice-status").then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        const dot = $("healthDot"), txt = $("healthText");
-        if (!dot || !txt) return;
-        if (!d) { dot.className = "hdot warn"; txt.textContent = "limited"; return; }
-        const hear = !!d.can_hear, speak = !!d.can_speak;
-        dot.className = "hdot " + (hear && speak ? "ok" : (speak || hear) ? "warn" : "bad");
-        txt.textContent = hear && speak ? "hears + speaks"
-          : speak ? "speaks only" : hear ? "hears only" : "offline mode";
-      }).catch(function () {
-        const dot = $("healthDot"), txt = $("healthText");
-        if (dot) dot.className = "hdot warn";
-        if (txt) txt.textContent = "browser mode";
-      });
-  } catch (e) {}
-});
-
 /* ================= v49: realtime full-duplex call path =====================
  *
  * This block is appended to app.js on purpose rather than living in its own
@@ -2170,56 +2144,10 @@ document.addEventListener("DOMContentLoaded", function () {
     interimRow = null;
   }
 
-  // v54 CALLER PANEL. The intake frame arrives as the server picks facts out
-  // of the live transcript - names, phone, email, service. Filled cells light
-  // up as they land, so the caller can SEE they were understood, which is the
-  // whole point of capturing it.
-  function updateCallerPanel(d) {
-    if (!d) return;
-    const panel = $("callerPanel");
-    if (!panel) return;
-    if (panel.hidden) {
-      panel.hidden = false;
-      const hero = $("hero");
-      if (hero) hero.classList.add("has-caller");
-    }
-    const fields = d.fields || {};
-    const map = {
-      first_name: "callerFirst", last_name: "callerLast", phone: "callerPhone",
-      email: "callerEmail", service: "callerService", account: "callerAccount",
-    };
-    Object.keys(map).forEach(function (k) {
-      const dd = $(map[k]);
-      if (!dd) return;
-      const cell = dd.closest(".cf");
-      const v = fields[k];
-      if (v) {
-        dd.textContent = v;
-        if (cell) cell.dataset.state = "filled";
-      }
-    });
-    const st = $("callerState");
-    if (st) {
-      st.textContent = d.complete ? "complete ✓" : "listening…";
-      st.classList.toggle("done", !!d.complete);
-    }
-  }
-
   function onEvent(ev) {
     switch (ev.type) {
       case "listening":
         setStatus("Call connected \u2014 just talk. You can interrupt me any time.");
-        if (window.VoiceOrb) window.VoiceOrb.state("listening");
-        break;
-
-      case "level":
-        // Real mic loudness from the capture worklet, throttled at source to
-        // ~60ms ticks. Drives the orb; costs one property set per event.
-        if (window.VoiceOrb) window.VoiceOrb.mic((ev.data && ev.data.rms) || 0);
-        break;
-
-      case "intake":
-        updateCallerPanel(ev.data);
         break;
 
       case "partial": {
@@ -2248,9 +2176,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
       case "token": {
         if (!ev.text) break;
-        // First tokens mean the brain is composing - the orb shows the
-        // "thinking" colour until audio actually starts.
-        if (!agentText && window.VoiceOrb) window.VoiceOrb.state("thinking");
         agentText += ev.text;
         if (!agentRow) agentRow = addMsg(agentText, "bot");
         else agentRow.querySelector(".bubble").textContent = agentText;
@@ -2259,10 +2184,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
       case "speaking":
         state.speaking = !!ev.value;
-        if (window.VoiceOrb) {
-          window.VoiceOrb.speaking(!!ev.value);
-          if (!ev.value && state.inCall) window.VoiceOrb.state("listening");
-        }
         break;
 
       case "barge":
@@ -2280,14 +2201,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // voice - so it is the one worth showing.
         if (d.first_audio_ms) {
           setStatus("Replied in " + Math.round(d.first_audio_ms) + "ms \u2014 go ahead.");
-          // The number callers FEEL, surfaced where they can see it.
-          const chip = $("latencyChip"), lval = $("latencyVal");
-          if (chip && lval) {
-            lval.textContent = Math.round(d.first_audio_ms) + "ms";
-            chip.hidden = false;
-          }
         }
-        if (window.VoiceOrb && state.inCall) window.VoiceOrb.state("listening");
         break;
       }
 
@@ -2297,7 +2211,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
       case "close":
         if (state.inCall) setStatus("Reconnecting\u2026");
-        if (window.VoiceOrb) window.VoiceOrb.state("idle");
         break;
 
       default:
