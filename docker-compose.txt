@@ -1,0 +1,42 @@
+# Voice Studio - enterprise multi-tenant deployment.
+#
+#   docker compose up -d --build
+#
+# Put real secrets in a .env file next to this compose file (see .env.example).
+# Mount your tenants.json to serve many websites from one server.
+services:
+  voice-studio:
+    build: .
+    image: voice-studio:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      LOG_LEVEL: "INFO"
+      # Worker processes (real multi-core). Tune to your box.
+      WEB_CONCURRENCY: "4"
+      # Max concurrent in-flight heavy ops PER worker (backpressure).
+      VOICE_MAX_INFLIGHT: "96"
+      SESSION_TTL_SEC: "1800"
+      # Where the tenant registry lives inside the container.
+      VOICE_TENANTS_FILE: "/app/tenants.json"
+      # Free brain providers - set whichever keys you have (see .env.example).
+      GROQ_API_KEY: "${GROQ_API_KEY:-}"
+      CEREBRAS_API_KEY: "${CEREBRAS_API_KEY:-}"
+      NVIDIA_API_KEY: "${NVIDIA_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      MISTRAL_API_KEY: "${MISTRAL_API_KEY:-}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      TOGETHER_API_KEY: "${TOGETHER_API_KEY:-}"
+    volumes:
+      # Your live tenant registry (edit without rebuilding the image).
+      - ./tenants.json:/app/tenants.json:ro
+      # Optional: persist downloaded local voice models (Kokoro/Piper).
+      - ./models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

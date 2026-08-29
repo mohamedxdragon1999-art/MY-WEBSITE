@@ -1,0 +1,19 @@
+# ════════════════════════════════════════════════════════════
+# NexusCRM backend — Cloudflare Worker config
+# Deploy:  wrangler deploy        (see DEPLOY.md)
+# ════════════════════════════════════════════════════════════
+name = "nexuscrm-backend"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+# Your D1 database — replace the id after `wrangler d1 create nexuscrm`
+[[d1_databases]]
+binding = "DB"
+database_name = "nexuscrm"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# Cron drives the workflow engine, delayed steps, reminders and the
+# session/demo purge. Every 5 minutes ≈ 288 runs/day — well inside the
+# free tier (100k requests/day).
+[triggers]
+crons = ["*/5 * * * *"]
