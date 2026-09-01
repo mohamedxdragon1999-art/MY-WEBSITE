@@ -7637,6 +7637,35 @@ async function generateSiteHtml(env, ws, opts) {
       });
     }
   }
+  // ── DIRECTION-AUTHORITATIVE COMPOSITION (Cycle 2) ──────────────────────────
+  // When the caller selects a design direction, the composition engine — not the
+  // generic section template — is authoritative for the LIVE route. The direction
+  // drives section selection/order, hero + feature families, type scale, rhythm,
+  // density and motion, so the site the user actually sees changes with it.
+  const __direction = String(opts.direction || '').trim();
+  if (__direction && NX_COMPOSE_DIRECTIONS && NX_COMPOSE_DIRECTIONS[__direction]) {
+    try {
+      const composed = nxCompose(nxComposePlanFromBlueprint(name, desc, plan, blue), { direction: __direction });
+      if (composed && composed.html && composed.html.includes('<')) {
+        const ogImage = opts.og_image || opts.image || (plan && plan.hero_image) || (blue.hero && blue.hero.image) || '';
+        const out = enhanceSiteHtml(composed.html, name, {
+          description: String(blue.meta_desc || blue.tagline || desc || '').slice(0, 200),
+          canonical: opts.canonical || '',
+          image: ogImage,
+          phone: String(plan.contact && plan.contact.phone || '').slice(0, 30),
+          email: String(plan.contact && plan.contact.email || '').slice(0, 60),
+          address: String(plan.contact && plan.contact.address || '').slice(0, 160),
+        });
+        // Surface the human-readable rationale (§24) alongside the rendered page.
+        // Pass the direction id explicitly — omitting it silently defaults the
+        // rationale to editorial-minimal, which would describe a page we did not render.
+        __LAST_DESIGN_EXPLANATION = nxDesignExplanation(composed.plan, composed.content, (composed.plan && composed.plan.direction) || __direction);
+        return out;
+      }
+    } catch (e) {
+      if (typeof console !== 'undefined') console.error('[direction-compose] failed:', e && e.message);
+    }
+  }
   const instructions = String(opts.instructions || '').slice(0, 1500);
   const themeOpts = {
     accent: opts.accent, accent2: opts.accent2, radius: opts.radius,
@@ -7808,6 +7837,41 @@ function escHtml(str) {
 // plan schema. This bridge translates a blueprint into that schema so the
 // reference design ('template') can be produced through the production path —
 // design identical to uploads/template.html, words driven by the user's plan.
+// Map the deterministic Blueprint content plan onto the composition engine's
+// content contract, so the LIVE route can render a direction-authoritative page
+// from exactly the same words the generic template would have used. Content is
+// never invented here — empty inputs stay empty so "remove before add" can drop
+// the section rather than padding the page with filler.
+function nxComposePlanFromBlueprint(name, desc, plan, blue) {
+  plan = plan || {}; blue = blue || {};
+  const hero = blue.hero || {};
+  const about = blue.about || {};
+  const contact = blue.contact || plan.contact || {};
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  return {
+    site_name: String(name || '').slice(0, 60),
+    ownerName: String(plan.ownerName || plan.owner || '').slice(0, 40),
+    hero_headline: String(plan.hero_headline || hero.title || blue.tagline || '').slice(0, 90),
+    hero_sub: String(plan.hero_sub || hero.sub || desc || blue.meta_desc || '').slice(0, 180),
+    description: String(desc || blue.meta_desc || '').slice(0, 160),
+    cta_primary: String(hero.primary || (blue.cta && blue.cta.primary) || '').slice(0, 28),
+    cta_secondary: String(hero.secondary || '').slice(0, 28),
+    services: arr(blue.services).map((x) => ({ title: String(x.title || '').slice(0, 40), desc: String(x.text || x.desc || '').slice(0, 140), icon: String(x.icon || '').slice(0, 12) })),
+    why: arr(blue.why).map((w) => (typeof w === 'string' ? w : String(w.title || w.check || ''))).filter(Boolean),
+    stats: arr(blue.stats).map((x) => ({ value: x.value, label: String(x.label || '').slice(0, 30) })),
+    projects: arr(blue.gallery_imgs).length
+      ? arr(blue.gallery_imgs).slice(0, 6).map((src, i) => ({ title: String((arr(blue.services)[i] || {}).title || 'Selected work').slice(0, 60), cat: 'Project', img: src }))
+      : arr(blue.timeline).map((t) => ({ title: String(t.name || '').slice(0, 60), cat: String(t.year || '').slice(0, 30), text: String(t.text || '').slice(0, 110) })),
+    reviews: arr(blue.reviews).map((r) => ({ text: String(r.quote || r.text || '').slice(0, 220), name: String(r.name || '').slice(0, 40), role: String(r.role || '').slice(0, 30), stars: r.stars })),
+    faqs: arr(blue.faq).map((f) => ({ q: String(f.q || '').slice(0, 100), a: String(f.a || '').slice(0, 200) })),
+    about: String(about.body || '').slice(0, 400),
+    contact: { email: String(contact.email || '').slice(0, 60), phone: String(contact.phone || '').slice(0, 30), address: String(contact.address || '').slice(0, 160) },
+  };
+}
+// Rationale for the most recent direction-composed render (§24), surfaced to the
+// builder UI via the build response.
+let __LAST_DESIGN_EXPLANATION = '';
+
 function nxTemplatePlanFromBlueprint(name, desc, plan, blue) {
   plan = plan || {};
   blue = blue || {};
@@ -10066,11 +10130,14 @@ async function buildAgenticSite(env, ws, body) {
     theme_id: body.theme_id, hero_style: body.hero_style, anim_preset: body.anim_preset,
     card_style: body.card_style, nav_style: body.nav_style, three_d: body.three_d,
     scene_id: body.scene_id, spline_url: body.spline_url, scene_text: body.scene_text,
+    direction: body.direction,
     deterministic: !!body.deterministic,
   });
+  __LAST_DESIGN_EXPLANATION = '';
   const loop = await runAgenticLoop(build, { maxIterations: 3 });
   const audit = auditSiteHtml(loop.html);
-  return { name, html: loop.html, test: loop.test, audit, iterations: loop.iterations, fixed: loop.fixed, trace: loop.trace, plan: body.plan || null };
+  const direction = (body.direction && NX_COMPOSE_DIRECTIONS && NX_COMPOSE_DIRECTIONS[body.direction]) ? String(body.direction) : '';
+  return { name, html: loop.html, test: loop.test, audit, iterations: loop.iterations, fixed: loop.fixed, trace: loop.trace, plan: body.plan || null, direction, designExplanation: __LAST_DESIGN_EXPLANATION || '' };
 }
 // Idempotent, cached schema migration: ensure the canonical `graph` column exists on
 // `sites` and `site_versions` so a pre-existing database (created before graph-aware

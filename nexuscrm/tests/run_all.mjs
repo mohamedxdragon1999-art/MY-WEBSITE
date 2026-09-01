@@ -18,6 +18,7 @@ const SUITES = [
   'test_template_prod.mjs',   // production path: design_id:'template' routes through generateSiteHtml
   'test_design_system.mjs',   // design-quality foundation: strategy/directions/maturity + QA detects+fixes bad designs
   'test_composition.mjs',     // Cycle 2: direction-authoritative composition — rendered DOM/typography/rhythm/section order differ per direction (color-only fails)
+  'test_live_direction.mjs',  // Cycle 2: the direction is authoritative on the LIVE route (POST /ai/agentic-build), not just in unit tests
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
