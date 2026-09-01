@@ -319,14 +319,14 @@ function __reviews(c, p) {
 }
 
 function __cta(c, p) {
-  return `<section class="c-cta" id="cta" data-r><div class="c-wrap c-cta-inner"><span class="c-kicker c-kicker-center">Let's talk</span><h2 class="c-cta-title">${__e(p.direction === 'bold-experimental' ? 'Make it happen' : 'Start the conversation')}</h2><div class="c-actions"><a class="c-btn c-btn-primary c-btn-lg" href="mailto:${__e(c.email)}">${__e(c.ctas.primary)}</a></div></div></section>`;
+  return `<section class="c-cta" id="cta" data-r><div class="c-wrap c-cta-inner"><span class="c-kicker c-kicker-center">Let's talk</span><h2 class="c-cta-title">${__e(p.direction === 'bold-experimental' ? 'Make it happen' : 'Start the conversation')}</h2><div class="c-actions"><a class="c-btn c-btn-primary c-btn-lg" href="${c.email ? `mailto:${__e(c.email)}` : '#contact'}">${__e(c.ctas.primary)}</a></div></div></section>`;
 }
 function __contact(c, p) {
-  return `<section class="c-contact" id="contact" data-r><div class="c-wrap c-contact-inner"><span class="c-kicker">Get in touch</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'Talk to us' : 'Start a conversation')}</h2><p class="c-lead">${__e(c.ctas.primary)} — tell us what you're making.</p><div class="c-contact-row"><a href="mailto:${__e(c.email)}" class="c-btn c-btn-ghost">${__e(c.email)}</a>${c.phone ? `<a href="tel:${__e(c.phone)}" class="c-btn c-btn-ghost">${__e(c.phone)}</a>` : ''}</div></div></section>`;
+  return `<section class="c-contact" id="contact" data-r><div class="c-wrap c-contact-inner"><span class="c-kicker">Get in touch</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'Talk to us' : 'Start a conversation')}</h2><p class="c-lead">${__e(c.ctas.primary)} — tell us what you're making.</p><div class="c-contact-row">${c.email ? `<a href="mailto:${__e(c.email)}" class="c-btn c-btn-ghost">${__e(c.email)}</a>` : ''}${c.phone ? `<a href="tel:${__e(c.phone)}" class="c-btn c-btn-ghost">${__e(c.phone)}</a>` : ''}</div></div></section>`;
 }
 
 function __footer(c, p) {
-  return `<footer class="c-footer" data-r><div class="c-wrap c-footer-row"><div class="c-footer-brand">${__e(c.name)} <span>— ${__e(c.owner)}</span></div><div class="c-footer-links"><a href="mailto:${__e(c.email)}">${__e(c.email)}</a>${c.phone ? `<a href="tel:${__e(c.phone)}">${__e(c.phone)}</a>` : ''}<span>© 2026 ${__e(c.name)}</span></div></div></footer>`;
+  return `<footer class="c-footer" data-r><div class="c-wrap c-footer-row"><div class="c-footer-brand">${__e(c.name)} <span>— ${__e(c.owner)}</span></div><div class="c-footer-links">${c.email ? `<a href="mailto:${__e(c.email)}">${__e(c.email)}</a>` : ''}${c.phone ? `<a href="tel:${__e(c.phone)}">${__e(c.phone)}</a>` : ''}<span>© 2026 ${__e(c.name)}</span></div></div></footer>`;
 }
 
 // ── FULL RENDER: compose sections in the plan order with the direction CSS ──

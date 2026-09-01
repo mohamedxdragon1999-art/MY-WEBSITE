@@ -122,6 +122,25 @@ console.log('\n== G. The composition engine\'s own output is structurally sound 
   check('every direction emits structurally valid, accessible HTML', bad.length === 0, bad.slice(0, 4).join(' | '));
 }
 
+console.log('\n== H. No dead links when contact details are absent ==');
+{
+  // An unguarded template emitted <a href="mailto:"></a> — a dead, unlabelled
+  // link on every generated page whenever the brief had no email.
+  const bad = [];
+  for (const d of Object.keys(nx.NX_COMPOSE_DIRECTIONS)) {
+    const html = nx.nxCompose({ site_name: 'A', hero_headline: 'H' }, { direction: d }).html;
+    if (/href="mailto:"/.test(html)) bad.push(d + ': empty mailto');
+    if (/href="tel:"/.test(html)) bad.push(d + ': empty tel');
+    const deep = ast.nxAstDeepAudit(html);
+    if (deep.issues.some(i => /no accessible text/.test(i))) bad.push(d + ': unlabelled link');
+  }
+  check('no empty mailto:/tel: links when contact data is missing', bad.length === 0, bad.slice(0, 4).join(' | '));
+
+  const withEmail = nx.nxCompose({ site_name: 'A', hero_headline: 'H', contact: { email: 'hi@x.co' } }, { direction: 'luxury-art' }).html;
+  check('a supplied email is still rendered', withEmail.includes('mailto:hi@x.co'));
+  check('pages with contact details stay accessible', ast.nxAstDeepAudit(withEmail).ok);
+}
+
 const total = passed + failed;
 console.log('\n────────────────────────────────────────');
 console.log((failed === 0 ? 'ALL PASSED' : 'FAILURES') + ' — ' + passed + '/' + total + ' passing');
