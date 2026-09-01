@@ -7,6 +7,9 @@ import NX_STRUCTURED_MOD from './nx_structured.js';
 // Structural validation for generated HTML. A static import (not require) so the
 // Cloudflare Worker bundler resolves it — `require` is not defined in an ES module.
 import NX_AST_MOD from './nx_ast.js';
+// Full validation pipeline: structure + layout + contrast + copy, aggregated
+// into one severity-tagged violation list.
+import NX_VALIDATE_MOD from './nx_validate.js';
 // What changed in V4.1 (all review findings addressed):
 //  * Timestamps are ISO-8601 UTC everywhere (schema defaults + JS writes),
 //    so SQL comparisons like fire_at <= now work — delayed workflow steps
@@ -9942,6 +9945,12 @@ async function runAgenticLoop(build, ctx) {
     }
   } catch (e) { /* validation must never break a build */ }
 
+  // ── VALIDATION REPORT (structure / layout / aesthetic / copy) ──
+  // Attached to the build response so the caller can see WHY a page passed,
+  // itemised by severity and location, rather than trusting a single score.
+  let validation = null;
+  try { validation = NX_VALIDATE_MOD.nxValidatePage(html); } catch (e) { validation = null; }
+
   let test = testSiteHtml(html);
   trace.push({ iter: 0, score: test.score, status: test.status, issues: test.issues.length });
   let fixed = false;
@@ -9954,7 +9963,15 @@ async function runAgenticLoop(build, ctx) {
     test = testSiteHtml(html);
     trace.push({ iter: i, score: test.score, status: test.status, issues: test.issues.length });
   }
-  return { html, test, fixed, iterations: trace.length, trace, ast: astGate ? { ok: astGate.ok, errors: astGate.errors } : null };
+  return { html, test, fixed, iterations: trace.length, trace,
+    ast: astGate ? { ok: astGate.ok, errors: astGate.errors } : null,
+    validation: validation ? {
+      pass: validation.pass,
+      blocking: validation.blocking, warnings: validation.warnings,
+      perViewport: validation.perViewport, readability: validation.readability,
+      // Never let a caller believe this was pixel-verified.
+      browserValidated: validation.browserValidated, renderer: validation.renderer, note: validation.note,
+    } : null };
 }
 
 // ── AI VISUAL EDITOR (natural-language element commands) ──
@@ -10191,6 +10208,7 @@ async function aiBuildSite(env, ws, body) {
     audit: built.audit,
     iterations: built.iterations,
     ast: built.ast || null,
+    validation: built.validation || null,
   };
 }
 async function buildAgenticSite(env, ws, body) {
@@ -10214,7 +10232,7 @@ async function buildAgenticSite(env, ws, body) {
   const loop = await runAgenticLoop(build, { maxIterations: 3 });
   const audit = auditSiteHtml(loop.html);
   const direction = (body.direction && NX_COMPOSE_DIRECTIONS && NX_COMPOSE_DIRECTIONS[body.direction]) ? String(body.direction) : '';
-  return { name, html: loop.html, test: loop.test, audit, iterations: loop.iterations, fixed: loop.fixed, trace: loop.trace, plan: body.plan || null, direction, designExplanation: __LAST_DESIGN_EXPLANATION || '', ast: loop.ast || null };
+  return { name, html: loop.html, test: loop.test, audit, iterations: loop.iterations, fixed: loop.fixed, trace: loop.trace, plan: body.plan || null, direction, designExplanation: __LAST_DESIGN_EXPLANATION || '', ast: loop.ast || null, validation: loop.validation || null };
 }
 // Idempotent, cached schema migration: ensure the canonical `graph` column exists on
 // `sites` and `site_versions` so a pre-existing database (created before graph-aware
