@@ -31,6 +31,7 @@ console.log('\n== A. ATOMIC MUTATION — a failed transaction mutates NOTHING ==
 {
   const p = mkProject();
   const before = snapshotSlice(p);
+  const beforePrimary = p.tokens.primaryColor; // capture the REAL pre-patch value
   const hero = p.order.find(id => p.nodes[id].semanticRole === 'hero');
   // a valid op followed by an INVALID op (bad token prop location)
   const r = nxProjectPatch(p, [
@@ -43,7 +44,7 @@ console.log('\n== A. ATOMIC MUTATION — a failed transaction mutates NOTHING ==
   check('original project deeply unchanged', snapshotSlice(p) === before);
   // the ops that DID apply before the failure must not have leaked
   check('content headline unchanged in original', p.content[hero].headline === 'Ship faster');
-  check('token primaryColor unchanged in original', p.tokens.primaryColor === '#0a1638');
+  check('token primaryColor unchanged in original', p.tokens.primaryColor === beforePrimary, 'expected ' + beforePrimary + ', got ' + p.tokens.primaryColor);
   // the candidate returned is the original (isolated), not a half-applied copy
   check('candidate not partially mutated', r.project.nodes[hero].content === undefined);
 }

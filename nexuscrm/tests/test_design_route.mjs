@@ -72,7 +72,12 @@ let token = '';
   const get2 = await call('GET', `/sites/${sid}/html`, null, token);
   check('persisted futuristic headline', /Launch Loop/.test(get2.data.html));
   check('persisted motion runtime (reduced-motion guard)', /prefers-reduced-motion/.test(get2.data.html) && /IntersectionObserver/.test(get2.data.html));
-  check('persisted futuristic design tokens', /--nx-primary:#04070f/i.test(get2.data.html));
+  {
+    // Bind to the engine's ACTUAL direction token instead of a stale literal.
+    const expectedPrimary = internals.NX_DIRECTIONS['futuristic-cinematic'].brand.primaryColor;
+    const re = new RegExp('--nx-primary:\\s*' + expectedPrimary, 'i');
+    check('persisted futuristic design tokens', re.test(get2.data.html), 'expected ' + expectedPrimary);
+  }
   const dqa = await call('POST', `/sites/${sid}/design`, { brief: 'x' }, token);
   check('regenerated site scores in design QA', typeof dqa.data?.designQA?.score === 'number');
 

@@ -437,9 +437,26 @@ function nxDirectionFit(brief, direction) {
     organic: ['organic', 'warm', 'friendly', 'earthy', 'natural', 'welcoming', 'soft'],
     saas: ['saas', 'software', 'app', 'startup', 'b2b', 'product', 'professional', 'dashboard'],
   };
-  const tone = d.brand.visualTone;
+  // Match a keyword group against the direction's FULL identity, not just
+  // `visualTone`. Relying on visualTone alone silently broke directions whose
+  // tone label doesn't literally contain its group name (e.g.
+  // futuristic-cinematic → visualTone "dark-cinematic" never matched the
+  // "futuristic" group, so a clearly futuristic brief ranked it last).
+  const identity = [direction, d.tone, d.brand.visualTone].join(' ').toLowerCase();
+  // Extra aliases let a group be recognised from equivalent vocabulary.
+  const groupAliases = {
+    luxury: ['luxury', 'premium'],
+    minimal: ['minimal'],
+    futuristic: ['futuristic', 'cinematic', 'sci-fi', 'neon', 'parallax', 'depth'],
+    editorial: ['editorial', 'magazine', 'serif'],
+    bold: ['bold', 'experimental', 'energy', 'gradients'],
+    organic: ['organic', 'warm', 'earthy'],
+    saas: ['saas', 'tech', 'clean', 'functional'],
+  };
   for (const [group, words] of Object.entries(w)) {
-    if (tone.indexOf(group) !== -1) for (const word of words) if (b.includes(word)) score += 16;
+    const aliases = groupAliases[group] || [group];
+    const matchesGroup = aliases.some((a) => identity.indexOf(a) !== -1);
+    if (matchesGroup) for (const word of words) if (b.includes(word)) score += 16;
   }
   return Math.min(100, score);
 }
