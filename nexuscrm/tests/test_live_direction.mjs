@@ -47,7 +47,11 @@ for (const d of DIRS) {
 
 console.log('\n== The rendered DOM actually differs per direction (not colour-only) ==');
 check('every direction renders a distinct hero family', new Set(DIRS.map(d => sigs[d].hero)).size === DIRS.length, DIRS.map(d => sigs[d].hero).join(','));
-check('every direction renders a distinct feature family', new Set(DIRS.map(d => sigs[d].feature)).size === DIRS.length, DIRS.map(d => sigs[d].feature).join(','));
+// Content-aware selection (§5) may legitimately converge two directions on the
+// same feature family for a given brief (e.g. a service-led brief pushes several
+// directions toward an enumerated list). What must NOT happen is collapse onto a
+// single default, so require real variety rather than strict uniqueness.
+check('feature families show real variety across directions (no single default)', new Set(DIRS.map(d => sigs[d].feature)).size >= 3 && !DIRS.some(d => sigs[d].feature === 'generic'), DIRS.map(d => sigs[d].feature).join(','));
 check('directions do not all share one section count', new Set(DIRS.map(d => (sigs[d].order || []).length)).size > 1);
 let min = 1, worst = '';
 for (let i = 0; i < DIRS.length; i++) for (let j = i + 1; j < DIRS.length; j++) {

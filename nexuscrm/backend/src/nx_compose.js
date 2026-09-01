@@ -122,6 +122,22 @@ function nxComposeContent(plan) {
 }
 
 // ── Composition Plan: direction → section order/variants/typography/rhythm/density ──
+// Classify what the content IS, so component selection can respond to it.
+// Deterministic and evidence-based: it reads the actual content, never a label.
+function nxContentShape(c) {
+  c = c || {};
+  const n = (a) => (Array.isArray(a) ? a.length : 0);
+  const projects = n(c.projects), services = n(c.services), reviews = n(c.reviews), stats = n(c.stats);
+  const copy = String(c.sub || '').length + String(c.headline || '').length;
+  const total = projects + services + reviews + stats;
+  let archetype = 'balanced';
+  if (projects >= 2 && projects >= services) archetype = 'image-led';
+  else if (services >= 3 && projects === 0) archetype = 'service-led';
+  else if (total <= 2 && copy < 160) archetype = 'statement-led';
+  else if (reviews >= 2 && reviews >= services) archetype = 'proof-led';
+  return { archetype, projects, services, reviews, stats, contentVolume: total };
+}
+
 function nxComposePlan(content, directionId) {
   const d = NX_COMPOSE_DIRECTIONS[directionId] || NX_COMPOSE_DIRECTIONS['editorial-minimal'];
   const has = (arr) => Array.isArray(arr) && arr.length > 0;
@@ -149,11 +165,34 @@ function nxComposePlan(content, directionId) {
   const motif = (d.rhythm && d.rhythm.length ? d.rhythm : ['normal']);
   const floor = (v) => sections.indexOf(v);
   const orderKey = (s) => { const i = floor(s); return i < 0 ? sections.length : i; };
+  // ── CONTENT-AWARE COMPONENT SELECTION (§5) ────────────────────────────────
+  // The direction sets the visual LANGUAGE; the content decides which member of
+  // each family speaks it. Without this, a photography portfolio and a law firm
+  // with the same field counts render an identical layout — component choice must
+  // answer "what does this content actually need?", not just "what is missing?".
+  const shape = nxContentShape(content);
+  let heroVariant = d.heroVariant, featureMode = d.featureMode, reviewMode = d.reviewMode;
+  if (shape.archetype === 'image-led') {
+    // A body of work is the argument: lead with the visual, let work run early.
+    if (heroVariant === 'minimal' || heroVariant === 'split') heroVariant = d.family === 'systematic' ? 'split' : 'fullbleed';
+    if (featureMode === 'grid' || featureMode === 'ruled') featureMode = 'split';
+    const wi = sections.indexOf('work');
+    if (wi > 2) { sections.splice(wi, 1); sections.splice(Math.min(2, sections.length), 0, 'work'); }
+  } else if (shape.archetype === 'service-led') {
+    // Many distinct services need a scannable enumeration, not a hero visual.
+    if (featureMode === 'split') featureMode = d.family === 'systematic' ? 'ruled' : 'edlist';
+  } else if (shape.archetype === 'statement-led') {
+    // Very little content: do not pad it out — make the statement the whole page.
+    if (heroVariant === 'split' || heroVariant === 'fullbleed') heroVariant = 'minimal';
+    if (featureMode === 'bento' || featureMode === 'grid') featureMode = 'split';
+  }
+  // A single testimonial should never be rendered as a "grid" of one.
+  if (reviewMode === 'grid' && (content.reviews || []).length < 2) reviewMode = 'single';
   const rhythm = sections.map((_, i) => motif[i % motif.length]);
   return {
     direction: d.id, name: d.name, family: d.family, palette: d.palette, type: d.type,
     radius: d.radius, shadow: d.shadow, surfaceFx: d.surfaceFx,
-    heroVariant: d.heroVariant, featureMode: d.featureMode, reviewMode: d.reviewMode,
+    heroVariant, featureMode, reviewMode, contentShape: shape,
     sections, rhythm, transitions: sections.map((_, i) => { const mot = NX_COMPOSE_TRANSITIONS[d.id] || ['fade']; return i === 0 ? 'flat' : mot[(i - 1) % mot.length]; }),
     emphasisTiers: sections.map((s) => { const w = (d.emphasis && d.emphasis[s] != null) ? d.emphasis[s] : __EMPH_W[s]; return __EMPH_TIER(w == null ? 50 : w); }),
     density: d.density, motion: d.motion, emphasis: d.emphasis || {}, desc: d.desc,
@@ -604,7 +643,7 @@ const nxCompose = (content, opts) => {
 
 const nx_compose_api = {
   NX_COMPOSE_DIRECTIONS, NX_COMPOSE_ORDER, NX_COMPOSE_TRANSITIONS,
-  nxComposeContent, nxComposePlan, nxDesignExplanation, nxRenderDirected, nxCompose,
+  nxComposeContent, nxComposePlan, nxContentShape, nxDesignExplanation, nxRenderDirected, nxCompose,
   nxComposeDegrade, nxComposePatchPlan, nxComposeDiagnose,
 };
 

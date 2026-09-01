@@ -98,6 +98,32 @@ console.log('\n== D. Mobile re-composes and never overflows ==');
   check('motion honours prefers-reduced-motion', noRm.length === 0, noRm.join(','));
 }
 
+console.log('\n== E. Content-aware component selection (§5): content shapes composition ==');
+{
+  const photography = { site_name: 'Ilya Petrov', hero_headline: 'Photographs', projects: [{ title: 'Northlight', cat: 'Series' }, { title: 'Salt', cat: 'Series' }, { title: 'Dusk', cat: 'Series' }] };
+  const lawFirm = { site_name: 'Hale & Reed', hero_headline: 'Counsel, precisely', services: [{ title: 'Corporate', desc: 'x' }, { title: 'Disputes', desc: 'y' }, { title: 'Tax', desc: 'z' }, { title: 'IP', desc: 'w' }] };
+  const luxury = { site_name: 'Maison Lune', hero_headline: 'Couture, quietly' };
+  const shape = (p) => nx.nxCompose(p, { direction: 'luxury-art' }).plan.contentShape.archetype;
+  check('a body of work is classified image-led', shape(photography) === 'image-led', shape(photography));
+  check('many services with no work is service-led', shape(lawFirm) === 'service-led', shape(lawFirm));
+  check('a sparse brief is statement-led', shape(luxury) === 'statement-led', shape(luxury));
+
+  // The SAME direction must compose these differently — otherwise industry/content
+  // has no influence and every site is the direction's default template.
+  let differs = 0;
+  for (const d of DIRS) {
+    const a = nx.nxCompose(photography, { direction: d }).plan;
+    const b = nx.nxCompose(lawFirm, { direction: d }).plan;
+    if (a.heroVariant !== b.heroVariant || a.featureMode !== b.featureMode || a.sections.join() !== b.sections.join()) differs++;
+  }
+  check('image-led and service-led briefs compose differently within a direction', differs === DIRS.length, differs + '/' + DIRS.length);
+
+  // A lone testimonial must not be rendered as a "grid" of one.
+  const one = { site_name: 'X', reviews: [{ text: 'Great', name: 'A' }] };
+  const soloGrid = DIRS.filter(d => nx.nxCompose(one, { direction: d }).plan.reviewMode === 'grid');
+  check('a single testimonial never renders as a grid', soloGrid.length === 0, soloGrid.join(','));
+}
+
 const total = passed + failed;
 console.log('\n────────────────────────────────────────');
 console.log((failed === 0 ? 'ALL PASSED' : 'FAILURES') + ' — ' + passed + '/' + total + ' passing');
