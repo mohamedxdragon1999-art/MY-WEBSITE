@@ -7523,8 +7523,11 @@ async function previewScene() {
       <script src="https://unpkg.com/three@0.160.0/build/three.min.js"><\/script>
       <script>
       var host=document.querySelector('.nx-scene-host');
-      try{var c2=document.createElement('canvas');if(!(window.WebGLRenderingContext&&(c2.getContext('webgl')||c2.getContext('experimental-webgl')))){host.style.background='radial-gradient(circle at 30% 30%, rgba(139,92,246,.25), transparent 65%)';document.body.innerHTML='<div style="color:#94a3b8;font-family:sans-serif;padding:40px;text-align:center">WebGL preview needs a real browser</div>';}else{boot3();}}catch(e){document.body.innerHTML='<div style="color:#94a3b8;font-family:sans-serif;padding:40px;text-align:center">WebGL not available here</div>';}
+      // Scene text MUST be published before boot3() runs: text:true scenes read
+      // window.NX_SCENE_TEXT while building their geometry, and this assignment
+      // used to sit AFTER the boot call, so they rendered an undefined value.
       window.NX_SCENE_TEXT=${JSON.stringify((V('ws-scene-text')?.value||'').slice(0,30))};
+      try{var c2=document.createElement('canvas');if(!(window.WebGLRenderingContext&&(c2.getContext('webgl')||c2.getContext('experimental-webgl')))){host.style.background='radial-gradient(circle at 30% 30%, rgba(139,92,246,.25), transparent 65%)';document.body.innerHTML='<div style="color:#94a3b8;font-family:sans-serif;padding:40px;text-align:center">WebGL preview needs a real browser</div>';}else{boot3();}}catch(e){document.body.innerHTML='<div style="color:#94a3b8;font-family:sans-serif;padding:40px;text-align:center">WebGL not available here</div>';}
       function boot3(){var THREE=window.THREE;var scene=new THREE.Scene();var cam=new THREE.PerspectiveCamera(55,host.offsetWidth/Math.max(1,host.offsetHeight),0.1,2000);
       var renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(host.offsetWidth,host.offsetHeight);host.appendChild(renderer.domElement);renderer.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%';
       function resize(){renderer.setSize(host.offsetWidth,host.offsetHeight);cam.aspect=host.offsetWidth/Math.max(1,host.offsetHeight);cam.updateProjectionMatrix();}addEventListener('resize',resize,{passive:true});
@@ -7601,6 +7604,17 @@ async function openAISiteBuilder(existing) {
         <div class="form-group"><label>🌌 3D Background Scene (${__wsScenes.filter(x=>x.group==='spline').length} Spline Community • ${__wsScenes.filter(x=>x.type==='three'&&x.group!=='spline').length} WebGL • ${__wsScenes.filter(x=>x.type==='canvas'&&/\(Pro\)/.test(x.name)).length} Pro • ${__wsScenes.filter(x=>x.type==='canvas'&&!/\(Pro\)/.test(x.name)).length} Classic)</label><select id="ws-scene" onchange="scenePick()"><option value="">None (static)</option><optgroup label="🌀 Spline Community (50 brand-new — particles, liquid glass, gold text… all interactive)">${__wsScenes.filter(x=>x.group==='spline').map(x=>`<option value="${escAttr(x.id)}">${esc(x.name)}${x.text?' ✍️':''}</option>`).join('')}</optgroup><optgroup label="🎮 WebGL 3D (most beautiful — real 3D objects, lights, materials)">${__wsScenes.filter(x=>x.type==='three'&&x.group!=='spline').map(x=>`<option value="${escAttr(x.id)}">${esc(x.name)}</option>`).join('')}</optgroup><optgroup label="🧊 Canvas Pro 3D (true perspective projection)">${__wsScenes.filter(x=>x.type==='canvas'&&/\(Pro\)/.test(x.name)).map(x=>`<option value="${escAttr(x.id)}">${esc(x.name)}</option>`).join('')}</optgroup><optgroup label="✨ Classic Canvas">${__wsScenes.filter(x=>x.type==='canvas'&&!/\(Pro\)/.test(x.name)).map(x=>`<option value="${escAttr(x.id)}">${esc(x.name)}</option>`).join('')}</optgroup><option value="__spline">Spline scene (paste URL)…</option></select>
         <div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-secondary btn-sm" onclick="previewScene()" style="font-size:10px">👁 Preview Scene</button><span id="ws-scene-desc" style="font-size:11px;color:var(--text3)"></span></div>
         <div class="form-group" id="ws-scene-text-wrap" style="display:none;margin-top:10px"><label>✍️ Scene words (any language — same animation)</label><input id="ws-scene-text" maxlength="30" placeholder="e.g. NEXUS or أهلاً" oninput="scenePick()"><div style="font-size:11px;color:var(--text3);margin-top:3px">This scene renders YOUR words in 3D — type anything, any language; the animation stays identical.</div></div></div>
+        <div class="form-group"><label>🎨 Art Direction — changes layout, not just colour</label>
+          <select id="ws-direction" onchange="directionPick()">
+            <option value="">Auto (best fit for the brief)</option>
+            <option value="editorial-minimal">Editorial Minimal — editorial hero, list-led features, airy</option>
+            <option value="cinematic-immersive">Cinematic Immersive — full-bleed hero, bento grid, dramatic</option>
+            <option value="luxury-art">Luxury Art — restrained hero, split features, slow motion</option>
+            <option value="bold-experimental">Bold Experimental — overlapping hero, alternating rows, dense</option>
+            <option value="swiss-structured">Swiss Structured — split hero, ruled grid, functional</option>
+          </select>
+          <div id="ws-direction-note" style="font-size:11px;color:var(--text3);margin-top:3px">Each direction rebuilds the page structure: section order, hero composition, rhythm, type scale and density — not a recolour.</div>
+        </div>
         <div class="form-group"><label>💡 3D Website Concept (${__wsConcepts.length})</label><select id="ws-concept" onchange="conceptPick()"><option value="">Custom (pick everything yourself)</option>${__wsConcepts.map(x=>`<option value="${escAttr(x.id)}">${esc(x.name)}</option>`).join('')}</select>
         <div id="ws-concept-desc" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>
       </div>
@@ -12737,6 +12751,7 @@ async function buildSiteAgentic() {
     scene_id: sceneId, scene_text: (V('ws-scene-text')?.value || '').trim().slice(0,30),
     spline_url: (V('ws-scene')?.value === '__spline') ? (V('ws-spline')?.value?.trim() || '') : '',
     concept_id: V('ws-concept')?.value || '', deterministic, webhook_url: webhookUrl,
+    direction: V('ws-direction')?.value || '',
   };
   toast('🚀 Agentic build: plan → build → inspect → test → fix → re-test','info',15000);
   try {
@@ -12748,6 +12763,19 @@ async function buildSiteAgentic() {
     showAgenticReport(saved, r);
   } catch(e) { toast('Agentic build failed: ' + e.message,'error',7000); }
 }
+function directionPick(){
+  // Immediate feedback so the picker never looks inert while a build is pending.
+  var sel=V('ws-direction'); var note=V('ws-direction-note'); if(!sel||!note)return;
+  var MAP={
+    '':'Each direction rebuilds the page structure: section order, hero composition, rhythm, type scale and density — not a recolour.',
+    'editorial-minimal':'Editorial hero · list-led features · airy density · quiet motion · generous type contrast.',
+    'cinematic-immersive':'Full-bleed hero · bento feature grid · balanced density · cinematic motion · largest display type.',
+    'luxury-art':'Restrained hero · split features · airy density · slow motion · most controlled scale.',
+    'bold-experimental':'Overlapping hero · alternating rows · dense layout · energetic motion · extreme display type.',
+    'swiss-structured':'Split hero · ruled grid (no card soup) · balanced density · functional motion · tight modular scale.'
+  };
+  note.textContent = MAP[sel.value] || MAP[''];
+}
 function showAgenticReport(saved, r) {
   const t = r.test || { status:'warn', passed:0, total:0, score:0, categories:[] };
   const a = r.audit || { score:0, grade:'', categories:[] };
@@ -12757,8 +12785,12 @@ function showAgenticReport(saved, r) {
       <span class="badge ${badge}">🧪 Testing Agent: ${esc(t.status.toUpperCase())} ${t.passed}/${t.total}</span>
       <span class="badge badge-purple">🔍 Audit ${a.score}/100 (${a.grade})</span>
       <span class="badge badge-gray">${r.iterations||1} pass${(r.iterations||1)>1?'es':''} · ${r.fixed?'auto-fixed ⚡':'clean ✅'}</span>
+      ${r.direction?`<span class="badge badge-purple">🎨 ${esc(r.direction)}</span>`:''}
     </div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="modal-body">
+      ${r.designExplanation?`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+        <div style="font-weight:700;margin-bottom:6px">🎨 Why this design</div>
+        <div style="font-size:12px;color:var(--text2);white-space:pre-line;line-height:1.6">${esc(r.designExplanation)}</div></div>`:''}
       ${nxTestReportHtml(t)}
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn btn-ai" onclick="previewSiteById(${saved.id}, ${jsAttr(saved.html)})">👁 Preview</button>

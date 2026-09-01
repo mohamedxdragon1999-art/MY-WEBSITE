@@ -432,18 +432,27 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
+  // Report the address we ACTUALLY bound. Hardcoding 127.0.0.1 in the banner was
+  // misleading under Docker/WSL/custom hosts, where the server is reachable on a
+  // different address and the printed URL simply does not work.
+  const wildcard = HOST === '0.0.0.0' || HOST === '::';
+  const shownHost = wildcard ? 'localhost' : HOST;
+  const url = 'http://' + shownHost + ':' + PORT;
+  const bindLine = wildcard
+    ? '  │  Bound to ' + (HOST + ' (all interfaces)').padEnd(45) + '│\n'
+    : '  │  Bound to ' + (HOST + ' (loopback only)').padEnd(45) + '│\n';
   const msg =
     '\n' +
     '  ┌────────────────────────────────────────────────────────┐\n' +
     '  │  🚀 NexusCRM is running!                               │\n' +
-    '  │  Open:  http://127.0.0.1:' + String(PORT).padEnd(46) + '│\n' +
-    '  │  (Your browser should open automatically)              │\n' +
+    '  │  Open:  ' + url.padEnd(47) + '│\n' +
+    bindLine +
+    (wildcard ? '' : '  │  Set HOST=0.0.0.0 for Docker/WSL/remote access.        │\n') +
     '  │  Local-only mode: data stays in this browser.          │\n' +
     '  │  For syncing + automations + AI streaming, deploy the  │\n' +
     '  │  backend (backend/DEPLOY.md) and set it in Settings.   │\n' +
     '  └────────────────────────────────────────────────────────┘\n';
   console.log(msg);
-  const url = 'http://127.0.0.1:' + PORT;
   try {
     if (process.platform === 'win32') exec('start "" ' + url);
     else if (process.platform === 'darwin') exec('open ' + url);
