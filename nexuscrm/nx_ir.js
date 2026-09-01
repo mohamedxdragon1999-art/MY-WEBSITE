@@ -114,8 +114,25 @@ function nxValidateProject(project) {
 // ═══════════════════════════════════════════════════════════════════════════
 function nxValidateGraphIntegrity(project, opts) {
   opts = opts || {};
-  const nodes = project.nodes || {}, order = project.order || [];
+  // This function IS the safety net for a corrupted graph, so it must REPORT
+  // corruption rather than throw on it. A malformed `order` or a null node used
+  // to crash the validator, which turned "the graph is broken" into an
+  // unhandled exception at the call site.
+  if (!project || typeof project !== 'object') return { ok: false, errors: ['project is not an object'] };
+  const rawNodes = project.nodes;
+  if (!rawNodes || typeof rawNodes !== 'object' || Array.isArray(rawNodes)) return { ok: false, errors: ['project.nodes is not an object'] };
+  if (project.order !== undefined && !Array.isArray(project.order)) return { ok: false, errors: ['project.order is not an array'] };
   const errors = [];
+  // Drop structurally invalid nodes up front and report them, so the checks
+  // below can assume every remaining node is a usable object.
+  const nodes = {};
+  for (const id of Object.keys(rawNodes)) {
+    const n = rawNodes[id];
+    if (!n || typeof n !== 'object' || Array.isArray(n)) { errors.push('node ' + id + ' is not a valid object'); continue; }
+    if (n.children !== undefined && !Array.isArray(n.children)) { errors.push('node ' + id + ' has a non-array children'); continue; }
+    nodes[id] = n;
+  }
+  const order = Array.isArray(project.order) ? project.order : [];
   const idSet = new Set(Object.keys(nodes));
   // order must be exactly the set of nodes, no dupes/subsets
   if (new Set(order).size !== order.length) errors.push('order has duplicate ids');
@@ -375,6 +392,22 @@ function __deepClone(v, seen) {
 }
 const NX_OPS = ['node.create', 'node.delete', 'node.move', 'node.replace', 'node.set', 'token.update', 'motion.update', 'responsive.update', 'asset.replace', 'interaction.add', 'constraint.set', 'state.set', 'asset.set'];
 
+// A graph id must be an OWN property. Using truthiness/`in` lets inherited
+// Object.prototype keys ("__proto__", "constructor", "toString") impersonate a
+// real node: the op passes validation, writes nothing, and still reports ok:true —
+// so an AI patch silently does nothing while believing it succeeded.
+const __RESERVED_KEYS = ['__proto__', 'constructor', 'prototype'];
+function __isSafeKey(k) {
+  if (typeof k !== 'string' || k.length === 0) return false;
+  if (__RESERVED_KEYS.indexOf(k) !== -1) return false;
+  // Reject ANY inherited Object.prototype member (toString, valueOf, hasOwnProperty…):
+  // these are truthy on a plain object and so impersonate an existing key.
+  return !Object.prototype.hasOwnProperty.call(Object.prototype, k);
+}
+function __hasNode(p, id) {
+  return __isSafeKey(id) && !!p && !!p.nodes && Object.prototype.hasOwnProperty.call(p.nodes, id) && !!p.nodes[id];
+}
+
 function nxProjectPatch(project, ops) {
   if (!Array.isArray(ops)) return { ok: false, errors: ['ops must be an array'], project };
   if (!project || !Array.isArray(project.order)) return { ok: false, errors: ['project is not a valid graph'], project };
@@ -422,7 +455,7 @@ function __applyOp(p, op, original) {
         return { ok: true, project: p };
       }
       case 'node.delete': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         const doomed = new Set([op.id]);
         const stack = [...(p.nodes[op.id].children || [])];
         while (stack.length) { const c = stack.pop(); if (doomed.has(c)) continue; doomed.add(c); (p.nodes[c]?.children || []).forEach(x => stack.push(x)); }
@@ -449,7 +482,7 @@ function __applyOp(p, op, original) {
         return { ok: true, project: p };
       }
       case 'node.move': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         const target = op.parentId ? p.nodes[op.parentId] : null;
         if (op.parentId && !target) return rollback(p, 'parent ' + op.parentId + ' not found');
         // REJECT moving a node below one of its OWN descendants (target is a
@@ -469,7 +502,7 @@ function __applyOp(p, op, original) {
         return { ok: true, project: p };
       }
       case 'node.replace': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         const n = p.nodes[op.id];
         const build = __D('nxBuildComponent', null);
         const replacement = build ? build(op.family, op.variant, p.content[op.id] || {}, p.tokens) : { component: { family: op.family, variant: op.variant } };
@@ -480,7 +513,7 @@ function __applyOp(p, op, original) {
         return { ok: true, project: p };
       }
       case 'node.set': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         const field = op.field, value = op.value;
         if (field === 'props' || field === 'styles' || field === 'tokens') p.nodes[op.id][field] = Object.assign({}, p.nodes[op.id][field] || {}, value || {});
         else if (field === 'design') p.design[op.id] = Object.assign({}, p.design[op.id] || {}, value || {});
@@ -493,23 +526,24 @@ function __applyOp(p, op, original) {
       }
       case 'token.update': {
         if (op.key === undefined) return rollback(p, 'token.update needs key');
+        if (!__isSafeKey(op.key)) return rollback(p, 'token.update: unsafe key ' + String(op.key));
         p.tokens = __D('nxMergeBrand', (b, patch) => Object.assign({}, b, patch))(p.tokens, { [op.key]: op.value });
         return { ok: true, project: p };
       }
       case 'motion.update': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         p.motion[op.id] = op.profile ? Object.assign({}, p.motion[op.id] || {}, op.profile) : { recipe: op.recipe || 'smooth' };
         return { ok: true, project: p };
       }
       case 'responsive.update': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         const rules = Array.isArray(p.responsive[op.id]) ? p.responsive[op.id] : [];
         const rule = op.rule; if (rule && rule.on) { const i = rules.findIndex(r => r.on === rule.on); if (i >= 0) rules[i] = rule; else rules.push(rule); }
         p.responsive[op.id] = rules;
         return { ok: true, project: p };
       }
       case 'asset.replace': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         const a = p.nodes[op.id].assets || (p.nodes[op.id].assets = []);
         if (op.assetKind) a[0] = Object.assign({}, a[0], op.asset || {}, { kind: op.assetKind });
         else if (op.asset) a[0] = Object.assign({}, op.asset);
@@ -517,7 +551,7 @@ function __applyOp(p, op, original) {
         return { ok: true, project: p };
       }
       case 'interaction.add': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         const list = Array.isArray(p.interaction[op.id]) ? p.interaction[op.id] : (p.interaction[op.id] = []);
         const it = op.interaction || {}; if (!it.trigger) return rollback(p, 'interaction needs trigger');
         if (it.target) { const t = p.nodes[it.target]; if (!t) return rollback(p, 'interaction target not found'); }
@@ -525,17 +559,17 @@ function __applyOp(p, op, original) {
         return { ok: true, project: p };
       }
       case 'constraint.set': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         (p.constraints || (p.constraints = {}))[op.id] = Object.assign({}, p.constraints && p.constraints[op.id], op.constraint || {});
         return { ok: true, project: p };
       }
       case 'state.set': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         (p.states || (p.states = {}))[op.id] = Object.assign({}, p.states && p.states[op.id], op.state ? { [op.state]: op.overrides } : op.overrides || {});
         return { ok: true, project: p };
       }
       case 'asset.set': {
-        if (!p.nodes[op.id]) return rollback(p, 'node ' + op.id + ' not found');
+        if (!__hasNode(p, op.id)) return rollback(p, 'node ' + op.id + ' not found');
         (p.assetGraph || (p.assetGraph = {}))[op.id] = Object.assign({ id: op.id }, op.asset || {});
         return { ok: true, project: p };
       }

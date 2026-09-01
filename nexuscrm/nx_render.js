@@ -772,6 +772,19 @@ function __leafContent(view) {
 // ─────────────────────────────────────────────────────────────────────────────
 function nxRenderDocument(project, opts) {
   opts = opts || {};
+  // A corrupted/absent graph must produce an honest INVALID result, not an
+  // exception: this is called from the live canvas redraw and the publish path,
+  // where a throw takes down the editor instead of reporting a broken graph.
+  if (!project || typeof project !== 'object' || !Array.isArray(project.order) || !project.nodes || typeof project.nodes !== 'object') {
+    return { html: '', css: '', valid: false, errors: ['project is not a valid graph'], complete: false, nodes: 0 };
+  }
+  // Every id in `order` must resolve to a real node object; a null/missing entry
+  // would otherwise fault deep inside the renderer rather than reporting here.
+  for (const __id of project.order) {
+    if (!Object.prototype.hasOwnProperty.call(project.nodes, __id) || !project.nodes[__id] || typeof project.nodes[__id] !== 'object') {
+      return { html: '', css: '', valid: false, errors: ['order references an invalid node: ' + String(__id)], complete: false, nodes: 0 };
+    }
+  }
   const bp = opts.breakpoint || 'desktop';
   const tokens = __mergeBrand({}, project.tokens);
   const integrity = __integrity(project);
@@ -1122,7 +1135,11 @@ this.advanceFor=function(el){var id=el&&el.getAttribute?el.getAttribute('data-nx
 const NX_CANVAS_ACTIONS = ['select', 'hover', 'drag', 'resize', 'reparent', 'duplicate', 'delete', 'multiSelect', 'group', 'ungroup', 'setProperty', 'setConstraint', 'setBreakpoint'];
 function __node(project, id) { return project.nodes[id]; }
 function nxCanvasAction(project, action, payload) {
-  payload = payload || {}; const id = payload.id; const isNode = x => project.nodes[x];
+  payload = payload || {}; const id = payload.id;
+  // Own-property check: `project.nodes[x]` is truthy for inherited Object.prototype
+  // keys ("__proto__", "constructor"), so those impersonated a real node and
+  // crashed the editor deeper in the call stack.
+  const isNode = x => typeof x === 'string' && x !== '__proto__' && x !== 'constructor' && x !== 'prototype' && Object.prototype.hasOwnProperty.call(project.nodes || {}, x) && !!project.nodes[x];
   if (action === 'select' || action === 'hover') return { ok: true, ops: [], description: action + ' ' + id };
   if (action === 'drag') {
     if (!isNode(id)) return { ok: false, ops: [], errors: ['not a node'] };
@@ -1191,7 +1208,11 @@ function __cloneSubtree(project, rootId) {
 // Group the selected nodes under a new real container node (preserving order,
 // layout) — a genuine graph operation, not a UI mask.
 function ngGroup(project, ids) {
-  const valid = ids.filter(id => project.nodes[id]);
+  // `ids` arrives from the editor/AI and is not guaranteed to be an array.
+  if (!Array.isArray(ids)) return { ok: false, ops: [], errors: ['ids must be an array'] };
+  if (!project || !project.nodes) return { ok: false, ops: [], errors: ['project is not a valid graph'] };
+  const own = (id) => typeof id === 'string' && id !== '__proto__' && id !== 'constructor' && id !== 'prototype' && Object.prototype.hasOwnProperty.call(project.nodes, id) && !!project.nodes[id];
+  const valid = ids.filter(own);
   if (valid.length < 2) return { ok: false, ops: [], errors: ['need ≥2 nodes to group'] };
   const first = valid[0];
   const parent = project.nodes[first].parent;
