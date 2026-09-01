@@ -493,7 +493,15 @@ function nxDesignQA(input) {
   const sections = _count(/class="[^"]*\bnx-section\b|<\s*section\b/gi, html);
   const gridOrFlex = _count(/display\s*:\s*(grid|flex)/gi, html);
   const mediaQueries = _count(/@media\b/gi, html);
-  const compositionScore = (sections ? 30 : 0) + (gridOrFlex ? 35 : 0) + (mediaQueries ? 35 : 0) + (h1 ? 10 : 0);
+  // Composition credit must reflect SUBSTANCE, not the mere presence of markers:
+  // 30 empty <section> tags and a repeated "display:grid" string used to score the
+  // same as a real layout, so an empty page could be gamed upward ~30 points.
+  const __textOnly = String(html).replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').trim();
+  const __words = __textOnly ? __textOnly.split(/\s+/).filter(Boolean).length : 0;
+  // A page with no real copy has no composition to judge, whatever markup it emits.
+  const __hasSubstance = __words >= 25 && (h1 + h2 + h3) > 0;
+  const compositionScore = !__hasSubstance ? Math.min(20, (sections ? 10 : 0) + (gridOrFlex ? 5 : 0) + (mediaQueries ? 5 : 0))
+    : (sections ? 30 : 0) + (gridOrFlex ? 35 : 0) + (mediaQueries ? 35 : 0) + (h1 ? 10 : 0);
   // ── spacing / rhythm ──
   const cssVars = _count(/--[a-z-]+\s*:/i, html);
   const paddings = _count(/padding\s*:/gi, html);

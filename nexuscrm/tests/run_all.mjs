@@ -22,6 +22,8 @@ const SUITES = [
   'test_compose_robustness.mjs', // Cycle 2: adversarial plans (hostile/malformed/unicode) + rendered a11y & document semantics
   'test_render_quality.mjs',    // Cycle 2: rendered craft invariants — type hierarchy, emphasis budget, rhythm, WCAG contrast, mobile re-composition
   'test_graph_hardening.mjs',   // Adversarial: IR mutation purity/atomicity, prototype-key impersonation, integrity validator, render + canvas entry points
+  'test_api_security.mjs',      // Adversarial: cross-tenant IDOR, forged tokens, SQLi, prototype pollution, oversized payloads, stored XSS
+  'test_qa_integrity.mjs',      // Adversarial: Design-QA must rank real design above bad design and resist marker-stuffing
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
