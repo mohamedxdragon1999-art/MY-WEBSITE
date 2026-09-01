@@ -22,7 +22,12 @@ console.log('\n== 1. DESIGN IS FIXED, WORDS ARE THE VARIABLE ==');
   check('compiled both valid', a.compiled.valid && b.compiled.valid);
   check('identical CSS length', a.compiled.css.length === b.compiled.css.length, a.compiled.css.length + ' vs ' + b.compiled.css.length);
   check('identical blade order', JSON.stringify(a.project.nodes['__root__'].children) === JSON.stringify(b.project.nodes['__root__'].children));
-  check('identical JS length', a.compiled.js.length === b.compiled.js.length, a.compiled.js.length + ' vs ' + b.compiled.js.length);
+  // The runtime script is now identity-substituted, so its LENGTH legitimately
+  // varies with the business name/contact details (that is the whole point of
+  // the identity boundary). What must stay fixed is the DESIGN: assert the
+  // script is structurally the same programme, not byte-identical.
+  const jsShape = (js) => [ (js.match(/function\s+\w+/g) || []).length, (js.match(/addEventListener/g) || []).length, (js.match(/querySelector/g) || []).length ].join('/');
+  check('identical JS structure (identity may differ in length)', jsShape(a.compiled.js) === jsShape(b.compiled.js), jsShape(a.compiled.js) + ' vs ' + jsShape(b.compiled.js));
   check('copy differs -> body differs', a.compiled.html !== b.compiled.html);
   const tagCount = h => (h.match(/<section\b/g) || []).length;
   check('section count invariant', tagCount(a.compiled.html) === tagCount(b.compiled.html), tagCount(a.compiled.html)+' vs '+tagCount(b.compiled.html));

@@ -28,6 +28,7 @@ const SUITES = [
   'test_build_site_unified.mjs',// /ai/build-site must build through the composition engine, not the legacy template
   'test_builder_ui_wiring.mjs', // Builder UI must actually send `direction` and display the design rationale
   'test_ast_validation.mjs',    // Blocking AST structural gate, deterministic auto-repair, per-node validation, LLM self-correction prompts
+  'test_template_identity.mjs', // Reference template must never leak its original client's identity; no shipped unlock secrets; one escaping guarantee
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',

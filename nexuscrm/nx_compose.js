@@ -228,7 +228,14 @@ function __art(seed, w, h, dir) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g${seed}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${base}"/><stop offset="1" stop-color="${b}" stop-opacity=".55"/></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g${seed})"/>${rects}<circle cx="${(seed * 173) % w}" cy="${(seed * 89) % h}" r="${70 + (seed % 50)}" fill="${a}" opacity=".18"/></svg>`;
   return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
-function __e(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+// Escape for HTML text AND attribute contexts. The single quote is included
+// deliberately: nx_render.js already had a separate __escAttr covering it while
+// this pipeline did not, so the two generators in the same builder carried
+// different safety guarantees for the same job. Today every attribute emitted
+// here is double-quoted so the gap is not exploitable — but the next person to
+// copy a snippet between these files would silently inherit the weaker escape.
+// One function, one guarantee, both contexts safe.
+function __e(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
 // ── SECTION RENDERERS (structural variants per direction) ────────────────────
 function __nav(c, p) {

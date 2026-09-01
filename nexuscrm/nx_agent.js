@@ -187,7 +187,14 @@ function autoFixSite(html) {
   s = s.replace(/<img([^>]*?)\s*loading="lazy"/i, '<img$1');
   // 2) drop nav links whose section id is missing (broken anchors)
   const idSet = new Set([...(String(s).match(/\bid\s*=\s*["']([^"']+)["']/gi) || [])].map(x => x.replace(/^id\s*=\s*["']|["']$/gi, '')));
-  s = s.replace(/<a\b([^>]*?\bhref\s*=\s*["']#([^"']+)["'][^>]*?)>/gi, (mm, pre, id) => idSet.has(id) ? mm : mm);
+  // Both branches used to return `mm`, so this replace did nothing at all. A
+  // broken in-page anchor is a real defect (the click silently does nothing),
+  // but DELETING the link would tear holes in the nav. Instead mark it: point it
+  // at the top of the page and flag it so a later pass / the author can see it.
+  s = s.replace(/<a\b([^>]*?\bhref\s*=\s*["']#([^"']+)["'][^>]*?)>/gi, (mm, pre, id) => {
+    if (idSet.has(id) || id === '' || id === 'top') return mm;
+    return '<a' + pre.replace(/\bhref\s*=\s*["']#[^"']+["']/i, 'href="#"') + ' data-nx-broken-anchor="' + id + '">';
+  });
   // 3) ensure a single h1 — if >1, demote extras to h2
   let h1s = (s.match(/<h1\b/gi) || []).length;
   while (h1s > 1) { s = s.replace(/<h1\b/gi, '<h2'); h1s--; }
