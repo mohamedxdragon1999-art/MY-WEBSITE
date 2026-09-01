@@ -7700,7 +7700,7 @@ async function generateSiteHtml(env, ws, opts) {
     nav_style: NAV_STYLES[opts.nav_style] ? opts.nav_style : '',
     three_d: THREE_D_LEVELS[opts.three_d] ? opts.three_d : 'off',
   };
-  const sceneId = SITE_SCENES[opts.scene_id] ? opts.scene_id : '';
+  const sceneId = sceneInfo(opts.scene_id) ? opts.scene_id : '';
   const sceneText = String(opts.scene_text || '').slice(0, 40); // editable words for text:true scenes (any language)
   const splineUrl = String(opts.spline_url || '').trim();
   const scene = sceneId ? SITE_SCENES[sceneId] : null;
@@ -8262,45 +8262,45 @@ function componentScriptsJs(opts) {
 // oceans, cities, particle worlds, abstract sculptures).
 // ════════════════════════════════════════════════════════════
 const THREE_SCENES = {
-tgalaxy:{name:'Galaxy Spiral (WebGL)',theme:'space',type:'three',body:`var geo=new THREE.BufferGeometry(),N=9000,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+tgalaxy:{name:'Galaxy Spiral (WebGL)',theme:'space', desc: "A slowly rotating spiral galaxy of drifting stars, with a bright dense core.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=9000,pos=new Float32Array(N*3),col=new Float32Array(N*3);
 for(var i=0;i<N;i++){var r=Math.pow(Math.random(),0.85)*62;var a=i*0.18;var x=Math.cos(a)*r,z=Math.sin(a)*r,y=(Math.random()-0.5)*1.3*(1-r/70);
 pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;var c=ac.clone().lerp(a2,r/70);col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({size:0.34,vertexColors:true,transparent:true,opacity:0.92,depthWrite:false,blending:THREE.AdditiveBlending}));
 scene.add(g);cam.position.set(0,16,34);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.0009;cam.position.x=Math.sin(t*0.08)*3;cam.lookAt(0,0,0);`},
-tgalaxy2:{name:'Galaxy Arms (WebGL)',theme:'midnight-violet',type:'three',body:`var geo=new THREE.BufferGeometry(),N=7000,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+tgalaxy2:{name:'Galaxy Arms (WebGL)',theme:'midnight-violet', desc: "Sweeping galaxy arms of coloured starlight winding out from a glowing centre.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=7000,pos=new Float32Array(N*3),col=new Float32Array(N*3);
 for(var i=0;i<N;i++){var a=i*0.7,tw=Math.floor(i/1400)%2,aa=a+tw*Math.PI;var r=Math.pow(Math.random(),0.8)*58;var x=Math.cos(aa)*r,z=Math.sin(aa)*r,y=(Math.random()-0.5)*0.9;
 pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;var c=ac.clone().lerp(a2,r/60);col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({size:0.3,vertexColors:true,transparent:true,opacity:0.9,depthWrite:false,blending:THREE.AdditiveBlending}));
 scene.add(g);cam.position.set(0,12,30);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.001;cam.position.y=12+Math.sin(t*0.15)*2;cam.lookAt(0,0,0);`},
-tplanet:{name:'Planet & Ring (WebGL)',theme:'teal-aqua',type:'three',body:`var R=6;
+tplanet:{name:'Planet & Ring (WebGL)',theme:'teal-aqua', desc: "A softly lit planet circled by a tilted particle ring system.",type:'three',body:`var R=6;
 var p=new THREE.Mesh(new THREE.SphereGeometry(R,48,48),new THREE.MeshStandardMaterial({color:ac,roughness:0.35,metalness:0.15}));
 scene.add(p);
 var rg=new THREE.Mesh(new THREE.RingGeometry(R*1.5,R*2.3,64),new THREE.MeshBasicMaterial({color:a2,side:THREE.DoubleSide,transparent:true,opacity:0.32}));rg.rotation.x=1.15;scene.add(rg);
 var m=new THREE.Mesh(new THREE.SphereGeometry(1.1,24,24),new THREE.MeshStandardMaterial({color:t3,roughness:0.6}));scene.add(m);
 scene.add(new THREE.AmbientLight(0xffffff,0.45));var l=new THREE.DirectionalLight(0xffffff,1.3);l.position.set(18,12,14);scene.add(l);
 cam.position.set(0,5,22);`,tick:`p.rotation.y+=0.004;m.position.set(Math.cos(t*0.35)*11,0,Math.sin(t*0.35)*11);`},
-tplanet2:{name:'Lava Planet (WebGL)',theme:'sunset',type:'three',body:`var R=6;
+tplanet2:{name:'Lava Planet (WebGL)',theme:'sunset', desc: "A molten world with glowing lava seams pulsing beneath a dark crust.",type:'three',body:`var R=6;
 var p=new THREE.Mesh(new THREE.SphereGeometry(R,48,48),new THREE.MeshStandardMaterial({color:0x3a1608,roughness:0.9,metalness:0.05,flatShading:true}));
 scene.add(p);
 var glow=new THREE.Mesh(new THREE.SphereGeometry(R*1.02,32,32),new THREE.MeshBasicMaterial({color:ac,transparent:true,opacity:0.16,blending:THREE.AdditiveBlending}));scene.add(glow);
 scene.add(new THREE.AmbientLight(0xffaa66,0.5));var l=new THREE.PointLight(ac,1.4,40);l.position.set(10,6,12);scene.add(l);
 cam.position.set(0,4,20);`,tick:`p.rotation.y+=0.0025;glow.rotation.y+=0.0025;l.intensity=1.2+Math.sin(t*2)*0.3;`},
-tplanet3:{name:'Ice Planet (WebGL)',theme:'glass-light',type:'three',body:`var R=6;
+tplanet3:{name:'Ice Planet (WebGL)',theme:'glass-light', desc: "A pale ice world with a cold rim-light and a faint frozen halo.",type:'three',body:`var R=6;
 var p=new THREE.Mesh(new THREE.SphereGeometry(R,48,48),new THREE.MeshStandardMaterial({color:0xcfe8ff,roughness:0.2,metalness:0.4}));
 scene.add(p);
 var h=new THREE.Mesh(new THREE.SphereGeometry(R*1.01,32,32),new THREE.MeshStandardMaterial({color:ac2,emissive:ac2,emissiveIntensity:0.3,transparent:true,opacity:0.25}));scene.add(h);
 scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1.4);l.position.set(14,10,12);scene.add(l);
 cam.position.set(0,5,20);`,tick:`p.rotation.y+=0.003;h.rotation.y+=0.003;`},
-tcity:{name:'3D City Night (WebGL)',theme:'graphite',type:'three',body:`var g=new THREE.Group(),N=110;
+tcity:{name:'3D City Night (WebGL)',theme:'graphite', desc: "A night-time cityscape of lit towers seen in true perspective.",type:'three',body:`var g=new THREE.Group(),N=110;
 for(var i=0;i<N;i++){var w=0.8+Math.random()*1.7,h=2+Math.random()*9,d=0.8+Math.random()*1.7;
 var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:0x141a26,roughness:0.85}));
 m.position.set((Math.random()-0.5)*42,h/2,(Math.random()-0.5)*42);g.add(m);
 if(Math.random()<0.55){var win=new THREE.Mesh(new THREE.PlaneGeometry(w*0.6,h*0.6),new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(0.1+Math.random()*0.06,0.9,0.5),transparent:true,opacity:0.85}));win.position.set(0,h/2+0.02,0);win.rotation.y=Math.PI/4;m.add(win);}}
 scene.add(g);scene.add(new THREE.AmbientLight(0x8899ff,0.3));var l=new THREE.DirectionalLight(0xffffff,0.8);l.position.set(20,30,12);scene.add(l);
 cam.position.set(0,17,30);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.0012;`},
-tcity2:{name:'Floating Islands (WebGL)',theme:'forest-dark',type:'three',body:`var g=new THREE.Group();
+tcity2:{name:'Floating Islands (WebGL)',theme:'forest-dark', desc: "Floating islands drifting slowly at different depths above the void.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<7;i++){var r=2+Math.random()*3;
 var rock=new THREE.Mesh(new THREE.ConeGeometry(r*0.9,r*2.4,7),new THREE.MeshStandardMaterial({color:0x3a4a3a,flatShading:true}));rock.position.y=-r*0.6;
 var top=new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.05,0.7,8),new THREE.MeshStandardMaterial({color:0x67c267,flatShading:true}));top.position.y=0.35;
@@ -8308,117 +8308,117 @@ var is=new THREE.Group();is.add(rock);is.add(top);
 is.position.set((Math.random()-0.5)*30,Math.random()*4,(Math.random()-0.5)*30);is.rotation.y=Math.random()*3;g.add(is);}
 scene.add(g);scene.add(new THREE.AmbientLight(0xaaddcc,0.5));var l=new THREE.DirectionalLight(0xffffff,1);l.position.set(12,20,8);scene.add(l);
 cam.position.set(0,10,26);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.0008;g.children.forEach(function(c,i){c.position.y+=Math.sin(t*0.7+i*2)*0.004;});`},
-tocean:{name:'3D Ocean (WebGL)',theme:'teal-aqua',type:'three',body:`var geo=new THREE.PlaneGeometry(60,60,64,64);geo.rotateX(-Math.PI/2);
+tocean:{name:'3D Ocean (WebGL)',theme:'teal-aqua', desc: "A rolling 3D ocean surface catching moving highlights on each swell.",type:'three',body:`var geo=new THREE.PlaneGeometry(60,60,64,64);geo.rotateX(-Math.PI/2);
 var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:ac,roughness:0.25,metalness:0.5,flatShading:true}));scene.add(m);
 scene.add(new THREE.AmbientLight(0xffffff,0.4));var l=new THREE.DirectionalLight(0xffffff,1.2);l.position.set(10,20,10);scene.add(l);
 cam.position.set(0,9,20);cam.lookAt(0,0,0);`,tick:`var p=m.geometry.attributes.position;for(var i=0;i<p.count;i++){var x=p.getX(i),z=p.getZ(i);p.setY(i,Math.sin(x*0.28+t*1.2)*Math.cos(z*0.28+t*0.85)*0.9);}p.needsUpdate=true;m.geometry.computeVertexNormals();`},
-tocean2:{name:'Wave Field (WebGL)',theme:'ocean-light',type:'three',body:`var geo=new THREE.PlaneGeometry(60,60,80,80);geo.rotateX(-Math.PI/2);
+tocean2:{name:'Wave Field (WebGL)',theme:'ocean-light', desc: "A broad field of interlocking waves rippling outward in every direction.",type:'three',body:`var geo=new THREE.PlaneGeometry(60,60,80,80);geo.rotateX(-Math.PI/2);
 var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:ac2,wireframe:false,roughness:0.3,metalness:0.4,flatShading:true}));scene.add(m);
 scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1.1);l.position.set(-8,14,10);scene.add(l);
 cam.position.set(0,12,24);cam.lookAt(0,0,0);`,tick:`var p=m.geometry.attributes.position;for(var i=0;i<p.count;i++){var x=p.getX(i),z=p.getZ(i);p.setY(i,Math.sin(x*0.4+t*2.2)*Math.cos(z*0.3+t*1.4)*1.1+Math.sin(x*0.12-t*1.1)*0.6);}p.needsUpdate=true;m.geometry.computeVertexNormals();`},
-tterrain:{name:'3D Mountains (WebGL)',theme:'forest-dark',type:'three',body:`var geo=new THREE.PlaneGeometry(80,80,70,70);geo.rotateX(-Math.PI/2);
+tterrain:{name:'3D Mountains (WebGL)',theme:'forest-dark', desc: "Sharp mountain ridges rendered as a shaded 3D height mesh.",type:'three',body:`var geo=new THREE.PlaneGeometry(80,80,70,70);geo.rotateX(-Math.PI/2);
 var pos=geo.attributes.position;for(var i=0;i<pos.count;i++){var x=pos.getX(i),z=pos.getZ(i);var y=Math.sin(x*0.12)*Math.cos(z*0.12)*3+Math.sin(x*0.32+z*0.27)*1.6+Math.sin(x*0.05)*2;pos.setY(i,Math.max(0,y));}geo.computeVertexNormals();
 var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x3d5a3d,roughness:0.9,flatShading:true}));scene.add(m);
 scene.add(new THREE.AmbientLight(0xffffff,0.45));var l=new THREE.DirectionalLight(0xfff2cc,1.2);l.position.set(20,24,12);scene.add(l);
 scene.fog=new THREE.Fog(0x0a120e,30,90);cam.position.set(0,14,30);cam.lookAt(0,2,0);`,tick:`cam.position.x=Math.sin(t*0.06)*6;cam.lookAt(0,2,0);`},
-tterrain2:{name:'Lava Fields (WebGL)',theme:'sunset',type:'three',body:`var geo=new THREE.PlaneGeometry(70,70,60,60);geo.rotateX(-Math.PI/2);
+tterrain2:{name:'Lava Fields (WebGL)',theme:'sunset', desc: "Cooling lava fields where hot fissures glow between darkened rock.",type:'three',body:`var geo=new THREE.PlaneGeometry(70,70,60,60);geo.rotateX(-Math.PI/2);
 var pos=geo.attributes.position;for(var i=0;i<pos.count;i++){var x=pos.getX(i),z=pos.getZ(i);pos.setY(i,Math.sin(x*0.15)*Math.cos(z*0.15)*2.4+Math.sin(x*0.4+z*0.35)*1);}geo.computeVertexNormals();
 var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x2a1206,roughness:0.95,flatShading:true}));scene.add(m);
 scene.add(new THREE.AmbientLight(0xff8844,0.4));var l=new THREE.PointLight(ac,1.6,50);l.position.set(0,6,0);scene.add(l);
 cam.position.set(0,13,26);cam.lookAt(0,0,0);`,tick:`l.intensity=1.3+Math.sin(t*1.6)*0.5;m.rotation.y+=0.001;`},
-tshapes:{name:'Abstract Sculpture (WebGL)',theme:'midnight-violet',type:'three',body:`var tk=new THREE.Mesh(new THREE.TorusKnotGeometry(2.6,0.8,120,20),new THREE.MeshStandardMaterial({color:ac,metalness:0.6,roughness:0.2}));tk.position.set(-7,0,0);scene.add(tk);
+tshapes:{name:'Abstract Sculpture (WebGL)',theme:'midnight-violet', desc: "An abstract sculpture of intersecting solids turning in slow orbit.",type:'three',body:`var tk=new THREE.Mesh(new THREE.TorusKnotGeometry(2.6,0.8,120,20),new THREE.MeshStandardMaterial({color:ac,metalness:0.6,roughness:0.2}));tk.position.set(-7,0,0);scene.add(tk);
 var ico=new THREE.Mesh(new THREE.IcosahedronGeometry(2.6,1),new THREE.MeshStandardMaterial({color:a2,metalness:0.5,roughness:0.25,flatShading:true}));ico.position.set(7,0,0);scene.add(ico);
 var oct=new THREE.Mesh(new THREE.OctahedronGeometry(2.2,0),new THREE.MeshStandardMaterial({color:t3,metalness:0.5,roughness:0.25,flatShading:true}));oct.position.set(0,0,7);scene.add(oct);
 var dod=new THREE.Mesh(new THREE.DodecahedronGeometry(2.4,0),new THREE.MeshStandardMaterial({color:ac2,metalness:0.5,roughness:0.3,flatShading:true}));dod.position.set(0,0,-7);scene.add(dod);
 scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1.4);l.position.set(10,14,10);scene.add(l);
 cam.position.set(0,3,16);cam.lookAt(0,0,0);`,tick:`tk.rotation.x+=0.004;tk.rotation.y+=0.006;ico.rotation.x+=0.005;ico.rotation.y-=0.007;oct.rotation.x-=0.006;oct.rotation.z+=0.005;dod.rotation.y+=0.008;dod.rotation.x+=0.003;
 [tk,ico,oct,dod].forEach(function(s,i){s.position.y=Math.sin(t*0.7+i*1.5)*0.5;});`},
-tshapes2:{name:'Golden Shapes (WebGL)',theme:'luxury-dark',type:'three',body:`var mats=[new THREE.MeshStandardMaterial({color:ac,metalness:0.85,roughness:0.15}),new THREE.MeshStandardMaterial({color:ac2,metalness:0.85,roughness:0.15}),new THREE.MeshStandardMaterial({color:0xffffff,metalness:0.9,roughness:0.1})];
+tshapes2:{name:'Golden Shapes (WebGL)',theme:'luxury-dark', desc: "Polished golden forms rotating under warm directional light.",type:'three',body:`var mats=[new THREE.MeshStandardMaterial({color:ac,metalness:0.85,roughness:0.15}),new THREE.MeshStandardMaterial({color:ac2,metalness:0.85,roughness:0.15}),new THREE.MeshStandardMaterial({color:0xffffff,metalness:0.9,roughness:0.1})];
 var shapes=[];
 for(var i=0;i<9;i++){var g=[new THREE.TorusGeometry(1.5,0.5,20,40),new THREE.IcosahedronGeometry(1.6,0),new THREE.OctahedronGeometry(1.7,0),new THREE.BoxGeometry(2.4,2.4,2.4)][i%4];
 var m=new THREE.Mesh(g,mats[i%3]);var a=i/9*Math.PI*2;m.position.set(Math.cos(a)*6,0,Math.sin(a)*6);scene.add(m);shapes.push(m);}
 scene.add(new THREE.AmbientLight(0xffffff,0.4));var l=new THREE.PointLight(0xffffff,1.6,30);l.position.set(0,8,0);scene.add(l);
 cam.position.set(0,7,14);cam.lookAt(0,0,0);`,tick:`shapes.forEach(function(s,i){s.rotation.x+=0.005*(i%3+1);s.rotation.y+=0.006*(i%2+1);s.position.y=Math.sin(t*0.6+i)*0.4;});`},
-tparticles:{name:'Particle Tornado (WebGL)',theme:'cyberpunk',type:'three',body:`var geo=new THREE.BufferGeometry(),N=4500,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+tparticles:{name:'Particle Tornado (WebGL)',theme:'cyberpunk', desc: "A towering particle tornado spiralling around a luminous axis.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=4500,pos=new Float32Array(N*3),col=new Float32Array(N*3);
 for(var i=0;i<N;i++){var p=i/N,a=p*22,r=p*16,x=Math.cos(a)*r,y=p*26-13,z=Math.sin(a)*r;
 x+=(Math.random()-0.5)*0.8;y+=(Math.random()-0.5)*0.8;z+=(Math.random()-0.5)*0.8;
 pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;var c=ac.clone().lerp(a2,p);col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({size:0.28,vertexColors:true,transparent:true,opacity:0.95,depthWrite:false,blending:THREE.AdditiveBlending}));
 scene.add(g);cam.position.set(0,4,22);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.004;`},
-tparticles2:{name:'Particle Sphere (WebGL)',theme:'space',type:'three',body:`var geo=new THREE.BufferGeometry(),N=2600,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+tparticles2:{name:'Particle Sphere (WebGL)',theme:'space', desc: "A breathing sphere of points that swells and contracts as it turns.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=2600,pos=new Float32Array(N*3),col=new Float32Array(N*3);
 for(var i=0;i<N;i++){var th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=9;
 pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.cos(ph);pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
 var c=ac.clone().lerp(t3,Math.random());col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({size:0.22,vertexColors:true,transparent:true,opacity:0.9,depthWrite:false,blending:THREE.AdditiveBlending}));
 scene.add(g);cam.position.set(0,0,20);`,tick:`g.rotation.x+=0.0015;g.rotation.y+=0.002;`},
-tparticles3:{name:'Helix Particles (WebGL)',theme:'teal-aqua',type:'three',body:`var geo=new THREE.BufferGeometry(),N=3000,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+tparticles3:{name:'Helix Particles (WebGL)',theme:'teal-aqua', desc: "Twin particle strands winding around each other in a bright helix.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=3000,pos=new Float32Array(N*3),col=new Float32Array(N*3);
 for(var i=0;i<N;i++){var p=i/N,a=p*14,y=p*30-15,r=6;
 for(var s2=0;s2<2;s2++){var x=(s2?Math.cos(a+Math.PI):Math.cos(a))*r,z=(s2?Math.sin(a+Math.PI):Math.sin(a))*r;
 var c=ac.clone().lerp(t3,p);col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;}}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({size:0.25,vertexColors:true,transparent:true,opacity:0.9,depthWrite:false,blending:THREE.AdditiveBlending}));
 scene.add(g);cam.position.set(0,2,24);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.0035;`},
-tgrid:{name:'Grid World (WebGL)',theme:'cyberpunk',type:'three',body:`var g=new THREE.GridHelper(70,36,ac,a2);g.position.y=-0.1;scene.add(g);
+tgrid:{name:'Grid World (WebGL)',theme:'cyberpunk', desc: "An endless neon grid receding to the horizon with a glowing sweep.",type:'three',body:`var g=new THREE.GridHelper(70,36,ac,a2);g.position.y=-0.1;scene.add(g);
 var cubes=[];for(var i=0;i<40;i++){var m=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8),new THREE.MeshStandardMaterial({color:i%3===0?ac:i%3===1?a2:t3,emissive:i%3===0?ac:new THREE.Color(0x000000),emissiveIntensity:0.4,metalness:0.4,roughness:0.4}));m.position.set((Math.random()-0.5)*50,0.5,(Math.random()-0.5)*50);m.rotation.set(Math.random(),Math.random(),Math.random());scene.add(m);cubes.push(m);}
 scene.add(new THREE.AmbientLight(0xffffff,0.4));var l=new THREE.DirectionalLight(0xffffff,0.9);l.position.set(10,16,8);scene.add(l);
 cam.position.set(0,16,26);cam.lookAt(0,0,0);`,tick:`cubes.forEach(function(m,i){m.rotation.x+=0.004*(i%3+1);m.rotation.y+=0.005*(i%2+1);m.position.y=0.5+Math.sin(t*0.8+i)*0.15;});g.material.opacity=0.55;`},
-twireglobe:{name:'Wireframe Globe (WebGL)',theme:'slate-blue',type:'three',body:`var g=new THREE.Group(),R=8;
+twireglobe:{name:'Wireframe Globe (WebGL)',theme:'slate-blue', desc: "A wireframe globe of latitude and longitude lines rotating in perspective.",type:'three',body:`var g=new THREE.Group(),R=8;
 for(var i=0;i<=14;i++){var phi=(i/14)*Math.PI;var pts=[];for(var j=0;j<=60;j++){var th=(j/60)*Math.PI*2;pts.push(new THREE.Vector3(R*Math.sin(phi)*Math.cos(th),R*Math.cos(phi),R*Math.sin(phi)*Math.sin(th)));}
 var lg=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:ac,transparent:true,opacity:0.45}));g.add(lg);}
 for(var j2=0;j2<=16;j2++){var th2=(j2/16)*Math.PI*2;var pts2=[];for(var i2=0;i2<=60;i2++){var phi2=(i2/60)*Math.PI;pts2.push(new THREE.Vector3(R*Math.sin(phi2)*Math.cos(th2),R*Math.cos(phi2),R*Math.sin(phi2)*Math.sin(th2)));}
 var lg2=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2),new THREE.LineBasicMaterial({color:a2,transparent:true,opacity:0.3}));g.add(lg2);}
 scene.add(g);cam.position.set(0,4,20);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.002;g.rotation.x=Math.sin(t*0.2)*0.08;`},
-tplanetrings:{name:'Ring Planet (WebGL)',theme:'cyberpunk',type:'three',body:`var R=5;
+tplanetrings:{name:'Ring Planet (WebGL)',theme:'cyberpunk', desc: "A neon-lit planet framed by concentric orbital rings.",type:'three',body:`var R=5;
 var p=new THREE.Mesh(new THREE.SphereGeometry(R,40,40),new THREE.MeshStandardMaterial({color:ac,roughness:0.5,metalness:0.3}));scene.add(p);
 for(var i=0;i<3;i++){var rg=new THREE.Mesh(new THREE.RingGeometry(R*(1.4+i*0.35),R*(1.5+i*0.35),64),new THREE.MeshBasicMaterial({color:i===1?a2:ac,side:THREE.DoubleSide,transparent:true,opacity:0.35-i*0.08}));rg.rotation.x=1.25+i*0.1;scene.add(rg);}
 scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1.3);l.position.set(12,8,10);scene.add(l);
 cam.position.set(0,3,18);`,tick:`p.rotation.y+=0.003;scene.rotation.y+=0.0006;`},
-tnebula:{name:'Nebula Clouds (WebGL)',theme:'midnight-violet',type:'three',body:`var tex=(function(){var c2=document.createElement('canvas');c2.width=c2.height=64;var x=c2.getContext('2d');var gr=x.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,255,255,0.9)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c2);})();
+tnebula:{name:'Nebula Clouds (WebGL)',theme:'midnight-violet', desc: "Layered nebula clouds drifting apart with parallax depth.",type:'three',body:`var tex=(function(){var c2=document.createElement('canvas');c2.width=c2.height=64;var x=c2.getContext('2d');var gr=x.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,255,255,0.9)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c2);})();
 var g=new THREE.Group();
 for(var i=0;i<26;i++){var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,color:i%2?ac.clone().multiplyScalar(1.6):a2.clone().multiplyScalar(1.6),transparent:true,opacity:0.16+Math.random()*0.12,blending:THREE.AdditiveBlending,depthWrite:false}));sp.scale.set(8+Math.random()*16,8+Math.random()*16,1);sp.position.set((Math.random()-0.5)*34,(Math.random()-0.5)*22,(Math.random()-0.5)*20);g.add(sp);}
 scene.add(g);cam.position.set(0,0,24);`,tick:`g.rotation.y+=0.0005;g.children.forEach(function(s,i){s.position.y+=Math.sin(t*0.3+i)*0.01;});`},
-tmeteors:{name:'Meteor Shower (WebGL)',theme:'space',type:'three',body:`var geo=new THREE.BufferGeometry(),N=300,pos=new Float32Array(N*3);
+tmeteors:{name:'Meteor Shower (WebGL)',theme:'space', desc: "Meteors streaking across a deep starfield, each leaving a fading trail.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=300,pos=new Float32Array(N*3);
 for(var i=0;i<N;i++){pos[i*3]=(Math.random()-0.5)*80;pos[i*3+1]=(Math.random()-0.5)*50;pos[i*3+2]=(Math.random()-0.5)*40;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
 var stars=new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:0.25,transparent:true,opacity:0.8}));scene.add(stars);
 var tail=new THREE.BufferGeometry();var tp=new Float32Array(6);tail.setAttribute('position',new THREE.BufferAttribute(tp,3));
 var line=new THREE.Line(tail,new THREE.LineBasicMaterial({color:ac,transparent:true,opacity:0.9}));scene.add(line);
 cam.position.set(0,2,26);`,tick:`var x=t*22%90-45;var p=line.geometry.attributes.position;p.setX(0,x);p.setY(0,28);p.setZ(0,0);p.setX(1,x-8);p.setY(1,25.5);p.setZ(1,0);p.needsUpdate=true;stars.rotation.y+=0.0004;`},
-tstarfield:{name:'Deep Starfield (WebGL)',theme:'space',type:'three',body:`var geo=new THREE.BufferGeometry(),N=2200,pos=new Float32Array(N*3);
+tstarfield:{name:'Deep Starfield (WebGL)',theme:'space', desc: "A dense starfield receding into deep space with real depth fade.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=2200,pos=new Float32Array(N*3);
 for(var i=0;i<N;i++){pos[i*3]=(Math.random()-0.5)*120;pos[i*3+1]=(Math.random()-0.5)*80;pos[i*3+2]=(Math.random()-0.5)*80;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:0.3,transparent:true,opacity:0.85,depthWrite:false}));scene.add(g);
 cam.position.set(0,0,30);`,tick:`g.rotation.y+=0.0003;g.rotation.x=Math.sin(t*0.05)*0.05;`},
-tblackhole:{name:'Black Hole (WebGL)',theme:'space',type:'three',body:`var core=new THREE.Mesh(new THREE.SphereGeometry(1.6,32,32),new THREE.MeshBasicMaterial({color:0x000000}));scene.add(core);
+tblackhole:{name:'Black Hole (WebGL)',theme:'space', desc: "A black hole bending a bright accretion disc around its dark core.",type:'three',body:`var core=new THREE.Mesh(new THREE.SphereGeometry(1.6,32,32),new THREE.MeshBasicMaterial({color:0x000000}));scene.add(core);
 var disk=new THREE.Mesh(new THREE.RingGeometry(3,9,64),new THREE.MeshBasicMaterial({color:ac,side:THREE.DoubleSide,transparent:true,opacity:0.5}));disk.rotation.x=1.3;scene.add(disk);
 var geo=new THREE.BufferGeometry(),N=1200,pos=new Float32Array(N*3);
 for(var i=0;i<N;i++){var a=Math.random()*6.28,r=3+Math.random()*9;pos[i*3]=Math.cos(a)*r;pos[i*3+1]=(Math.random()-0.5)*0.8;pos[i*3+2]=Math.sin(a)*r;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({color:a2,size:0.18,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(g);
 cam.position.set(0,7,16);cam.lookAt(0,0,0);`,tick:`disk.rotation.z+=0.006;g.rotation.y+=0.008;core.scale.setScalar(1+Math.sin(t*3)*0.05);`},
-taurora:{name:'Aurora Ribbons (WebGL)',theme:'lavender',type:'three',body:`var g=new THREE.Group();
+taurora:{name:'Aurora Ribbons (WebGL)',theme:'lavender', desc: "Aurora ribbons rippling in slow curtains of shifting colour.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<5;i++){var geo=new THREE.PlaneGeometry(50,1.6,40,1);var m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:i%2?ac:a2,transparent:true,opacity:0.22-i*0.03,side:THREE.DoubleSide,depthWrite:false}));m.position.y=-3+i*1.5;m.rotation.z=0.1;g.add(m);}
 scene.add(g);cam.position.set(0,2,22);cam.lookAt(0,0,0);`,tick:`g.children.forEach(function(m,i){var p=m.geometry.attributes.position;for(var v=0;v<p.count;v++){var x=p.getX(v);p.setY(v,Math.sin(x*0.3+t*(0.8+i*0.2)+i*2)*1.6);}p.needsUpdate=true;});g.rotation.y=Math.sin(t*0.1)*0.2;`},
-ttunnel:{name:'3D Tunnel (WebGL)',theme:'cyberpunk',type:'three',body:`var g=new THREE.Group();
+ttunnel:{name:'3D Tunnel (WebGL)',theme:'cyberpunk', desc: "A luminous tunnel of rings rushing past the camera.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<30;i++){var rg=new THREE.Mesh(new THREE.RingGeometry(7,7.8,48),new THREE.MeshBasicMaterial({color:i%3===0?ac:i%3===1?a2:t3,side:THREE.DoubleSide,transparent:true,opacity:0.5}));rg.position.z=-i*3;g.add(rg);}
 scene.add(g);cam.position.set(0,0,0);`,tick:`g.children.forEach(function(r,i){r.position.z=((r.position.z+0.5)%90)-45;});g.rotation.z+=0.003;`},
-tcubes3d:{name:'Floating Cubes (WebGL)',theme:'glass-dark',type:'three',body:`var g=new THREE.Group();
+tcubes3d:{name:'Floating Cubes (WebGL)',theme:'glass-dark', desc: "Weightless cubes tumbling gently at staggered depths.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<26;i++){var s2=0.5+Math.random()*1.2;var m=new THREE.Mesh(new THREE.BoxGeometry(s2,s2,s2),new THREE.MeshStandardMaterial({color:i%3===0?ac:i%3===1?a2:t3,metalness:0.6,roughness:0.25}));m.position.set((Math.random()-0.5)*24,(Math.random()-0.5)*14,(Math.random()-0.5)*14);m.rotation.set(Math.random()*3,Math.random()*3,0);g.add(m);}
 scene.add(g);scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1.2);l.position.set(10,12,10);scene.add(l);
 cam.position.set(0,2,24);`,tick:`g.children.forEach(function(m,i){m.rotation.x+=0.003*(i%3+1);m.rotation.y+=0.004*(i%2+1);m.position.y+=Math.sin(t*0.6+i)*0.004;});g.rotation.y+=0.0015;`},
-twaves3d:{name:'Ribbon Waves (WebGL)',theme:'teal-aqua',type:'three',body:`var g=new THREE.Group();
+twaves3d:{name:'Ribbon Waves (WebGL)',theme:'teal-aqua', desc: "Wide ribbons of light folding and unfolding like fabric.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<12;i++){var geo=new THREE.PlaneGeometry(60,1.4,50,1);var m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:i%2?ac:a2,transparent:true,opacity:0.16,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2.4;m.position.y=-4+i*0.75;g.add(m);}
 scene.add(g);cam.position.set(0,8,24);cam.lookAt(0,0,0);`,tick:`g.children.forEach(function(m,i){var p=m.geometry.attributes.position;for(var v=0;v<p.count;v++){var x=p.getX(v);p.setY(v,Math.sin(x*0.15+t*(0.7+i*0.12)+i*2)*1.2);}p.needsUpdate=true;});`},
-tdna:{name:'DNA Helix 3D (WebGL)',theme:'teal-aqua',type:'three',body:`var g=new THREE.Group();
+tdna:{name:'DNA Helix 3D (WebGL)',theme:'teal-aqua', desc: "A DNA double helix turning steadily, its rungs catching the light.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<36;i++){var y=-8+i*0.45;var a=i*0.35;
 var r1=new THREE.Mesh(new THREE.SphereGeometry(0.28,12,12),new THREE.MeshStandardMaterial({color:ac}));r1.position.set(Math.cos(a)*3,y,Math.sin(a)*3);g.add(r1);
 var r2=new THREE.Mesh(new THREE.SphereGeometry(0.28,12,12),new THREE.MeshStandardMaterial({color:a2}));r2.position.set(Math.cos(a+Math.PI)*3,y,Math.sin(a+Math.PI)*3);g.add(r2);
 var bar=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,6.1,6),new THREE.MeshStandardMaterial({color:t3,transparent:true,opacity:0.5}));bar.position.set(0,y,0);g.add(bar);}
 scene.add(g);scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1.2);l.position.set(8,10,10);scene.add(l);
 cam.position.set(0,0,14);`,tick:`g.rotation.y+=0.006;`},
-tsolarsystem:{name:'Solar System (WebGL)',theme:'space',type:'three',body:`var sun=new THREE.Mesh(new THREE.SphereGeometry(2.6,32,32),new THREE.MeshBasicMaterial({color:0xffdd77}));scene.add(sun);
+tsolarsystem:{name:'Solar System (WebGL)',theme:'space', desc: "Planets tracing concentric orbits around a radiant central star.",type:'three',body:`var sun=new THREE.Mesh(new THREE.SphereGeometry(2.6,32,32),new THREE.MeshBasicMaterial({color:0xffdd77}));scene.add(sun);
 var glow=new THREE.Mesh(new THREE.SphereGeometry(3,24,24),new THREE.MeshBasicMaterial({color:0xffaa44,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending}));scene.add(glow);
 var planets=[];
 for(var i=0;i<6;i++){var r=6+i*2.2;var pr=0.4+i*0.22;var col=i%2?ac:a2;if(i===3)col=t3;
@@ -8427,14 +8427,14 @@ planets.push({m:m,r:r,s:Math.random()*6.28,v:0.4+i*0.12});scene.add(m);
 var orbit=new THREE.Line(new THREE.BufferGeometry().setFromPoints((function(){var p=[];for(var j=0;j<=64;j++){var a=j/64*6.28;p.push(new THREE.Vector3(Math.cos(a)*r,0,Math.sin(a)*r));}return p;})()),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.12}));scene.add(orbit);}
 scene.add(new THREE.AmbientLight(0xffffff,0.35));var l=new THREE.DirectionalLight(0xffffff,1.1);l.position.set(12,8,10);scene.add(l);
 cam.position.set(0,10,24);cam.lookAt(0,0,0);`,tick:`sun.rotation.y+=0.002;glow.scale.setScalar(1+Math.sin(t*1.5)*0.05);planets.forEach(function(p){p.s+=0.01*p.v;var x=Math.cos(p.s)*p.r,z=Math.sin(p.s)*p.r;p.m.position.set(x,Math.sin(t+p.s)*0.4,z);p.m.rotation.y+=0.02;});`},
-tcity3:{name:'Neon City (WebGL)',theme:'cyberpunk',type:'three',body:`var g=new THREE.Group(),N=90;
+tcity3:{name:'Neon City (WebGL)',theme:'cyberpunk', desc: "A cyberpunk skyline washed in magenta and cyan neon.",type:'three',body:`var g=new THREE.Group(),N=90;
 for(var i=0;i<N;i++){var w=0.9+Math.random()*1.6,h=2+Math.random()*8,d=0.9+Math.random()*1.6;
 var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:0x0e1220,roughness:0.7,metalness:0.5}));
 m.position.set((Math.random()-0.5)*40,h/2,(Math.random()-0.5)*40);g.add(m);
 if(Math.random()<0.6){var edge=new THREE.Mesh(new THREE.BoxGeometry(w+0.04,h+0.04,d+0.04),new THREE.MeshBasicMaterial({color:Math.random()<0.5?ac:a2,transparent:true,opacity:0.5,wireframe:true}));m.add(edge);}}
 scene.add(g);scene.add(new THREE.AmbientLight(0x334488,0.5));var l=new THREE.PointLight(ac,1,40);l.position.set(0,18,0);scene.add(l);
 cam.position.set(0,16,28);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.0015;l.intensity=0.8+Math.sin(t*1.8)*0.4;`},
-tvolcano:{name:'Volcano 3D (WebGL)',theme:'sunset',type:'three',body:`var cone=new THREE.Mesh(new THREE.ConeGeometry(4,6,12),new THREE.MeshStandardMaterial({color:0x3a2416,flatShading:true}));cone.position.y=-1;scene.add(cone);
+tvolcano:{name:'Volcano 3D (WebGL)',theme:'sunset', desc: "A volcanic cone venting embers into the dark above glowing lava.",type:'three',body:`var cone=new THREE.Mesh(new THREE.ConeGeometry(4,6,12),new THREE.MeshStandardMaterial({color:0x3a2416,flatShading:true}));cone.position.y=-1;scene.add(cone);
 var rock=new THREE.Mesh(new THREE.CylinderGeometry(5.5,7,3,12),new THREE.MeshStandardMaterial({color:0x2a1a10,flatShading:true}));rock.position.y=-4;scene.add(rock);
 var lava=new THREE.Mesh(new THREE.CircleGeometry(1.2,12),new THREE.MeshBasicMaterial({color:ac,transparent:true,opacity:0.9}));lava.rotation.x=-Math.PI/2;lava.position.y=2;scene.add(lava);
 var glow=new THREE.PointLight(ac,2,18);glow.position.y=2;scene.add(glow);
@@ -8443,7 +8443,7 @@ var geo=new THREE.BufferGeometry(),N=500,pos=new Float32Array(N*3);geo.setAttrib
 var pts=new THREE.Points(geo,new THREE.PointsMaterial({color:a2,size:0.3,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(pts);
 cam.position.set(0,6,16);cam.lookAt(0,2,0);`,tick:`glow.intensity=1.4+Math.sin(t*3)*0.7;
 var p=pts.geometry.attributes.position;for(var i=0;i<N;i++){var y=p.getY(i);if(y<0||Math.random()<0.02){p.setX(i,(Math.random()-0.5)*1.4);p.setZ(i,(Math.random()-0.5)*1.4);p.setY(i,2);}p.setY(i,y+0.12);p.setX(i,p.getX(i)+(Math.random()-0.5)*0.06);p.setZ(i,p.getZ(i)+(Math.random()-0.5)*0.06);}p.needsUpdate=true;`},
-tmeteors2:{name:'Comet Trail (WebGL)',theme:'midnight-violet',type:'three',body:`var geo=new THREE.BufferGeometry(),N=200,pos=new Float32Array(N*3);
+tmeteors2:{name:'Comet Trail (WebGL)',theme:'midnight-violet', desc: "A single bright comet arcing past with a long luminous tail.",type:'three',body:`var geo=new THREE.BufferGeometry(),N=200,pos=new Float32Array(N*3);
 for(var i=0;i<N;i++){pos[i*3]=(Math.random()-0.5)*100;pos[i*3+1]=(Math.random()-0.5)*60;pos[i*3+2]=(Math.random()-0.5)*60;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
 var stars=new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:0.22,transparent:true,opacity:0.7}));scene.add(stars);
@@ -8452,22 +8452,22 @@ var line=new THREE.Line(trail,new THREE.LineBasicMaterial({color:ac,transparent:
 cam.position.set(0,4,28);`,tick:`var cx=Math.cos(t*0.25)*24,cz=Math.sin(t*0.25)*24,cy=10+Math.sin(t*0.4)*4;
 var p=line.geometry.attributes.position;for(var i=39;i>0;i--){p.setX(i,p.getX(i-1));p.setY(i,p.getY(i-1));p.setZ(i,p.getZ(i-1));}
 p.setX(0,cx);p.setY(0,cy);p.setZ(0,cz);p.needsUpdate=true;`},
-trose:{name:'Rose Curves (WebGL)',theme:'rose-elegant',type:'three',body:`var pts=[];
+trose:{name:'Rose Curves (WebGL)',theme:'rose-elegant', desc: "Mathematical rose curves blooming and re-forming in continuous motion.",type:'three',body:`var pts=[];
 for(var i=0;i<400;i++){var a=i/400*Math.PI*2;var r=8*Math.cos(a*4);var x=Math.cos(a)*r,y=Math.sin(a)*r,z=(i/400-0.5)*4;
 pts.push(new THREE.Vector3(x,y,z));}
 var geo=new THREE.BufferGeometry().setFromPoints(pts);
 var line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ac,transparent:true,opacity:0.9}));scene.add(line);
 scene.add(new THREE.AmbientLight(0xffffff,0.6));
 cam.position.set(0,0,22);cam.lookAt(0,0,0);`,tick:`line.rotation.y+=0.004;line.rotation.x=Math.sin(t*0.3)*0.2;`},
-tmeshfield:{name:'Mesh Field (WebGL)',theme:'graphite',type:'three',body:`var geo=new THREE.PlaneGeometry(70,70,50,50);geo.rotateX(-Math.PI/2);
+tmeshfield:{name:'Mesh Field (WebGL)',theme:'graphite', desc: "A taut mesh surface flexing in slow waves across the frame.",type:'three',body:`var geo=new THREE.PlaneGeometry(70,70,50,50);geo.rotateX(-Math.PI/2);
 var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:ac,wireframe:true,transparent:true,opacity:0.35}));scene.add(m);
 scene.add(new THREE.AmbientLight(0xffffff,0.6));
 cam.position.set(0,14,26);cam.lookAt(0,0,0);`,tick:`var p=m.geometry.attributes.position;for(var i=0;i<p.count;i++){var x=p.getX(i),z=p.getZ(i);p.setY(i,Math.sin(x*0.15+t*1.2)*Math.cos(z*0.15+t*0.9)*1.2);}p.needsUpdate=true;m.rotation.y+=0.0008;`},
-torbits:{name:'Orbital Rings (WebGL)',theme:'slate-blue',type:'three',body:`var g=new THREE.Group();
+torbits:{name:'Orbital Rings (WebGL)',theme:'slate-blue', desc: "Interlocking orbital rings turning on independent axes.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<8;i++){var r=3+i*1.6;var rg=new THREE.Mesh(new THREE.RingGeometry(r-0.08,r+0.08,64),new THREE.MeshBasicMaterial({color:i%2?ac:a2,side:THREE.DoubleSide,transparent:true,opacity:0.6}));rg.rotation.x=Math.PI/2+i*0.22;rg.rotation.z=i*0.4;g.add(rg);}
 scene.add(g);scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.PointLight(0xffffff,1.2,30);l.position.set(0,6,0);scene.add(l);
 cam.position.set(0,4,16);`,tick:`g.children.forEach(function(r,i){r.rotation.z+=0.002*(i%3+1);});g.rotation.y+=0.0012;`},
-tabstract:{name:'Abstract Flow (WebGL)',theme:'midnight-violet',type:'three',body:`var pts=[];
+tabstract:{name:'Abstract Flow (WebGL)',theme:'midnight-violet', desc: "An abstract flow of soft forms folding through one another.",type:'three',body:`var pts=[];
 for(var i=0;i<600;i++){var a=i*0.15;var r=Math.sin(i*0.02)*6;pts.push(new THREE.Vector3(Math.cos(a)*r,Math.sin(i*0.04)*4,Math.sin(a)*r));}
 var geo=new THREE.BufferGeometry().setFromPoints(pts);
 var line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ac,transparent:true,opacity:0.85}));scene.add(line);
@@ -8475,32 +8475,32 @@ var pts2=[];for(var j=0;j<400;j++){var a2=j*0.2;var r2=Math.cos(j*0.03)*7;pts2.p
 var geo2=new THREE.BufferGeometry().setFromPoints(pts2);
 var line2=new THREE.Line(geo2,new THREE.LineBasicMaterial({color:a2,transparent:true,opacity:0.6}));scene.add(line2);
 cam.position.set(0,4,20);cam.lookAt(0,0,0);`,tick:`line.rotation.y+=0.004;line.rotation.x+=0.001;line2.rotation.y-=0.003;line2.rotation.x+=0.002;`},
-tprisms:{name:'Light Prisms (WebGL)',theme:'lavender',type:'three',body:`var g=new THREE.Group();
+tprisms:{name:'Light Prisms (WebGL)',theme:'lavender', desc: "Refracting prisms scattering light into moving spectral bands.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<7;i++){var m=new THREE.Mesh(new THREE.ConeGeometry(1.2,2.6,4),new THREE.MeshStandardMaterial({color:i%2?ac:a2,metalness:0.7,roughness:0.15,flatShading:true}));var a=i/7*6.28;m.position.set(Math.cos(a)*8,0,Math.sin(a)*8);g.add(m);}
 var core=new THREE.Mesh(new THREE.OctahedronGeometry(1.8,0),new THREE.MeshStandardMaterial({color:t3,metalness:0.7,roughness:0.15,flatShading:true}));g.add(core);
 scene.add(g);scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.PointLight(0xffffff,1.5,30);l.position.set(0,7,0);scene.add(l);
 cam.position.set(0,5,18);cam.lookAt(0,0,0);`,tick:`g.children.forEach(function(m,i){m.rotation.y+=0.006;m.rotation.x+=0.002;m.position.y=Math.sin(t*0.7+i)*0.4;});`},
-tbiome:{name:'Biome Blobs (WebGL)',theme:'mint-fresh',type:'three',body:`var g=new THREE.Group();
+tbiome:{name:'Biome Blobs (WebGL)',theme:'mint-fresh', desc: "Soft organic blobs merging and separating in a fresh, living rhythm.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<9;i++){var r=1.2+Math.random()*2;var m=new THREE.Mesh(new THREE.SphereGeometry(r,28,28),new THREE.MeshStandardMaterial({color:[ac,a2,t3][i%3],roughness:0.4,metalness:0.2,flatShading:true}));m.position.set((Math.random()-0.5)*20,(Math.random()-0.5)*10,(Math.random()-0.5)*10);g.add(m);}
 scene.add(g);scene.add(new THREE.AmbientLight(0xffffff,0.55));var l=new THREE.DirectionalLight(0xffffff,1.1);l.position.set(10,12,8);scene.add(l);
 cam.position.set(0,2,22);`,tick:`g.children.forEach(function(m,i){m.position.y+=Math.sin(t*0.5+i*1.3)*0.006;m.rotation.x+=0.002;m.rotation.y+=0.003;});g.rotation.y+=0.001;`},
-tscifi:{name:'Sci-Fi Grid (WebGL)',theme:'cyberpunk',type:'three',body:`var grid=new THREE.GridHelper(80,40,ac,a2);grid.position.y=-3;scene.add(grid);
+tscifi:{name:'Sci-Fi Grid (WebGL)',theme:'cyberpunk', desc: "A sci-fi control grid with scanning lines sweeping across the plane.",type:'three',body:`var grid=new THREE.GridHelper(80,40,ac,a2);grid.position.y=-3;scene.add(grid);
 var geo=new THREE.BufferGeometry(),N=1500,pos=new Float32Array(N*3),col=new Float32Array(N*3);
 for(var i=0;i<N;i++){pos[i*3]=(Math.random()-0.5)*50;pos[i*3+1]=Math.random()*18-3;pos[i*3+2]=(Math.random()-0.5)*50;var c=Math.random()<0.7?ac:a2;col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
 geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
 var g=new THREE.Points(geo,new THREE.PointsMaterial({size:0.16,vertexColors:true,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(g);
 scene.add(new THREE.AmbientLight(0x334477,0.4));
 cam.position.set(0,8,26);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.002;grid.material.opacity=0.5+Math.sin(t)*0.15;`},
-tcarousel:{name:'3D Carousel (WebGL)',theme:'sunset',type:'three',body:`var g=new THREE.Group();
+tcarousel:{name:'3D Carousel (WebGL)',theme:'sunset', desc: "A rotating 3D carousel of panels revolving around a shared centre.",type:'three',body:`var g=new THREE.Group();
 for(var i=0;i<8;i++){var m=new THREE.Mesh(new THREE.BoxGeometry(2,3,0.4),new THREE.MeshStandardMaterial({color:[ac,a2,t3][i%3],metalness:0.5,roughness:0.3}));var a=i/8*6.28;m.position.set(Math.cos(a)*7,0,Math.sin(a)*7);m.rotation.y=-a;g.add(m);}
 var hub=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,4,12),new THREE.MeshStandardMaterial({color:ac2,metalness:0.6}));g.add(hub);
 scene.add(g);scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1.2);l.position.set(10,12,8);scene.add(l);
 cam.position.set(0,4,20);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.004;g.children.forEach(function(m,i){if(i<8)m.position.y=Math.sin(t*0.8+i)*0.4;});`},
-tgrid2:{name:'Checker World (WebGL)',theme:'graphite',type:'three',body:`var g=new THREE.Group();
+tgrid2:{name:'Checker World (WebGL)',theme:'graphite', desc: "An infinite chequered plane stretching to a distant horizon.",type:'three',body:`var g=new THREE.Group();
 for(var x=-4;x<=4;x++)for(var z=-4;z<=4;z++){var m=new THREE.Mesh(new THREE.BoxGeometry(1.8,1+((x+z)%3===0?0.8:0),1.8),new THREE.MeshStandardMaterial({color:(x+z)%2===0?0x333a44:0x22262e,roughness:0.8,metalness:0.3}));m.position.set(x*2,0.5,z*2);g.add(m);}
 scene.add(g);scene.add(new THREE.AmbientLight(0xffffff,0.5));var l=new THREE.DirectionalLight(0xffffff,1);l.position.set(10,14,8);scene.add(l);
 cam.position.set(0,12,20);cam.lookAt(0,0,0);`,tick:`g.rotation.y+=0.0012;`},
-tribbon:{name:'Infinite Ribbon (WebGL)',theme:'ocean-light',type:'three',body:`var N=400,pts=[];
+tribbon:{name:'Infinite Ribbon (WebGL)',theme:'ocean-light', desc: "A single endless ribbon twisting smoothly through space.",type:'three',body:`var N=400,pts=[];
 for(var i=0;i<N;i++)pts.push(new THREE.Vector3((i/N-0.5)*40,0,0));
 var geo=new THREE.BufferGeometry().setFromPoints(pts);
 var line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ac,transparent:true,opacity:0.9}));scene.add(line);
@@ -8740,9 +8740,24 @@ const SITE_SCENES_V2 = {
 function cube3(x,y,z,s,rx,ry){var p=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].map(function(v){return [v[0]*s,v[1]*s,v[2]*s];});
 var f=[[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[0,3,7,4],[1,2,6,5]];mesh3(p,f,ac,0.05,0.7,[rx,ry,t*0.2]);}
 function draw(){for(var i=0;i<cubes.length;i++){var c=cubes[i];c.rx+=c.vx;c.ry+=c.vy;cube3(c.x,c.y,c.z,c.s,c.rx,c.ry);}}draw();` },
-  p3sphere: { name: '3D Wire Sphere (Pro)', theme: 'slate-blue', desc: 'A rotating wireframe sphere built from real 3D latitude/longitude rings with perspective.', fn: `var ac=hex2rgb(C.a);var R=Math.min(W,H)*0.26;
-function ring(y,r,ry,rz){var pts=[];for(var i=0;i<=40;i++){var a=i/40*6.2832;pts.push([Math.cos(a)*r,y,Math.sin(a)*r]);}for(var i=0;i<pts.length-1;i++)line3(pts[i][0],pts[i][1],pts[i][2],pts[i+1][0],pts[i+1][1],pts[i+1][2],ac,0.4,1);}
-function draw(){var ry=t*0.3;for(var i=0;i<10;i++){var phi=i/10*Math.PI;var y=Math.cos(phi)*R,r=Math.sin(phi)*R;var R2=[ry,0,0];for(var p2=0;p2<20;p2++){var a=p2/20*6.2832;var x=Math.cos(a)*r,yy=y,z=Math.sin(a)*r;var q=rot3(x,yy,z,0,ry,0);var q2=rot3(x,yy,z,Math.PI/2,ry,0);dot3(q[0],q[1],q[2],2,ac,0.5);}}for(var j=0;j<12;j++){var th=j/12*6.2832;var pts=[];for(var k=0;k<=36;k++){var a2=k/36*6.2832;pts.push(rot3(Math.cos(a2)*R,Math.sin(a2)*R*0,0,0,0,0));}for(var k=0;k<pts.length-1;k++){var p1=rot3(Math.cos(k/36*6.2832)*R,0,Math.sin(k/36*6.2832)*R,0,ry,0);var p2=rot3(Math.cos((k+1)/36*6.2832)*R,0,Math.sin((k+1)/36*6.2832)*R,0,ry,0);line3(p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],ac,0.25,0.8);}}draw();` },
+  p3sphere: { name: '3D Wire Sphere (Pro)', theme: 'slate-blue', desc: 'A rotating wireframe sphere built from real 3D latitude/longitude rings with perspective.', fn: `var ac=hex2rgb(C.a),ac2=hex2rgb(C.a2||C.a);var R=Math.min(W,H)*0.26;
+function draw(){
+var ry=t*0.3,rx=0.35+Math.sin(t*0.25)*0.12;
+// latitude rings
+for(var i=1;i<10;i++){var phi=i/10*Math.PI;var y=Math.cos(phi)*R,r=Math.sin(phi)*R;var prev=null;
+for(var k=0;k<=44;k++){var a=k/44*6.2832;var q=rot3(Math.cos(a)*r,y,Math.sin(a)*r,rx,ry,0);
+if(prev)line3(prev[0],prev[1],prev[2],q[0],q[1],q[2],ac,0.22,0.9);prev=q;}}
+// longitude meridians
+for(var j=0;j<14;j++){var th=j/14*6.2832;var prev2=null;
+for(var k2=0;k2<=44;k2++){var ph=k2/44*Math.PI;var r2=Math.sin(ph)*R,y2=Math.cos(ph)*R;
+var q2=rot3(Math.cos(th)*r2,y2,Math.sin(th)*r2,rx,ry,0);
+if(prev2)line3(prev2[0],prev2[1],prev2[2],q2[0],q2[1],q2[2],ac2,0.16,0.8);prev2=q2;}}
+// vertex glow on the lit hemisphere
+for(var v=0;v<220;v++){var th3=v*2.399,ph3=Math.acos(1-2*(v+0.5)/220);
+var q3=rot3(Math.sin(ph3)*Math.cos(th3)*R,Math.cos(ph3)*R,Math.sin(ph3)*Math.sin(th3)*R,rx,ry,0);
+if(q3[2]<0)continue;dot3(q3[0],q3[1],q3[2],1.7,ac,0.25+(q3[2]/R)*0.45);}
+}
+draw();` },
   p3torus: { name: '3D Torus (Pro)', theme: 'midnight-violet', desc: 'A rotating 3D torus knot of glowing dots in perspective — real depth.', fn: `var ac=hex2rgb(C.a),ac2=hex2rgb(C.a2||C.t);function draw(){var n=220;for(var i=0;i<n;i++){var u=i/n*6.2832*3+t*0.4;var r=14+Math.sin(u*2)*5;var x=Math.cos(u)*r*0.8,y=Math.sin(u*2)*6,z=Math.sin(u)*r*0.8;var q=rot3(x,y,z,Math.sin(t*0.2)*0.4,t*0.5,0);var col=i%3?ac:ac2;dot3(q[0],q[1],q[2],2.4,col,0.8);}}draw();` },
   p3galaxy: { name: '3D Galaxy (Pro)', theme: 'space', desc: 'A spiral galaxy of stars rotated in true 3D with perspective and depth fade.', fn: `var ac=hex2rgb(C.a),ac2=hex2rgb(C.a2||C.t);function draw(){var n=500;for(var i=0;i<n;i++){var a=i*0.35;var r=Math.pow(i/n,0.8)*Math.min(W,H)*0.42;var x=Math.cos(a)*r,y=(Math.random()-0.5)*2*(1-r/(W*0.5)),z=Math.sin(a)*r;var q=rot3(x,y,z,t*0.12,0.35,0);var col=i%4===0?ac2:ac;dot3(q[0],q[1],q[2],1.8,col,0.8);}}draw();` },
   p3terrain: { name: '3D Terrain Mesh (Pro)', theme: 'forest-dark', desc: 'A shaded 3D terrain mesh rotating in perspective — real vertex displacement + height shading.', fn: `var ac=hex2rgb(C.a);var gs=22;function draw(){var R=[t*0.1,-0.5,0];for(var gy=0;gy<gs;gy++){for(var gx=0;gx<gs;gx++){var px=(gx/gs-0.5)*44,py=(gy/gs-0.5)*30;var h=Math.sin(px*0.25+t)*Math.cos(py*0.25+t*0.8)*3+Math.sin(px*0.6+py*0.4)*1.2;var q=rot3(px,h,py,R[0],R[1],R[2]);var shade=0.35+Math.max(0,Math.sin(px*0.25+t)*0.3);dot3(q[0],q[1],q[2],1.6,ac,shade);}}}draw();` },
@@ -8767,8 +8782,12 @@ for(var k=0;k<faces.length;k++){var fc=faces[k].f;ctx.beginPath();for(var m=0;m<
 Object.assign(SITE_SCENES, SITE_SCENES_V2);
 // unified scene lookup: canvas scenes + WebGL scenes
 Object.assign(SITE_SCENES, THREE_SCENES);
-function sceneInfo(id){return SITE_SCENES[id]||null;}
-function isThreeScene(id){return !!(THREE_SCENES[id]);}
+// Own-property lookups: SITE_SCENES['__proto__'] / ['constructor'] are truthy on a
+// plain object, so those ids used to resolve as if they were real scenes and were
+// served to the client instead of a clean 404.
+function __ownScene(map, id){ return (typeof id === 'string' && Object.prototype.hasOwnProperty.call(map, id)) ? map[id] : null; }
+function sceneInfo(id){return __ownScene(SITE_SCENES, id)||null;}
+function isThreeScene(id){return !!__ownScene(THREE_SCENES, id);}
 // scene → recommended theme (for concept packs)
 const SCENE_THEME = {};
 Object.keys(SITE_SCENES).forEach(function(id){ SCENE_THEME[id] = SITE_SCENES[id].theme; });
@@ -10110,32 +10129,29 @@ function nxVisualApplyEdits(html, overrides) {
 }
 
 async function aiBuildSite(env, ws, body) {
+  // UNIFIED BUILD PATH.
+  //
+  // This route used to be "ask the model for a full HTML document, else emit a
+  // static fallback template". That bypassed the entire composition engine, so
+  // /ai/build-site produced generic AI-shaped pages with no design direction, no
+  // composition plan, no hierarchy/rhythm system and no quality loop — while
+  // /ai/agentic-build produced art-directed output from the same brief.
+  //
+  // It now delegates to the SAME deterministic pipeline. The AI (when configured)
+  // enriches content inside that pipeline rather than authoring raw markup, so the
+  // design floor never depends on a model being available. The response contract
+  // ({ name, html }) is preserved, with design metadata added.
   const name = String(body.name || '').slice(0, 120) || 'My Website';
   const desc = String(body.description || '').slice(0, 800) || 'A modern business website';
-  const w = await getWorkspace(env, ws);
-  if (!(await withinDailyCap(env, ws, w.ai_daily_call_cap))) throw new Error(`Daily AI call cap (${w.ai_daily_call_cap}) reached — raise it in Settings → AI Providers if needed.`);
-  let html;
-  try {
-    const r = await callProvider(env, w, [{
-      role: 'user',
-      content: `Create a complete, modern, responsive single-page business website in plain HTML. Rules: ONLY inline CSS in a <style> tag, NO external resources (no CDN, no fonts, no JS frameworks — a tiny bit of vanilla JS is allowed), professional color palette, great typography, subtle CSS animations, sections: hero with headline+subheadline+CTA, services/features (3-6 cards), about, testimonials (2-3), contact with a simple form (action="#") showing email + phone. Site name: "${name}". About: ${desc}. Return ONLY the full HTML document starting with <!DOCTYPE html>.`,
-    }], { max_tokens: 4000 });
-    html = r.content || '';
-    await trackAIUsage(env, ws, 'build-site', r.provider, r.usage);
-  } catch (e) {
-    html = SITE_FALLBACK_HTML(name, desc);
-  }
-  // Only keep the first HTML document if the model added chatter around it.
-  const docStart = html.indexOf('<!DOCTYPE html>');
-  const docEnd = html.lastIndexOf('</html>');
-  if (docStart >= 0 && docEnd > docStart) html = html.slice(docStart, docEnd + 7);
-  if (!html.includes('<!DOCTYPE html>') && !html.startsWith('<html')) html = SITE_FALLBACK_HTML(name, desc);
-  if (html.length > 400000) html = html.slice(0, 400000);
-  // Quality guarantee: inject SEO/OG/JSON-LD, preconnect, lazy/alt images,
-  // rel=noopener, accessibility & mobile hygiene — deterministic & idempotent.
-  // (Keep the readable name for the frontend; the HTML is what gets served.)
-  html = enhanceSiteHtml(html, name, { description: desc });
-  return { name, html };
+  const built = await buildAgenticSite(env, ws, Object.assign({}, body, { name, description: desc }));
+  return {
+    name: built.name,
+    html: built.html,
+    direction: built.direction || '',
+    designExplanation: built.designExplanation || '',
+    audit: built.audit,
+    iterations: built.iterations,
+  };
 }
 async function buildAgenticSite(env, ws, body) {
   const name = String(body.name || 'My Website').slice(0, 120);

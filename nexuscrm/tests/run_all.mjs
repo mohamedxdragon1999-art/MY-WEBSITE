@@ -24,6 +24,8 @@ const SUITES = [
   'test_graph_hardening.mjs',   // Adversarial: IR mutation purity/atomicity, prototype-key impersonation, integrity validator, render + canvas entry points
   'test_api_security.mjs',      // Adversarial: cross-tenant IDOR, forged tokens, SQLi, prototype pollution, oversized payloads, stored XSS
   'test_qa_integrity.mjs',      // Adversarial: Design-QA must rank real design above bad design and resist marker-stuffing
+  'test_scene_gallery.mjs',     // 3D gallery: every advertised scene has metadata and COMPILING code
+  'test_build_site_unified.mjs',// /ai/build-site must build through the composition engine, not the legacy template
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
