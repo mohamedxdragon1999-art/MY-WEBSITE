@@ -57,7 +57,7 @@ const NX_COMPOSE_DIRECTIONS = {
     palette: { bg: '#FAFAF8', bg2: '#F2F2EE', surface: '#FFFFFF', surface2: '#EBEBE5', text: '#111210', muted: '#5A5C55', faint: '#8A8C83', accent: '#1B4DE4', accent2: '#0A0A0A', line: 'rgba(17,18,16,.14)', rule: '#111210' },
     type: { family: "'Inter', 'Helvetica Neue', sans-serif", body: "'Inter', system-ui, sans-serif", display: 'clamp(3rem,8vw,5.6rem)', hero: 'clamp(2.2rem,4.8vw,3.6rem)', section: 'clamp(1.5rem,2.8vw,2.1rem)', body: 'clamp(1rem,1.25vw,1.08rem)', caption: '0.75rem', btn: '0.74rem', measure: '72ch' },
     radius: 0, shadow: 'none', surfaceFx: 'none',
-    heroVariant: 'split', featureMode: 'grid', reviewMode: 'quote',
+    heroVariant: 'split', featureMode: 'ruled', reviewMode: 'quote',
     sectionOrder: ['nav', 'hero', 'metrics', 'feature', 'story', 'work', 'cta', 'footer'],
     rhythm: ['normal', 'compact', 'normal', 'normal', 'compact', 'normal', 'compact'],
     density: 'balanced', motion: 'functional', emphasis: { hero: 100, cta: 70, feature: 55, metrics: 45, contact: 60 },
@@ -116,7 +116,13 @@ function nxComposePlan(content, directionId) {
     return false;
   };
   sections = sections.filter(s => !drop(s));
+  // Guarantee the required closing sections exist. `footer` is STRUCTURALLY
+  // terminal: appending a missing `contact` after an already-present `footer`
+  // would render the page furniture out of order, so re-seat the footer last.
   for (const req of ['cta', 'contact', 'footer']) if (!sections.includes(req)) sections.push(req);
+  if (sections[sections.length - 1] !== 'footer') {
+    sections = sections.filter(s => s !== 'footer').concat(['footer']);
+  }
   // Section Rhythm System: map the direction's rhythm motif onto the final,
   // filtered section list so EVERY section gets an explicit, real spacing beat.
   const motif = (d.rhythm && d.rhythm.length ? d.rhythm : ['normal']);
@@ -220,6 +226,12 @@ function __feature(c, p) {
   }
   if (mode === 'split') {
     return `<section class="c-feature c-feature-split" id="feature" data-r><div class="c-wrap c-split"><div class="c-split-img">${__art(6, 640, 800, p.direction)}</div><div class="c-split-body">${head}${items.slice(0, 3).map(it => `<div class="c-split-item"><span class="c-dot"></span><div><h4>${__e(it.title)}</h4><p>${__e(it.text || c.sub)}</p></div></div>`).join('')}</div></div></section>`;
+  }
+  if (mode === 'ruled') {
+    // Ruled grid — the authentic Swiss treatment: information sits in a strict
+    // modular grid separated by hairline rules, NOT in elevated card surfaces.
+    // This is a real alternative presentation mode (§11 card-soup), not a reskin.
+    return `<section class="c-feature c-feature-ruled" id="feature" data-r><div class="c-wrap">${head}<div class="c-ruled${items.length > 3 ? ' c-ruled-3' : ''}">${items.slice(0, 6).map((it, i) => `<div class="c-ruled-cell"><span class="c-ruled-idx">${String(i + 1).padStart(2, '0')}</span><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div>`).join('')}</div></div></section>`;
   }
   // grid
   return `<section class="c-feature c-feature-grid" id="feature" data-r><div class="c-wrap">${head}<div class="c-grid${items.length > 3 ? ' c-grid-3' : ''}">${items.slice(0, 6).map((it) => `<div class="c-card"><span class="c-card-k">${__e(it.icon || '◦')}</span><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div>`).join('')}</div></div></section>`;
@@ -382,6 +394,15 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
 .c-grid-3{grid-template-columns:repeat(3,1fr)}
 .c-card{padding:28px;background:var(--surf);border:1px solid var(--line);border-radius:var(--rad)}
+/* ruled grid — hairline modular cells, no elevated surface (Swiss) */
+.c-ruled{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:1px solid var(--rule)}
+.c-ruled-3{grid-template-columns:repeat(3,1fr)}
+.c-ruled-cell{padding:32px 28px 36px 0;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+.c-ruled-cell:nth-child(2n){padding-right:0}
+.c-ruled-3 .c-ruled-cell:nth-child(3n){border-right:0}
+.c-ruled-idx{display:block;font-size:var(--fs-caption);letter-spacing:.14em;color:var(--accent);margin-bottom:14px;font-variant-numeric:tabular-nums}
+.c-ruled-cell h3{margin:0 0 10px;font-size:calc(var(--fs-section)*.62);line-height:1.15}
+.c-ruled-cell p{margin:0;color:var(--muted);max-width:38ch}
 .c-card-k{display:block;font-size:1.2rem;margin-bottom:12px;color:var(--accent)}
 .c-card h3{font-family:var(--disp);font-size:1.25rem;margin-bottom:8px;letter-spacing:-.01em}
 .c-card p{color:var(--muted);font-size:${t.body}}
@@ -460,6 +481,8 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 @media (max-width:900px){
   .c-hero-editorial .c-hero-inner,.c-hero-split .c-hero-inner,.c-hero-overlap .c-hero-inner,.c-story-inner,.c-split{grid-template-columns:1fr}
   .c-grid,.c-grid-3,.c-bento,.c-work-grid,.c-reviewGrid,.c-metrics-grid{grid-template-columns:1fr}
+  .c-ruled,.c-ruled-3{grid-template-columns:1fr}
+  .c-ruled-cell{border-right:0;padding-right:0}
   .c-bento-big{grid-row:auto}
   .c-edrow{grid-template-columns:1fr;gap:10px}
   .c-altrow{grid-template-columns:1fr;gap:14px}.c-altrow-img{order:-1}

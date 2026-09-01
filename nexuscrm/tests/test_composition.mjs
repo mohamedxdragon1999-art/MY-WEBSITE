@@ -266,6 +266,34 @@ console.log('\n== O. VISUAL QUALITY LOOP (§20): corrupt → measure → patch �
   check('quality loop improves every direction (no direction left degraded)', okAll, msg.join(' | '));
 }
 
+console.log('\n== P. STRUCTURAL INVARIANTS: page furniture order + no card-soup in ANY direction ==');
+{
+  // P1. `footer` must be the LAST rendered section in every direction. A missing
+  // `contact` used to be appended AFTER an already-present footer, so luxury-art
+  // and swiss-structured rendered footer-before-contact.
+  let footerLast = true; const badFooter = [];
+  for (const d of DIRS) {
+    const order = nxStructuralSignature(ir.nxCompose(richPlan(), { direction: d }).html).order || [];
+    const last = String(order[order.length - 1] || '');
+    if (!/c-footer/.test(last)) { footerLast = false; badFooter.push(d + ':' + last); }
+  }
+  check('footer is structurally terminal in every direction', footerLast, badFooter.join(','));
+
+  // P2. No direction may degenerate into card-soup. swiss-structured previously
+  // measured cardDependency 0.6 / monotony 49 by using generic feature cards.
+  let noSoup = true; const soupy = [];
+  for (const d of DIRS) {
+    const rep = st.nxRepetitionModel(ir.nxCompose(richPlan(), { direction: d }).html);
+    if (rep.cardDependency > 0.35 || rep.monotony > 45) { noSoup = false; soupy.push(d + ' cardDep=' + rep.cardDependency + ' monotony=' + rep.monotony); }
+  }
+  check('no direction degenerates into card-soup', noSoup, soupy.join(' | '));
+
+  // P3. Feature families must be genuinely distinct across directions (a shared
+  // fallback "grid" for several directions would be a reskin, not composition).
+  const feats = DIRS.map(d => nxStructuralSignature(ir.nxCompose(richPlan(), { direction: d }).html).feature);
+  check('every direction resolves a distinct, recognised feature family', new Set(feats).size === DIRS.length && !feats.includes('generic'), feats.join(','));
+}
+
 const total = passed + failed;
 console.log('\n────────────────────────────────────────');
 console.log((failed === 0 ? 'ALL PASSED' : 'FAILURES') + ' — ' + passed + '/' + total + ' passing');

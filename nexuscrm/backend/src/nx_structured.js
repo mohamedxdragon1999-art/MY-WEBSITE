@@ -69,6 +69,7 @@ function featureVariant(body) {
   if (/c-feature-alt/.test(cls)) return 'alternating';
   if (/c-feature-bento/.test(cls)) return 'bento';
   if (/c-feature-split/.test(cls)) return 'split';
+  if (/c-feature-ruled/.test(cls)) return 'ruled';
   if (/c-feature-grid/.test(cls)) return 'grid';
   return 'generic';
 }
@@ -173,11 +174,11 @@ function nxRepetitionModel(html) {
   const componentDiversity = families.length;
   // card dependency: cards/reviews vs. all content-representational blocks
   const cards = doc.querySelectorAll('.c-card, .c-review').length;
-  const blocks = doc.querySelectorAll('.c-card, .c-review, .c-edrow, .c-altrow, .c-work-item, .c-quote, .c-bento-cell, .c-split-item, .c-metric').length;
+  const blocks = doc.querySelectorAll('.c-card, .c-review, .c-edrow, .c-altrow, .c-work-item, .c-quote, .c-bento-cell, .c-split-item, .c-metric, .c-ruled-cell').length;
   const cardDependency = blocks ? cards / blocks : 0;
   // layout distinctness among section layout modes
   const modes = new Set();
-  sections.forEach((s) => { const c = s.getAttribute('class') || ''; const m = c.match(/c-(grid|bento|work-grid|reviewGrid|metrics-grid|edlist|altlist|split|story|hero-[a-z]+)/); if (m) modes.add(m[1]); });
+  sections.forEach((s) => { const c = s.getAttribute('class') || ''; const m = c.match(/c-(ruled|grid|bento|work-grid|reviewGrid|metrics-grid|edlist|altlist|split|story|hero-[a-z]+)/); if (m) modes.add(m[1]); });
   const layoutDistinctness = Math.min(1, modes.size / 5);
   // rhythm variety
   const rhythms = new Set([...doc.querySelectorAll('[data-rhythm]')].map((e) => e.getAttribute('data-rhythm')));
