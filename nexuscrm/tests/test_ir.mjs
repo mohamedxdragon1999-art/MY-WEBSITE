@@ -8,9 +8,9 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 // Let nx_ir resolve the color/token helpers from the design system.
-globalThis.__NX_DESIGN = require('/home/user/nx_design.js');
+globalThis.__NX_DESIGN = require('../nx_design.js');
 
-const IR = require('/home/user/nx_ir.js');
+const IR = require('../nx_ir.js');
 const {
   nxValidateNode, nxValidateProject,
   nxBriefFromPrompt, nxBriefValidate,

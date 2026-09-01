@@ -5,10 +5,10 @@
 // Run: node tests/test_version.mjs
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-globalThis.__NX_IR = require('/home/user/nx_ir.js');
-globalThis.__NX_DESIGN = require('/home/user/nx_design.js');
-const G = require('/home/user/nx_graph.js');
-const IR = require('/home/user/nx_ir.js');
+globalThis.__NX_IR = require('../nx_ir.js');
+globalThis.__NX_DESIGN = require('../nx_design.js');
+const G = require('../nx_graph.js');
+const IR = require('../nx_ir.js');
 const { nxHistoryPush, nxSnapshotView, nxHistoryRevert, nxCompare, nxDiff } = G;
 
 let passed = 0, failed = 0; const failures = [];
@@ -42,13 +42,14 @@ console.log('\n== 2. REVERT ACTUALLY RESTORES THE GRAPH ==');
   const p = mkProject();
   const hero = p.order.find(id => p.nodes[id].semanticRole === 'hero');
   // V1 = p. V2 = change headline + token via the mutation engine.
+  const priorPrimary = p.tokens.primaryColor; // capture the REAL prior value (not a stale literal)
   const v2 = IR.nxProjectPatch(p, [{ op: 'node.set', id: hero, field: 'content', value: { headline: 'CHANGED' } }, { op: 'token.update', key: 'primaryColor', value: '#123456' }]).project;
   const entry = nxHistoryPush(v2, [{ op: 'node.set', id: hero, field: 'content', value: { headline: 'CHANGED' } }], 'edit headline', p);
   check('history records 1 entry + a prior snapshot', entry && v2.history.length === 1 && !!v2.history[0].beforeView);
   const rev = nxHistoryRevert(v2, 1);
   check('revert is ok and returns a restored project', rev.ok === true && !!rev.project, JSON.stringify(rev.errors || []));
   check('revert restores the headline to the prior content', rev.project.content[hero].headline === 'Original headline');
-  check('revert restores the token', rev.project.tokens.primaryColor === '#0a1638');
+  check('revert restores the token', rev.project.tokens.primaryColor === priorPrimary, 'expected ' + priorPrimary + ', got ' + rev.project.tokens.primaryColor);
   check('revert returns ops describing the change', Array.isArray(rev.ops) && rev.ops.some(o => o.op === 'token.update'));
   check('restored project is a valid graph', IR.nxValidateGraphIntegrity(rev.project).ok);
   // reverting again with no history → honest failure
@@ -61,11 +62,12 @@ console.log('\n== 3. nxDIFF IS AN HONEST "WHAT CHANGED" REPORTER ==');
 {
   const p = mkProject();
   const hero = p.order.find(id => p.nodes[id].semanticRole === 'hero');
+  const priorPrimary = p.tokens.primaryColor; // capture the REAL prior value
   const v2 = IR.nxProjectPatch(p, [{ op: 'node.set', id: hero, field: 'content', value: { headline: 'Changed' } }, { op: 'token.update', key: 'primaryColor', value: '#222222' }]).project;
   const d = nxDiff(p, v2);
   check('diff detects the content change + the token change', d.some(o => o.op === 'token.update' && o.key === 'primaryColor') && d.some(o => o.op === 'node.set' && o.id === hero));
   const d2 = nxDiff(v2, p);
-  check('diff is directional (reverse diff has reversed values)', d2.some(o => o.op === 'token.update' && o.value === '#0a1638'));
+  check('diff is directional (reverse diff has reversed values)', d2.some(o => o.op === 'token.update' && o.key === 'primaryColor' && o.value === priorPrimary));
 }
 
 console.log('\n== 4. nxCOMPARE = REAL MEASURED DELTA (not hard-coded zero) ==');

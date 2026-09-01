@@ -6,10 +6,10 @@
 // Run: node tests/test_import.mjs
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-globalThis.__NX_IR = require('/home/user/nx_ir.js');
-globalThis.__NX_DESIGN = require('/home/user/nx_design.js');
-const G = require('/home/user/nx_graph.js');
-const IR = require('/home/user/nx_ir.js');
+globalThis.__NX_IR = require('../nx_ir.js');
+globalThis.__NX_DESIGN = require('../nx_design.js');
+const G = require('../nx_graph.js');
+const IR = require('../nx_ir.js');
 
 let passed = 0, failed = 0; const failures = [];
 function check(name, cond, extra = '') {
@@ -58,7 +58,7 @@ console.log('\n== 3. TEXT / ASSETS / CARDS / TOKENS EXTRACTED ==');
 console.log('\n== 4. IMPORTED GRAPH CAN BE RENDERED (enters the pipeline) ==');
 {
   globalThis.__NX_DEPS = { design: globalThis.__NX_DESIGN, ir: globalThis.__NX_IR, graph: G };
-  const R = require('/home/user/nx_render.js');
+  const R = require('../nx_render.js');
   const r = G.nxImportHtml(HTML, { name: 'Acme' });
   const doc = R.nxRenderDocument(r.project);
   check('imported graph renders a tagged document', doc.html && doc.html.includes('data-nx-id'));

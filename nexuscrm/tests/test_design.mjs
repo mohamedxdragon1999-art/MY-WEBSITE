@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
-const D = (await import(join('/home/user', 'nx_design.js'))); // shared engine
+const D = (await import(join(ROOT, 'nx_design.js'))); // shared engine
 const {
   NX_BRAND_DEFAULTS, NX_COMPONENTS, NX_DIRECTIONS,
   expandHex, contrastRatio, isHex,

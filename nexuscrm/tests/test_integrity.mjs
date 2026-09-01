@@ -5,8 +5,8 @@
 // Run: node tests/test_integrity.mjs
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-globalThis.__NX_DESIGN = require('/home/user/nx_design.js');
-const IR = require('/home/user/nx_ir.js');
+globalThis.__NX_DESIGN = require('../nx_design.js');
+const IR = require('../nx_ir.js');
 const {
   nxNewProject, nxSeedNode, nxProjectPatch, nxNodeMove, nxNodeDelete, nxNodeCreate,
   nxValidateGraphIntegrity, nxValidateGraphState, nxValidateProject,

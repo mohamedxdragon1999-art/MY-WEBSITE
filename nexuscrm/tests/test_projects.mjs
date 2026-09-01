@@ -5,11 +5,11 @@
 // Run: node tests/test_projects.mjs
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const design = require('/home/user/nx_design.js');
-const ir = require('/home/user/nx_ir.js');
-const graph = require('/home/user/nx_graph.js');
+const design = require('../nx_design.js');
+const ir = require('../nx_ir.js');
+const graph = require('../nx_graph.js');
 globalThis.__NX_DEPS = { design, ir, graph };
-const R = require('/home/user/nx_render.js');
+const R = require('../nx_render.js');
 const { nxSeedComponent, nxRenderDocument, nxBuildSiteGraph } = R;
 
 let passed = 0, failed = 0; const failures = [];

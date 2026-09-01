@@ -10,11 +10,11 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
 
-const design = require('/home/user/nx_design.js');
-const ir = require('/home/user/nx_ir.js');
-const graph = require('/home/user/nx_graph.js');
+const design = require('../nx_design.js');
+const ir = require('../nx_ir.js');
+const graph = require('../nx_graph.js');
 globalThis.__NX_DEPS = { design, ir, graph };
-const R = require('/home/user/nx_render.js');
+const R = require('../nx_render.js');
 const {
   nxRenderTree, nxRenderNode, nxRenderDocument, nxRuntimeScript, nxSeedComponent,
   nxCanvasAction, nxCanvasApply, nxCanvas, ngGroup, ngUngroup,

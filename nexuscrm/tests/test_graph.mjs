@@ -8,11 +8,11 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 // Provide nx_ir to nx_graph via the __NX_IR registry, and the design system for QA.
-globalThis.__NX_IR = require('/home/user/nx_ir.js');
-globalThis.__NX_DESIGN = require('/home/user/nx_design.js');
+globalThis.__NX_IR = require('../nx_ir.js');
+globalThis.__NX_DESIGN = require('../nx_design.js');
 
-const G = require('/home/user/nx_graph.js');
-const IR = require('/home/user/nx_ir.js');
+const G = require('../nx_graph.js');
+const IR = require('../nx_ir.js');
 const {
   nxSetConstraint, nxGetConstraint, nxSolveConstraint, nxSolveLayout,
   nxDefineState, nxStates, nxCompileStateCss,

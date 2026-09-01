@@ -5,7 +5,7 @@
 // produces a valid 21-blade site; (4) config (phone/email) flows through runtime.
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const T = require('/home/user/nx_template.js');
+const T = require('../nx_template.js');
 
 let passed = 0, failed = 0; const failures = [];
 function check(name, cond, extra = '') {

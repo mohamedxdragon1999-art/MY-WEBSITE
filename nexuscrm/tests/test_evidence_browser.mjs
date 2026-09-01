@@ -15,13 +15,13 @@
 // Run: node tests/test_evidence_browser.mjs   (or via tests/run_all.mjs)
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const design = require('/home/user/nx_design.js');
-const ir = require('/home/user/nx_ir.js');
-const graph = require('/home/user/nx_graph.js');
+const design = require('../nx_design.js');
+const ir = require('../nx_ir.js');
+const graph = require('../nx_graph.js');
 globalThis.__NX_DEPS = { design, ir, graph };
-const R = require('/home/user/nx_render.js');
+const R = require('../nx_render.js');
 const { nxBuildSiteGraph } = R;
-const EV = require('/home/user/repo/nexuscrm/nx_evidence.js');
+const EV = require('../nx_evidence.js');
 
 let passed = 0, failed = 0, skipped = 0; const failures = []; let skippedAll = false;
 function check(name, cond, extra = '') {
@@ -118,7 +118,7 @@ if (browserAvailable) {
     // We intentionally INJECT a real defect through a GRAPH mutation (not by editing
     // HTML), prove the browser catches it, then REPAIR it through the graph and
     // prove the evidence metrics improved. This is the actual "before / after" loop.
-    const ir = require('/home/user/nx_ir.js');
+    const ir = require('../nx_ir.js');
     let bad = nxBuildSiteGraph({ name: 'Meridian', brief: 'premium futuristic saas, cinematic, dark', primary: '#04070f', accent: '#ff6b1a', motionStyle: 'cinematic', heroVariant: 'split' });
     // find the hero copy heading and the pricing-grid; force a REAL defect:
     const heroHead = bad.project.order.find(id => bad.project.nodes[id].component.family === 'heading' && bad.project.content[id].level === 1) || bad.project.order.find(id => bad.project.nodes[id].component.family === 'heading');
