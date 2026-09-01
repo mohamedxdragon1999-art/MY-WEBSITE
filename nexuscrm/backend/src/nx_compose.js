@@ -52,6 +52,54 @@ const NX_COMPOSE_DIRECTIONS = {
     density: 'dense', motion: 'energetic', emphasis: { hero: 100, cta: 85, feature: 60, work: 65, contact: 60 },
     desc: 'Unexpected composition, strong contrast, large/small scale variation, overlap, experimental grid, expressive motion.',
   },
+  // ── SIGNAL INDUSTRIAL ──────────────────────────────────────────────────
+  // Distilled from the reference site design the owner supplied as the house
+  // default: a deep near-black field, a single hot-orange accent used sparingly
+  // as a signal (never as decoration), Space Grotesk display against Inter body,
+  // a mono eyebrow in wide tracking, and generous 72–132px section breathing.
+  //
+  // This is a TOKEN SET, not a copy of that page. The 274KB literal template is
+  // one client's finished site; this reproduces its design language so any brief
+  // renders in that style with its own content, structure and composition.
+  'signal-industrial': {
+    id: 'signal-industrial',
+    name: 'Signal Industrial',
+    family: 'engineered',
+    palette: {
+      bg: '#060912', bg2: '#080C16', surface: '#0D1322', surface2: '#121A2C',
+      text: '#EEF2F8', muted: '#97A3BA', faint: '#6B7791',
+      accent: '#FF5F00', accent2: '#FFB23E',
+      line: 'rgba(255,255,255,.10)', rule: 'rgba(255,255,255,.13)',
+    },
+    type: {
+      family: "'Space Grotesk','Inter',system-ui,sans-serif",
+      // Grotesk display against a neutral body is the core pairing of this
+      // direction; the mono is reserved for eyebrows and technical labels.
+      bodyFamily: "'Inter',system-ui,-apple-system,sans-serif",
+      mono: "'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace",
+      body: 'clamp(1rem,1.2vw,1.125rem)',
+      display: 'clamp(2.5rem,6.6vw,4.75rem)',
+      hero: 'clamp(2rem,4.2vw,3rem)',
+      section: 'clamp(1.625rem,3.1vw,2.4rem)',
+      caption: '0.76rem',
+      btn: '0.8rem',
+      measure: '68ch',
+    },
+    radius: 14,
+    shadow: '0 30px 80px -30px rgba(0,0,0,.9)',
+    surfaceFx: 'panel',
+    heroVariant: 'aurora',
+    featureMode: 'spec',
+    reviewMode: 'grid',
+    // Proof-forward order: credibility (metrics) lands immediately after the
+    // hero, matching how the reference design argues for a trade business.
+    sectionOrder: ['nav', 'hero', 'marquee', 'metrics', 'feature', 'story', 'work', 'reviews', 'faq', 'cta', 'contact', 'footer'],
+    rhythm: ['compact', 'dramatic', 'compact', 'normal', 'spacious', 'normal', 'normal', 'compact', 'normal', 'spacious', 'normal'],
+    density: 'balanced',
+    motion: 'engineered',
+    emphasis: { hero: 100, metrics: 60, feature: 70, cta: 80, work: 55, contact: 65 },
+    desc: 'Deep engineered dark field with a single hot-signal accent, technical mono eyebrows, grotesk display against a neutral body, panelled surfaces and generous structural breathing.',
+  },
   'swiss-structured': {
     id: 'swiss-structured', name: 'Modern Swiss', family: 'systematic',
     palette: { bg: '#FAFAF8', bg2: '#F2F2EE', surface: '#FFFFFF', surface2: '#EBEBE5', text: '#111210', muted: '#5A5C55', faint: '#8A8C83', accent: '#1B4DE4', accent2: '#0A0A0A', line: 'rgba(17,18,16,.14)', rule: '#111210' },
@@ -260,6 +308,24 @@ function __hero(c, p) {
   if (v === 'minimal') {
     return `<section class="c-hero c-hero-minimal" id="home" data-r><div class="c-wrap c-hero-inner">${eyebrow}${title}${body}<div class="c-hero-actions">${actions}</div></div></section>`;
   }
+  if (v === 'aurora') {
+    // Signature hero of the engineered family: three offset radial glow fields
+    // drifting behind a hard technical grid, copy on the left, and a spec-row
+    // that states real, verifiable facts instead of invented credibility stats.
+    const specs = [];
+    if (Array.isArray(c.stats)) for (const st of c.stats.slice(0, 3)) {
+      if (st && (st.value != null) && st.label) specs.push({ v: String(st.value), l: String(st.label) });
+    }
+    const specRow = specs.length
+      ? `<dl class="c-hero-specs">${specs.map(x => `<div><dt>${__e(x.l)}</dt><dd>${__e(x.v)}</dd></div>`).join('')}</dl>`
+      : '';
+    return `<section class="c-hero c-hero-aurora" id="home" data-r>`
+      + `<div class="c-aurora" aria-hidden="true"><i class="c-a1"></i><i class="c-a2"></i><i class="c-a3"></i></div>`
+      + `<div class="c-hero-grid-lines" aria-hidden="true"></div>`
+      + `<div class="c-wrap c-hero-inner">`
+      + `<div class="c-hero-copy">${eyebrow}${title}${body}${actions}${specRow}</div>`
+      + `</div></section>`;
+  }
   if (v === 'overlap') {
     return `<section class="c-hero c-hero-overlap" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-badges">${__art(2, 520, 340, p.direction)}${__art(7, 380, 240, p.direction)}</div></div></section>`;
   }
@@ -293,6 +359,18 @@ function __feature(c, p) {
   }
   if (mode === 'split') {
     return `<section class="c-feature c-feature-split" id="feature" data-r><div class="c-wrap c-split"><div class="c-split-img">${__art(6, 640, 800, p.direction)}</div><div class="c-split-body">${head}${items.slice(0, 3).map(it => `<div class="c-split-item"><span class="c-dot"></span><div><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div></div>`).join('')}</div></div></section>`;
+  }
+  if (mode === 'spec') {
+    // Spec sheet — the engineered treatment: each capability is a numbered
+    // technical row (index · title · description), aligned to a hard baseline
+    // with a hairline separator. Deliberately NOT cards: an engineering firm
+    // presents capabilities as a schedule of works, not as marketing tiles.
+    return `<section class="c-feature c-feature-spec" id="feature" data-r><div class="c-wrap">${head}`
+      + `<ol class="c-spec">${items.slice(0, 6).map((it, i) => `<li class="c-spec-row">`
+        + `<span class="c-spec-idx">${String(i + 1).padStart(2, '0')}</span>`
+        + `<h3 class="c-spec-title">${__e(it.title)}</h3>`
+        + `<p class="c-spec-desc">${__e(it.desc)}</p>`
+        + `</li>`).join('')}</ol></div></section>`;
   }
   if (mode === 'ruled') {
     // Ruled grid — the authentic Swiss treatment: information sits in a strict
@@ -382,10 +460,10 @@ function __css(d, p) {
   const radius = (p && p.radius != null) ? p.radius : d.radius;
   const shadow = (p && p.shadow != null) ? p.shadow : d.shadow;
   return `
-:root{--bg:${pal.bg};--bg2:${pal.bg2};--surf:${pal.surface};--surf2:${pal.surface2};--text:${pal.text};--muted:${pal.muted};--faint:${pal.faint};--accent:${pal.accent};--accent2:${pal.accent2};--line:${pal.line};--rule:${pal.rule};--disp:${t.family};--body:${t.body};--rad:${radius}px;--shadow:${shadow};--measure:${t.measure}}
+:root{--bg:${pal.bg};--bg2:${pal.bg2};--surf:${pal.surface};--surf2:${pal.surface2};--text:${pal.text};--muted:${pal.muted};--faint:${pal.faint};--accent:${pal.accent};--accent2:${pal.accent2};--line:${pal.line};--rule:${pal.rule};--disp:${t.family};--font:${t.bodyFamily || t.family};--body:${t.body};--rad:${radius}px;--shadow:${shadow};--measure:${t.measure};--mono:${t.mono || "'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace"};--fs-caption:${t.caption};--fs-display:${t.display};--fs-hero:${t.hero};--fs-section:${t.section};--ease:cubic-bezier(.22,1,.36,1);--emph:1}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:var(--body);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{font-family:var(--font);font-size:var(--body);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 /* A long unbroken word, URL or email must never force horizontal scroll on a
    narrow viewport — the classic mobile-overflow defect. Break only where needed. */
 h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-break:normal}
@@ -435,6 +513,43 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-hero-minimal .c-lead{text-align:center}
 /* overlap bold */
 .c-hero-overlap .c-hero-inner{grid-template-columns:1.2fr .8fr;align-items:center}
+/* ── AURORA HERO (engineered family) ────────────────────────────────────
+   Three offset radial fields drift slowly behind a hard technical grid. The
+   glow is the ONLY decorative element in the whole direction, which is what
+   lets a single hot accent read as a signal rather than as noise. */
+.c-hero-aurora{position:relative;overflow:hidden;isolation:isolate}
+.c-hero-aurora .c-hero-inner{padding-block:clamp(96px,13vw,168px);position:relative;z-index:2}
+.c-hero-aurora .c-hero-copy{max-width:min(100%,58ch)}
+.c-aurora{position:absolute;inset:-25% -10%;z-index:0;filter:blur(70px);opacity:.5;pointer-events:none}
+.c-aurora i{position:absolute;display:block;border-radius:50%}
+.c-aurora .c-a1{width:44vw;height:44vw;left:-6%;top:-12%;background:radial-gradient(circle,var(--accent) 0%,transparent 68%);animation:c-drift1 26s ease-in-out infinite alternate}
+.c-aurora .c-a2{width:34vw;height:34vw;right:-4%;top:6%;background:radial-gradient(circle,var(--accent2) 0%,transparent 66%);animation:c-drift2 32s ease-in-out infinite alternate}
+.c-aurora .c-a3{width:30vw;height:30vw;left:32%;bottom:-18%;background:radial-gradient(circle,var(--accent) 0%,transparent 70%);opacity:.55;animation:c-drift3 38s ease-in-out infinite alternate}
+@keyframes c-drift1{to{transform:translate3d(6%,4%,0) scale(1.12)}}
+@keyframes c-drift2{to{transform:translate3d(-5%,7%,0) scale(1.08)}}
+@keyframes c-drift3{to{transform:translate3d(4%,-6%,0) scale(1.15)}}
+.c-hero-grid-lines{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:76px 76px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 30%,transparent 78%);
+          mask-image:radial-gradient(ellipse at 50% 40%,#000 30%,transparent 78%)}
+/* Technical spec row — real facts from the brief, never invented numbers. */
+.c-hero-specs{display:flex;flex-wrap:wrap;gap:clamp(24px,4vw,56px);margin-top:clamp(28px,4vw,44px);
+  padding-top:clamp(20px,2.6vw,28px);border-top:1px solid var(--line)}
+.c-hero-specs dt{font-family:var(--mono);font-size:var(--fs-caption);letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+.c-hero-specs dd{font-size:clamp(1.5rem,2.6vw,2.1rem);font-weight:700;letter-spacing:-.02em;color:var(--text)}
+/* ── SPEC SHEET FEATURE FAMILY (engineered) ─────────────────────────────
+   A schedule of works, not a card grid: numbered rows on a hard baseline,
+   separated by hairlines. The accent appears only on the index numeral. */
+.c-spec{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.c-spec-row{display:grid;grid-template-columns:auto minmax(12ch,22%) 1fr;gap:clamp(16px,3vw,40px);
+  align-items:baseline;padding:clamp(22px,3vw,34px) 0;border-bottom:1px solid var(--line);transition:background .3s var(--ease)}
+.c-spec-row:hover{background:rgba(255,255,255,.02)}
+.c-spec-idx{font-family:var(--mono);font-size:var(--fs-caption);letter-spacing:.18em;color:var(--accent)}
+.c-spec-title{font-family:var(--disp);font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:700;letter-spacing:-.01em;margin:0}
+.c-spec-desc{color:var(--muted);margin:0;max-width:var(--measure)}
+@media (max-width:760px){.c-spec-row{grid-template-columns:auto 1fr;row-gap:8px}.c-spec-desc{grid-column:2/-1}}
+@media (prefers-reduced-motion:reduce){.c-aurora i{animation:none}}
 .c-hero-badges{position:relative}
 .c-hero-badges svg{width:100%}
 .c-hero-badges svg:last-child{position:absolute;right:0;bottom:-32px;width:64%;border:6px solid var(--bg)}
@@ -478,6 +593,18 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
 .c-grid-3{grid-template-columns:repeat(3,1fr)}
 .c-card{padding:28px;background:var(--surf);border:1px solid var(--line);border-radius:var(--rad)}
+${p.surfaceFx === 'panel' ? `
+/* ── PANEL SURFACE (engineered) ─────────────────────────────────────────
+   surfaceFx was declared on every direction but never consumed by the CSS —
+   dead configuration. A panel reads as machined hardware: a subtle top-edge
+   highlight, a hairline border, and a hot accent rule that appears only on
+   hover so the signal colour stays scarce. */
+.c-card,.c-bento-item,.c-stat,.c-rev{position:relative;background:linear-gradient(180deg,var(--surf2) 0%,var(--surf) 100%);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.c-card::before,.c-bento-item::before,.c-stat::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)}
+.c-card::after,.c-bento-item::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);transform:scaleY(0);transform-origin:top;transition:transform .45s var(--ease,cubic-bezier(.22,1,.36,1))}
+.c-card:hover::after,.c-bento-item:hover::after{transform:scaleY(1)}
+.c-kicker{font-family:var(--mono)}
+` : ''}
 /* ruled grid — hairline modular cells, no elevated surface (Swiss) */
 .c-ruled{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:1px solid var(--rule)}
 .c-ruled-3{grid-template-columns:repeat(3,1fr)}

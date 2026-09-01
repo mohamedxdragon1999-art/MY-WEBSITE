@@ -58,8 +58,13 @@ function richPlan() {
 
 console.log('\n== A. COMPOSITION RESOLVER: component families produce the right variants ==');
 {
-  check('five directions registered', DIRS.length === 5, `got ${DIRS.length}`);
-  check('direction ids match Cycle 1 NX_DESIGN_DIRECTIONS', DIRS.every(d => ir.NX_DESIGN_DIRECTIONS.some(x => x.id === d)));
+  // The direction set is extensible (a sixth, 'signal-industrial', was added as
+  // the house default style). Assert the FLOOR and that each is well-formed,
+  // rather than freezing the count.
+  check('at least five directions registered', DIRS.length >= 5, `got ${DIRS.length}`);
+  // Every Cycle-1 direction must still be renderable; the engine may offer more.
+  check('every Cycle 1 direction is still registered', ir.NX_DESIGN_DIRECTIONS.every(x => DIRS.includes(x.id)),
+    ir.NX_DESIGN_DIRECTIONS.map(x => x.id).filter(x => !DIRS.includes(x)).join(','));
   for (const d of DIRS) {
     const r = ir.nxCompose(richPlan(), { direction: d });
     const sig = nxStructuralSignature(r.html);
@@ -91,7 +96,7 @@ console.log('\n== C. TYPOGRAPHIC HIERARCHY SOLVER (rendered, not metadata) ==');
   const num = (v) => { const m = String(v).match(/clamp\(([^,]+),([^,]+),([^)]+)\)/); const mid = (s) => parseFloat(s.replace(/[^\d.]/g, '')) || 0; return m ? mid(m[1]) * 0.3 + mid(m[2]) * 0.4 + mid(m[3]) * 0.3 : (parseFloat(String(v).replace(/[^\d.]/g, '')) || 0); };
   check('bold-experimental display > swiss-structured display (hierarchy grows)', num(scales['bold-experimental'].display) > num(scales['swiss-structured'].display));
   check('cinematic display > swiss-structured display', num(scales['cinematic-immersive'].display) > num(scales['swiss-structured'].display));
-  check('each direction has a distinct text measure (type scale, rendered)', new Set(DIRS.map(d => nxStructuralSignature(ir.nxCompose(richPlan(), { direction: d }).html).measure)).size === 5);
+  check('each direction has a distinct text measure (type scale, rendered)', new Set(DIRS.map(d => nxStructuralSignature(ir.nxCompose(richPlan(), { direction: d }).html).measure)).size === DIRS.length);
 }
 
 console.log('\n== D. SECTION RHYTHM SYSTEM & DENSITY ==');
@@ -110,7 +115,7 @@ console.log('\n== E. DIRECTION-CONTROLLED MOTION ==');
 {
   const motion = {};
   for (const d of DIRS) motion[d] = ir.nxCompose(richPlan(), { direction: d }).plan.motion;
-  check('motion set is unique across directions', new Set(Object.values(motion)).size === 5, JSON.stringify(motion));
+  check('motion set is unique across directions', new Set(Object.values(motion)).size === DIRS.length, JSON.stringify(motion));
   check('cinematic motion is cinematic', motion['cinematic-immersive'] === 'cinematic');
 }
 
@@ -124,7 +129,7 @@ console.log('\n== F. RESPONSIVE RE-COMPOSES (breakpoint changes layout, not just
 console.log('\n== G. HERO IS STRUCTURALLY DIFFERENT ACROSS DIRECTIONS ==');
 {
   const heroes = new Set(DIRS.map(d => nxStructuralSignature(ir.nxCompose(richPlan(), { direction: d }).html).hero));
-  check('all five hero modes are structurally distinct', heroes.size === 5, JSON.stringify([...heroes]));
+  check('every hero mode is structurally distinct', heroes.size === DIRS.length, JSON.stringify([...heroes]));
 }
 
 console.log('\n== H. DIRECTION DISTINCTNESS (rendered DOM, NOT palette) ==');

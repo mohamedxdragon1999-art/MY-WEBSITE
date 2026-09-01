@@ -7607,6 +7607,7 @@ async function openAISiteBuilder(existing) {
         <div class="form-group"><label>🎨 Art Direction — changes layout, not just colour</label>
           <select id="ws-direction" onchange="directionPick()">
             <option value="">Auto (best fit for the brief)</option>
+            <option value="signal-industrial">Signal Industrial — aurora hero, spec sheet, engineered dark (house default)</option>
             <option value="editorial-minimal">Editorial Minimal — editorial hero, list-led features, airy</option>
             <option value="cinematic-immersive">Cinematic Immersive — full-bleed hero, bento grid, dramatic</option>
             <option value="luxury-art">Luxury Art — restrained hero, split features, slow motion</option>
@@ -12768,6 +12769,7 @@ function directionPick(){
   var sel=V('ws-direction'); var note=V('ws-direction-note'); if(!sel||!note)return;
   var MAP={
     '':'Each direction rebuilds the page structure: section order, hero composition, rhythm, type scale and density — not a recolour.',
+    'signal-industrial':'Aurora hero with drifting glow fields · numbered spec-sheet capabilities · engineered dark field · one hot signal accent · mono technical labels.',
     'editorial-minimal':'Editorial hero · list-led features · airy density · quiet motion · generous type contrast.',
     'cinematic-immersive':'Full-bleed hero · bento feature grid · balanced density · cinematic motion · largest display type.',
     'luxury-art':'Restrained hero · split features · airy density · slow motion · most controlled scale.',

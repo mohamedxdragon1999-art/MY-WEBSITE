@@ -58,6 +58,7 @@ function heroVariant(body) {
   if (/c-hero-fullbleed/.test(cls)) return 'fullbleed';
   if (/c-hero-minimal/.test(cls)) return 'minimal';
   if (/c-hero-overlap/.test(cls)) return 'overlap';
+  if (/c-hero-aurora/.test(cls)) return 'aurora';
   if (/c-hero-split/.test(cls)) return 'split';
   return 'generic';
 }
@@ -70,6 +71,7 @@ function featureVariant(body) {
   if (/c-feature-bento/.test(cls)) return 'bento';
   if (/c-feature-split/.test(cls)) return 'split';
   if (/c-feature-ruled/.test(cls)) return 'ruled';
+  if (/c-feature-spec/.test(cls)) return 'spec';
   if (/c-feature-grid/.test(cls)) return 'grid';
   return 'generic';
 }
