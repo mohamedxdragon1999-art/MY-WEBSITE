@@ -4,6 +4,9 @@
 // ════════════════════════════════════════════════════════════
 import NX_COMPOSE_MOD from './nx_compose.js';
 import NX_STRUCTURED_MOD from './nx_structured.js';
+// Structural validation for generated HTML. A static import (not require) so the
+// Cloudflare Worker bundler resolves it — `require` is not defined in an ES module.
+import NX_AST_MOD from './nx_ast.js';
 // What changed in V4.1 (all review findings addressed):
 //  * Timestamps are ISO-8601 UTC everywhere (schema defaults + JS writes),
 //    so SQL comparisons like fire_at <= now work — delayed workflow steps
@@ -9903,6 +9906,35 @@ async function runAgenticLoop(build, ctx) {
   let html = await build();
   const trace = [];
   html = html || '';
+
+  // ── BLOCKING STRUCTURAL GATE (fast, deterministic, runs every build) ──
+  // Nothing previously verified that emitted markup was structurally sound:
+  // an unclosed <div> or a <div> inside a <p> silently changed the rendered
+  // layout because the browser repairs it its own way. Parse the document,
+  // and if it is malformed, repair it deterministically BEFORE any scoring —
+  // heavy semantic auditing stays out of this hot path by design.
+  let astGate = null;
+  try {
+    const __ast = NX_AST_MOD;
+    astGate = __ast.nxAstSyntaxGate(html);
+    // Only rewrite when the structure is genuinely broken. Re-serializing a
+    // healthy document is a no-op semantically but still perturbs formatting
+    // (parse5 normalises boolean attributes such as `data-r` to `data-r=""`),
+    // and the rendered page is the source of truth — do not touch it needlessly.
+    if (!astGate.ok) {
+      const rep = __ast.nxAstAutoClose(html);
+      if (rep.changed) {
+        const after = __ast.nxAstSyntaxGate(rep.html);
+        // Never accept a "repair" that leaves the document worse off.
+        if (after.errors.length < astGate.errors.length) {
+          html = rep.html;
+          trace.push({ iter: 0, stage: 'ast-repair', before: astGate.errors.length, after: after.errors.length, errors: astGate.errors.slice(0, 5) });
+          astGate = after;
+        }
+      }
+    }
+  } catch (e) { /* validation must never break a build */ }
+
   let test = testSiteHtml(html);
   trace.push({ iter: 0, score: test.score, status: test.status, issues: test.issues.length });
   let fixed = false;
@@ -9915,7 +9947,7 @@ async function runAgenticLoop(build, ctx) {
     test = testSiteHtml(html);
     trace.push({ iter: i, score: test.score, status: test.status, issues: test.issues.length });
   }
-  return { html, test, fixed, iterations: trace.length, trace };
+  return { html, test, fixed, iterations: trace.length, trace, ast: astGate ? { ok: astGate.ok, errors: astGate.errors } : null };
 }
 
 // ── AI VISUAL EDITOR (natural-language element commands) ──
@@ -10151,6 +10183,7 @@ async function aiBuildSite(env, ws, body) {
     designExplanation: built.designExplanation || '',
     audit: built.audit,
     iterations: built.iterations,
+    ast: built.ast || null,
   };
 }
 async function buildAgenticSite(env, ws, body) {
@@ -10174,7 +10207,7 @@ async function buildAgenticSite(env, ws, body) {
   const loop = await runAgenticLoop(build, { maxIterations: 3 });
   const audit = auditSiteHtml(loop.html);
   const direction = (body.direction && NX_COMPOSE_DIRECTIONS && NX_COMPOSE_DIRECTIONS[body.direction]) ? String(body.direction) : '';
-  return { name, html: loop.html, test: loop.test, audit, iterations: loop.iterations, fixed: loop.fixed, trace: loop.trace, plan: body.plan || null, direction, designExplanation: __LAST_DESIGN_EXPLANATION || '' };
+  return { name, html: loop.html, test: loop.test, audit, iterations: loop.iterations, fixed: loop.fixed, trace: loop.trace, plan: body.plan || null, direction, designExplanation: __LAST_DESIGN_EXPLANATION || '', ast: loop.ast || null };
 }
 // Idempotent, cached schema migration: ensure the canonical `graph` column exists on
 // `sites` and `site_versions` so a pre-existing database (created before graph-aware

@@ -27,6 +27,7 @@ const SUITES = [
   'test_scene_gallery.mjs',     // 3D gallery: every advertised scene has metadata and COMPILING code
   'test_build_site_unified.mjs',// /ai/build-site must build through the composition engine, not the legacy template
   'test_builder_ui_wiring.mjs', // Builder UI must actually send `direction` and display the design rationale
+  'test_ast_validation.mjs',    // Blocking AST structural gate, deterministic auto-repair, per-node validation, LLM self-correction prompts
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
