@@ -19,6 +19,7 @@ const SUITES = [
   'test_design_system.mjs',   // design-quality foundation: strategy/directions/maturity + QA detects+fixes bad designs
   'test_composition.mjs',     // Cycle 2: direction-authoritative composition — rendered DOM/typography/rhythm/section order differ per direction (color-only fails)
   'test_live_direction.mjs',  // Cycle 2: the direction is authoritative on the LIVE route (POST /ai/agentic-build), not just in unit tests
+  'test_compose_robustness.mjs', // Cycle 2: adversarial plans (hostile/malformed/unicode) + rendered a11y & document semantics
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',

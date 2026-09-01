@@ -78,26 +78,47 @@ const NX_COMPOSE_TRANSITIONS = {
 };
 
 // ── Content architecture (what the page says — always derived from the plan) ──
+// HARDENING: a plan arrives from AI output, imported sites and user input, so no
+// field can be trusted to have the expected type. `__arr` tolerates a non-array
+// collection instead of throwing, and `__str` never lets a non-primitive leak
+// into visible copy as "[object Object]" / "NaN" / "undefined".
+function __arr(v) { return Array.isArray(v) ? v : (v == null || v === '' ? [] : [v]); }
+function __str(v) {
+  if (v == null) return '';
+  const t = typeof v;
+  if (t === 'string') return v;
+  if (t === 'number') return Number.isFinite(v) ? String(v) : '';
+  if (t === 'boolean') return String(v);
+  if (Array.isArray(v)) return v.map(__str).filter(Boolean).join(' ');
+  if (t === 'object') {
+    // Prefer a human-meaningful field over a useless "[object Object]".
+    for (const k of ['title', 'text', 'name', 'label', 'value', 'q', 'a']) {
+      if (v[k] != null && typeof v[k] !== 'object') return __str(v[k]);
+    }
+    return '';
+  }
+  return '';
+}
 function nxComposeContent(plan) {
-  plan = plan || {};
-  const name = String(plan.site_name || plan.name || 'Studio').slice(0, 60);
-  const owner = String(plan.ownerName || plan.owner || '').split(' ')[0] || 'The Studio';
-  const headline = String(plan.hero_headline || plan.tagline || 'Made to be remembered.').slice(0, 90);
-  const sub = String(plan.hero_sub || plan.description || '').slice(0, 180) || 'A considered, high-craft site for people who care about the details.';
-  const ctas = { primary: String(plan.cta_primary || 'Start a project').slice(0, 28), secondary: String(plan.cta_secondary || 'See our work').slice(0, 28) };
-  const services = (plan.services || plan.features || []).slice(0, 6).map(s => {
+  plan = (plan && typeof plan === 'object' && !Array.isArray(plan)) ? plan : {};
+  const name = __str(plan.site_name || plan.name).slice(0, 60) || 'Studio';
+  const owner = __str(plan.ownerName || plan.owner).split(' ')[0] || 'The Studio';
+  const headline = __str(plan.hero_headline || plan.tagline).slice(0, 90) || 'Made to be remembered.';
+  const sub = __str(plan.hero_sub || plan.description).slice(0, 180) || 'A considered, high-craft site for people who care about the details.';
+  const ctas = { primary: __str(plan.cta_primary).slice(0, 28) || 'Start a project', secondary: __str(plan.cta_secondary).slice(0, 28) || 'See our work' };
+  const services = __arr(plan.services || plan.features).slice(0, 6).map(s => {
     if (typeof s === 'string') return { title: s.slice(0, 32), text: '' };
-    return { title: String(s.title || '').slice(0, 40), text: String(s.desc || s.text || '').slice(0, 140), icon: String(s.icon || '') };
-  });
-  const why = (plan.why_us || plan.why || []).map(w => (typeof w === 'string' ? w : String(w.check || w.title || ''))).filter(Boolean).slice(0, 5);
-  const stats = (plan.stats || []).slice(0, 4).map(s => ({ value: s.value != null ? s.value : '0', label: String(s.label || s.name || '').slice(0, 30) }));
-  const projects = (plan.projects || []).slice(0, 6).map(p => ({ title: String(p.title || '').slice(0, 60), cat: String(p.cat || p.cls || '').slice(0, 30), text: String(p.text || '').slice(0, 110) }));
-  const reviews = (plan.reviews || plan.testimonials || []).slice(0, 4).map(r => ({ quote: String(r.text || r.quote || '').slice(0, 220), author: String(r.name || r.author || '').slice(0, 40), role: String(r.role || r.via || '').slice(0, 30), stars: Math.max(1, Math.min(5, Number(r.stars) || 5)) }));
-  const faqs = (plan.faqs || plan.faq || []).slice(0, 6).map(f => ({ q: String(f.q || '').slice(0, 100), a: String(f.a || '').slice(0, 200) }));
-  const contact = plan.contact || {};
-  const phone = String(contact.phone || plan.phone || '').slice(0, 30);
-  const email = String(contact.email || plan.email || '').slice(0, 60);
-  return { name, owner, headline, sub, ctas, services, why, stats, projects, reviews, faqs, contact, phone, email, meta: String(plan.description || '').slice(0, 160) };
+    return { title: __str(s && s.title).slice(0, 40), text: __str(s && (s.desc || s.text)).slice(0, 140), icon: __str(s && s.icon).slice(0, 12) };
+  }).filter(s => s.title || s.text);
+  const why = __arr(plan.why_us || plan.why).map(w => (typeof w === 'string' ? w : __str(w && (w.check || w.title)))).filter(Boolean).slice(0, 5);
+  const stats = __arr(plan.stats).slice(0, 4).map(s => ({ value: (s && s.value != null && __str(s.value) !== '') ? s.value : '0', label: __str(s && (s.label || s.name)).slice(0, 30) })).filter(s => s.label);
+  const projects = __arr(plan.projects).slice(0, 6).map(p => ({ title: __str(p && p.title).slice(0, 60), cat: __str(p && (p.cat || p.cls)).slice(0, 30), text: __str(p && p.text).slice(0, 110) })).filter(p => p.title);
+  const reviews = __arr(plan.reviews || plan.testimonials).slice(0, 4).map(r => ({ quote: __str(r && (r.text || r.quote)).slice(0, 220), author: __str(r && (r.name || r.author)).slice(0, 40), role: __str(r && (r.role || r.via)).slice(0, 30), stars: Math.max(1, Math.min(5, Number(r && r.stars) || 5)) })).filter(r => r.quote);
+  const faqs = __arr(plan.faqs || plan.faq).slice(0, 6).map(f => ({ q: __str(f && f.q).slice(0, 100), a: __str(f && f.a).slice(0, 200) })).filter(f => f.q);
+  const contact = (plan.contact && typeof plan.contact === 'object') ? plan.contact : {};
+  const phone = __str(contact.phone || plan.phone).slice(0, 30);
+  const email = __str(contact.email || plan.email).slice(0, 60);
+  return { name, owner, headline, sub, ctas, services, why, stats, projects, reviews, faqs, contact, phone, email, meta: __str(plan.description).slice(0, 160) };
 }
 
 // ── Composition Plan: direction → section order/variants/typography/rhythm/density ──
@@ -225,7 +246,7 @@ function __feature(c, p) {
     return `<section class="c-feature c-feature-bento" id="feature" data-r><div class="c-wrap">${head}<div class="c-bento">${items.slice(0, 3).map((it, i) => `<div class="c-bento-cell ${i === 0 ? 'c-bento-big' : ''}"><div class="c-bento-img">${__art(i + 1, i === 0 ? 640 : 320, i === 0 ? 440 : 200, p.direction)}</div><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div>`).join('')}</div></div></section>`;
   }
   if (mode === 'split') {
-    return `<section class="c-feature c-feature-split" id="feature" data-r><div class="c-wrap c-split"><div class="c-split-img">${__art(6, 640, 800, p.direction)}</div><div class="c-split-body">${head}${items.slice(0, 3).map(it => `<div class="c-split-item"><span class="c-dot"></span><div><h4>${__e(it.title)}</h4><p>${__e(it.text || c.sub)}</p></div></div>`).join('')}</div></div></section>`;
+    return `<section class="c-feature c-feature-split" id="feature" data-r><div class="c-wrap c-split"><div class="c-split-img">${__art(6, 640, 800, p.direction)}</div><div class="c-split-body">${head}${items.slice(0, 3).map(it => `<div class="c-split-item"><span class="c-dot"></span><div><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div></div>`).join('')}</div></div></section>`;
   }
   if (mode === 'ruled') {
     // Ruled grid — the authentic Swiss treatment: information sits in a strict
@@ -288,7 +309,21 @@ function nxRenderDirected(content, directionId, plan) {
   const d = NX_COMPOSE_DIRECTIONS[directionId] || NX_COMPOSE_DIRECTIONS['editorial-minimal'];
   const p = plan || nxComposePlan(content, directionId);
   const render = { nav: __nav, hero: __hero, logos: __logoStrip, marquee: __marquee, metrics: __metrics, feature: __feature, story: __story, work: __work, reviews: __reviews, cta: __cta, contact: __contact, footer: __footer };
-  const main = p.sections.map((s, i) => __injectRhythm(render[s] ? render[s](content, p) : '', p.rhythm ? p.rhythm[i] : '', p.transitions ? p.transitions[i] : '', p.emphasisTiers ? p.emphasisTiers[i] : '')).join('\n');
+  // Landmark structure: `nav` and `footer` are page furniture and must sit
+  // OUTSIDE <main>; everything between them is the document's main content.
+  // Without a <main> landmark, screen-reader users get no "skip to content" target.
+  const parts = p.sections.map((s, i) => ({
+    key: s,
+    html: __injectRhythm(render[s] ? render[s](content, p) : '', p.rhythm ? p.rhythm[i] : '', p.transitions ? p.transitions[i] : '', p.emphasisTiers ? p.emphasisTiers[i] : ''),
+  }));
+  const lead = [], body = [], tail = [];
+  let seenMain = false;
+  for (const part of parts) {
+    if (part.key === 'nav' && !seenMain) { lead.push(part.html); continue; }
+    if (part.key === 'footer') { tail.push(part.html); continue; }
+    seenMain = true; body.push(part.html);
+  }
+  const main = lead.join('\n') + '\n<main id="main" class="c-main">' + body.join('\n') + '</main>\n' + tail.join('\n');
   const motion = (p && p.motion) || d.motion;
   const html = `<!DOCTYPE html><html lang="en" data-dir="${d.id}" data-motion="${motion}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${__e(content.name)} — ${__e(d.name)}</title><meta name="description" content="${__e(content.meta)}"><style>${__css(d, p)}</style></head><body><div class="c-page" data-density="${p.density}">${main}</div><script>${__js(p)}</script></body></html>`;
   return { html, plan: p, content };
@@ -387,7 +422,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
 .c-split-img svg{width:100%;border-radius:var(--rad)}
 .c-split-item{display:flex;gap:16px;padding-block:18px;border-top:1px solid var(--line)}
-.c-split-item h4{font-family:var(--disp);font-size:1.15rem;margin-bottom:4px}
+.c-split-item h3{font-family:var(--disp);font-size:1.15rem;margin-bottom:4px;font-weight:600}
 .c-split-item p{color:var(--muted);font-size:${t.body}}
 .c-dot{width:10px;height:10px;background:var(--accent);border-radius:50%;margin-top:6px;flex:none}
 /* card grid */

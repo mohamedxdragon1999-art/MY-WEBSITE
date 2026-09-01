@@ -42,7 +42,7 @@ function num(v) { const n = parseFloat(String(v).replace(/[^\d.]/g, '')); return
 // Top-level section order from the DOM body (real rendered structure, not CSS).
 function sectionOrder(body) {
   const order = [];
-  body.querySelectorAll('body > .c-page > *').forEach(el => {
+  body.querySelectorAll(':scope > .c-page > *:not(.c-main), :scope > .c-page > .c-main > *').forEach(el => {
     const cls = (el.getAttribute('class') || '').split(' ').find(c => c.startsWith('c-'));
     const id = el.id ? '#' + el.id : '';
     order.push((cls || el.tagName.toLowerCase()) + id);
@@ -118,7 +118,7 @@ function nxStructuralSignature(html) {
     radius: num(css.vars.rad),
     measure: css.vars.measure,
     shape: domShape(body),
-    sectionCount: body.querySelectorAll('body > .c-page > *').length,
+    sectionCount: body.querySelectorAll(':scope > .c-page > *:not(.c-main), :scope > .c-page > .c-main > *').length,
   };
 }
 
@@ -167,7 +167,7 @@ function nxPaletteOnly(fullHtml) {
 function nxRepetitionModel(html) {
   const dom = new JSDOM(html);
   const doc = dom.window.document;
-  const sections = [...doc.querySelectorAll('body > .c-page > *')];
+  const sections = [...doc.querySelectorAll('body > .c-page > *:not(.c-main), body > .c-page > .c-main > *')];
   const comp = {};
   sections.forEach((s) => { const cls = (s.getAttribute('class') || '').split(' ').find((c) => c.startsWith('c-')); if (cls) comp[cls] = (comp[cls] || 0) + 1; });
   const families = Object.keys(comp);
@@ -211,7 +211,7 @@ function nxRenderedDesignReport(html) {
     rhythmVariety: rep.rhythmVariety, componentDiversity: rep.componentDiversity,
     typeUniformity: +typeUniformity.toFixed(3), emphasisAllMax, contrast: +contrast.toFixed(2),
     emphasisTiers: new Set(emph).size, hero: ((html.match(/data-dir="([^"]+)"/) || [])[1] || ''),
-    sectionCount: doc.querySelectorAll('body > .c-page > *').length,
+    sectionCount: doc.querySelectorAll('body > .c-page > *:not(.c-main), body > .c-page > .c-main > *').length,
   };
 }
 
