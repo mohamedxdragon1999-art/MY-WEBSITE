@@ -10,7 +10,7 @@
 const NX_COMPOSE_DIRECTIONS = {
   'editorial-minimal': {
     id: 'editorial-minimal', name: 'Editorial Minimal', family: 'type-led',
-    palette: { bg: '#F4F1EB', bg2: '#EAE6DC', surface: '#FBFAF6', surface2: '#EFECE2', text: '#1A1714', muted: '#6B655A', faint: '#9B9486', accent: '#B5402A', accent2: '#6A4A34', line: 'rgba(26,23,20,.12)', rule: '#1A1714' },
+    palette: { bg: '#F4F1EB', bg2: '#EAE6DC', surface: '#FBFAF6', surface2: '#EFECE2', text: '#1A1714', muted: '#6B655A', faint: '#7D7669', accent: '#B5402A', accent2: '#6A4A34', line: 'rgba(26,23,20,.12)', rule: '#1A1714' },
     type: { family: "'Playfair Display', Georgia, serif", body: "'Helvetica Neue', Arial, sans-serif", display: 'clamp(3.2rem,8.5vw,6.6rem)', hero: 'clamp(2.6rem,6vw,4.6rem)', section: 'clamp(1.7rem,3.4vw,2.6rem)', body: 'clamp(1.02rem,1.35vw,1.14rem)', caption: '0.78rem', btn: '0.74rem', measure: '62ch' },
     radius: 0, shadow: 'none', surfaceFx: 'none',
     heroVariant: 'editorial', featureMode: 'edlist', reviewMode: 'quote',
@@ -340,6 +340,9 @@ function __css(d, p) {
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:var(--body);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+/* A long unbroken word, URL or email must never force horizontal scroll on a
+   narrow viewport — the classic mobile-overflow defect. Break only where needed. */
+h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-break:normal}
 img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 .c-wrap{max-width:1200px;margin-inline:auto;padding-inline:clamp(20px,4.5vw,56px)}
 .c-kicker{display:inline-block;font-family:var(--body);font-size:${t.caption};letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:16px}
