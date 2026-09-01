@@ -153,7 +153,10 @@ function nxMeasure(html, document, viewport) {
           selector: sel, viewport: `${vw}x${vh}`, measured: `≈${Math.round(h)}px tall (min 44px)`,
           message: `${sel} is too small to tap reliably on mobile.` });
       }
-      if (!inlineInProse && label && wEst > 0 && wEst < 44 && label.length <= 3) {
+      // Honour an explicit min-width/width: if the author (or a repair pass) has
+      // guaranteed the inline size, the text-advance estimate is irrelevant.
+      const minW = px(cascade.computed(el, 'min-width')) || px(cascade.computed(el, 'width')) || 0;
+      if (!inlineInProse && label && wEst > 0 && Math.max(wEst, minW) < 44 && label.length <= 3) {
         issues.push({ severity: 'blocking', category: 'layout', rule: 'touch-target',
           selector: sel, viewport: `${vw}x${vh}`, measured: `≈${Math.round(wEst)}px wide (min 44px)`,
           message: `${sel} is too narrow to tap reliably on mobile.` });

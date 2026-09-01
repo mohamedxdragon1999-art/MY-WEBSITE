@@ -102,24 +102,96 @@ function __report(violations, perViewport, copy) {
   };
 }
 
+// ── DETERMINISTIC AUTO-REPAIR (§5) ────────────────────────────────────────
+// Repairs must be MINIMAL and targeted at a specific measured violation. Each
+// handler fixes exactly one rule and touches nothing else, so a fix for one
+// blocker cannot introduce another elsewhere.
+function nxAutoRepair(html, blocking) {
+  let out = String(html || '');
+  const applied = [];
+  const rules = new Set((blocking || []).map(b => b.rule));
+
+  // Structural breakage — let the spec-compliant parser rebuild the tree.
+  if (rules.has('html-validity')) {
+    try {
+      const { nxAstAutoClose } = require('./nx_ast.js');
+      const rep = nxAstAutoClose(out);
+      if (rep.changed) { out = rep.html; applied.push('html-validity: reparsed and re-serialised'); }
+    } catch (e) { /* leave as-is */ }
+  }
+
+  // Sub-44px tap targets — inject a scoped rule rather than rewriting elements,
+  // which is the smallest intervention that satisfies the constraint.
+  if (rules.has('touch-target') && !/nx-repair-touch/.test(out)) {
+    const css = '<style id="nx-repair-touch">/* auto-repair: WCAG 2.5.8 minimum target size */'
+      + '@media (max-width:480px){a:not(p a):not(li a),button,input[type="submit"],input[type="button"]'
+      + '{min-height:44px;display:inline-flex;align-items:center}}</style>';
+    if (/<\/head>/i.test(out)) { out = out.replace(/<\/head>/i, css + '</head>'); applied.push('touch-target: enforced 44px minimum on mobile'); }
+  }
+
+  // Anything wider than the viewport — contain it without altering layout intent.
+  if (rules.has('overflow-x')) {
+    if (!/nx-repair-overflow/.test(out)) {
+      const css = '<style id="nx-repair-overflow">/* auto-repair: prevent horizontal scroll */'
+        + 'html,body{max-width:100%;overflow-x:hidden}img,svg,video,table{max-width:100%}</style>';
+      if (/<\/head>/i.test(out)) { out = out.replace(/<\/head>/i, css + '</head>'); applied.push('overflow-x: contained oversized content'); }
+    }
+    // A stylesheet cannot beat an inline style, which is where fixed oversized
+    // widths usually come from. Rewrite the declaration itself: cap the width
+    // and keep the intent by preserving it as a max-width.
+    const before = out;
+    out = out.replace(/style\s*=\s*"([^"]*)"/gi, (m, decls) => {
+      if (!/(?:^|;)\s*(?:min-)?width\s*:\s*\d{3,}px/i.test(decls)) return m;
+      const fixed = decls
+        .replace(/(^|;)\s*width\s*:\s*(\d{3,})px/gi, (mm, sep, n) => `${sep}width:100%;max-width:${n}px`)
+        .replace(/(^|;)\s*min-width\s*:\s*\d{3,}px/gi, '$1min-width:0');
+      return 'style="' + fixed + '"';
+    });
+    if (out !== before) applied.push('overflow-x: capped oversized inline widths');
+  }
+
+  // A tap target that is too NARROW usually has no horizontal padding. Give
+  // standalone controls a minimum inline size without disturbing prose links.
+  if (rules.has('touch-target') && !/nx-repair-target-width/.test(out)) {
+    const css = '<style id="nx-repair-target-width">/* auto-repair: minimum tap width */'
+      + '@media (max-width:480px){a:not(p a):not(li a),button{min-width:44px;justify-content:center}}</style>';
+    if (/<\/head>/i.test(out)) { out = out.replace(/<\/head>/i, css + '</head>'); applied.push('touch-target: enforced 44px minimum width'); }
+  }
+
+  return { html: out, applied };
+}
+
 // §5/§6: iterate a generator against its own violations.
 function nxValidateAndRepair(generate, repair, opts) {
   opts = opts || {};
   const max = Math.max(1, Math.min(6, opts.maxIterations || 4));
+  // Default to the built-in deterministic repairer so the gate works with no
+  // caller wiring: validation that needs a hand-supplied fixer is advisory.
+  const fix = (typeof repair === 'function') ? repair
+    : (h, blocking) => nxAutoRepair(h, blocking).html;
   const log = [];
-  let html = generate();
+  let html = typeof generate === 'function' ? generate() : String(generate || '');
   let report = nxValidatePage(html, opts);
-  log.push({ iteration: 0, blocking: report.blocking.length, warnings: report.warnings.length });
-  for (let i = 1; i <= max && !report.pass && typeof repair === 'function'; i++) {
-    const next = repair(html, report.blocking, i);
-    if (!next || next === html) break;         // no progress — stop, do not loop
+  log.push({ iteration: 0, blocking: report.blocking.length, warnings: report.warnings.length, repairs: [] });
+
+  for (let i = 1; i <= max && !report.pass; i++) {
+    let next = null, applied = [];
+    if (typeof repair === 'function') next = repair(html, report.blocking, i);
+    else { const r = nxAutoRepair(html, report.blocking); next = r.html; applied = r.applied; }
+    if (!next || next === html) break;              // no progress — stop, do not spin
     const cand = nxValidatePage(next, opts);
-    // Never accept a repair that makes things worse (best-known-version rule).
+    // Best-known-version rule: never replace a page with a worse candidate.
     if (cand.blocking.length >= report.blocking.length) break;
     html = next; report = cand;
-    log.push({ iteration: i, blocking: report.blocking.length, warnings: report.warnings.length });
+    log.push({ iteration: i, blocking: report.blocking.length, warnings: report.warnings.length, repairs: applied });
   }
-  return { html, report, iterations: log.length, log };
+  return {
+    html, report, iterations: log.length, log,
+    repaired: log.length > 1,
+    // §6: if blockers survive the budget we must NOT claim success.
+    shippedWithBlockers: !report.pass,
+    unresolved: report.blocking,
+  };
 }
 
-module.exports = { nxValidatePage, nxValidateAndRepair, nxContrast };
+module.exports = { nxValidatePage, nxValidateAndRepair, nxAutoRepair, nxContrast };

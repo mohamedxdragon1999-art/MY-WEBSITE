@@ -10,6 +10,9 @@ import NX_AST_MOD from './nx_ast.js';
 // Full validation pipeline: structure + layout + contrast + copy, aggregated
 // into one severity-tagged violation list.
 import NX_VALIDATE_MOD from './nx_validate.js';
+// Cross-generation validation history, so a slow regression is visible without
+// anyone eyeballing individual pages.
+import NX_HISTORY_MOD from './nx_history.js';
 // What changed in V4.1 (all review findings addressed):
 //  * Timestamps are ISO-8601 UTC everywhere (schema defaults + JS writes),
 //    so SQL comparisons like fire_at <= now work — delayed workflow steps
@@ -9945,11 +9948,32 @@ async function runAgenticLoop(build, ctx) {
     }
   } catch (e) { /* validation must never break a build */ }
 
-  // ── VALIDATION REPORT (structure / layout / aesthetic / copy) ──
-  // Attached to the build response so the caller can see WHY a page passed,
-  // itemised by severity and location, rather than trusting a single score.
-  let validation = null;
-  try { validation = NX_VALIDATE_MOD.nxValidatePage(html); } catch (e) { validation = null; }
+  // ── BLOCKING VALIDATION GATE (§5) ──────────────────────────────────────
+  // This is a GATE, not a report. Every generation is measured for structural,
+  // layout, contrast and copy violations; anything tagged `blocking` triggers
+  // automatic, minimal repair and re-measurement, up to the iteration budget.
+  // Nothing reaches the caller un-repaired, and if blockers survive the budget
+  // we say so explicitly rather than quietly shipping a broken page.
+  let validation = null, validationLog = [], validationRepaired = false;
+  try {
+    const gate = NX_VALIDATE_MOD.nxValidateAndRepair(() => html, null, { maxIterations: 4 });
+    if (gate && gate.html) {
+      html = gate.html;
+      validation = gate.report;
+      validationLog = gate.log;
+      validationRepaired = gate.repaired;
+    }
+  } catch (e) { validation = null; }
+  try {
+    if (validation) NX_HISTORY_MOD.nxRecordGeneration({
+      direction: (ctx && ctx.direction) || '', name: (ctx && ctx.name) || '',
+      pass: validation.pass, iterations: validationLog.length, repaired: validationRepaired,
+      shippedWithBlockers: !validation.pass,
+      blockingRules: validation.blocking.map(b => b.rule),
+      warningCount: validation.warnings.length,
+      repairs: validationLog.flatMap(l => l.repairs || []),
+    });
+  } catch (e) { /* history must never break a build */ }
 
   let test = testSiteHtml(html);
   trace.push({ iter: 0, score: test.score, status: test.status, issues: test.issues.length });
@@ -9969,6 +9993,9 @@ async function runAgenticLoop(build, ctx) {
       pass: validation.pass,
       blocking: validation.blocking, warnings: validation.warnings,
       perViewport: validation.perViewport, readability: validation.readability,
+      // §6: an honest signal that blockers survived the repair budget.
+      shippedWithBlockers: !validation.pass,
+      repaired: validationRepaired, repairLog: validationLog,
       // Never let a caller believe this was pixel-verified.
       browserValidated: validation.browserValidated, renderer: validation.renderer, note: validation.note,
     } : null };
@@ -11595,6 +11622,12 @@ async function routerInner(req, env, ctx, origin, ip, path, parts, root, query) 
   if (path === '/ai/scan-site' && req.method === 'POST') {
     try { return json(await scanWebsite(env, auth.workspaceId, body.url), 200, origin); }
     catch (e) { return err(e.message, e instanceof UserError ? 400 : 502, origin); }
+  }
+  // Cross-generation validation health. Per-page pass/fail hides slow drift;
+  // this shows the distribution of repair iterations and the rules that fire
+  // most often, which is how a degrading checker or a bad prompt pattern shows.
+  if (path === '/ai/validation-history' && req.method === 'GET') {
+    return json({ stats: NX_HISTORY_MOD.nxHistoryStats(), recent: NX_HISTORY_MOD.nxHistory(25) }, 200, origin);
   }
   if (path === '/ai/site-scenes' && req.method === 'GET') {
     const list = Object.entries(SITE_SCENES).map(([id, v]) => ({ id, name: v.name, theme: v.theme, desc: v.desc, type: isThreeScene(id) ? 'three' : 'canvas', group: v.group || '', text: !!v.text }));
