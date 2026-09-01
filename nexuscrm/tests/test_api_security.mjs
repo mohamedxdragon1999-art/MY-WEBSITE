@@ -32,9 +32,16 @@ const siteA=await call('POST','/sites',{name:'A site',html:'<html>SECRET-A</html
 const idA=siteA.data?.id||siteA.data?.site?.id;
 
 // 1. IDOR: tenant B must never read/modify/delete tenant A's site
+// Sanity: these endpoints must work for the OWNER, otherwise "tenant B is blocked"
+// would pass vacuously against routes that 404 for everyone.
+for(const [m,path] of [['GET',`/sites/${idA}`],['GET',`/sites/${idA}/html`],['GET',`/sites/${idA}/test`],['GET',`/sites/${idA}/snapshots`]]){
+  const own=await call(m,path,null,tA);
+  if(own.status!==200) rec('VACUOUS',`owner ${m} ${path} -> ${own.status}; cross-tenant check would be meaningless`);
+}
 for(const [m,path,body] of [['GET',`/sites/${idA}`,null],['GET',`/sites/${idA}/html`,null],
-  ['PUT',`/sites/${idA}`,{name:'hacked'}],['DELETE',`/sites/${idA}`,null],
-  ['POST',`/sites/${idA}/design`,{direction:'editorial'}]]){
+  ['GET',`/sites/${idA}/test`,null],['GET',`/sites/${idA}/snapshots`,null],
+  ['PATCH',`/sites/${idA}`,{name:'hacked'}],['DELETE',`/sites/${idA}`,null],
+  ['POST',`/sites/${idA}/snapshots`,{label:'x'}],['POST',`/sites/${idA}/import`,{}]]){
   const r=await call(m,path,body,tB);
   if(r.status<400) rec('IDOR',`tenant B ${m} ${path} -> ${r.status} (should be 403/404)`);
   if(JSON.stringify(r.data||'').includes('SECRET-A')) rec('LEAK',`tenant B read tenant A content via ${m} ${path}`);
@@ -72,11 +79,21 @@ for(const [label,body] of [['huge-name',{name:'x'.repeat(1_000_00),html:'<p>x</p
 if(({}).admin!==undefined) rec('SECURITY','prototype pollution via JSON body');
 
 // 6. XSS stored+served
-const x=await call('POST','/sites',{name:'<script>alert(1)</script>',html:'<script>steal()</script>'},tA);
+// Storing a name verbatim and returning it in JSON is CORRECT — JSON is not HTML,
+// and the client escapes on render. What must never happen is the API serving that
+// name back inside an HTML response where it would execute.
+const x=await call('POST','/sites',{name:'<script>alert(1)</script>',html:'<p>ok</p>'},tA);
 const xid=x.data?.id||x.data?.site?.id;
-if(xid){const got=await call('GET',`/sites/${xid}`,null,tA);
-  const nm=String(got.data?.name||'');
-  if(nm.includes('<script>')) rec('XSS',`site name stored unescaped and returned raw: ${nm.slice(0,40)}`);}
+if(xid){
+  const got=await call('GET',`/sites/${xid}`,null,tA);
+  if(got.status!==200) rec('XSS',`owner cannot read the site back (HTTP ${got.status}) — check is vacuous`);
+  const h={'Content-Type':'application/json',Origin:'http://app.local',Authorization:'Bearer '+tA};
+  const raw=await worker.fetch(new Request(`http://test.local/api/sites/${xid}/html`,{headers:h}),env,ctx);
+  const ctype=String(raw.headers.get('content-type')||'');
+  const bodyTxt=await raw.text();
+  if(/^text\/html/i.test(ctype) && bodyTxt.includes('<script>alert(1)</script>'))
+    rec('XSS',`the untrusted site NAME was echoed into an executable HTML response`);
+}
 
 let passed = 0, failed = 0; const failures = [];
 function check(name, cond, extra = '') {
@@ -92,7 +109,8 @@ check('forged/malformed bearer tokens are rejected', of('AUTHZ').filter(x => x.i
 check('no SQL injection via path ids or body', of('SQLI').length === 0, of('SQLI').slice(0, 3).join(' | '));
 check('oversized/malformed payloads never 500', of('ROBUST').length === 0, of('ROBUST').slice(0, 3).join(' | '));
 check('no prototype pollution via JSON body', of('SECURITY').length === 0, of('SECURITY').join(' | '));
-check('stored site names are not returned as raw script', of('XSS').length === 0, of('XSS').join(' | '));
+check('cross-tenant probes are not vacuous (owner can reach the routes)', of('VACUOUS').length === 0, of('VACUOUS').slice(0, 3).join(' | '));
+check('untrusted site names are never echoed into executable HTML', of('XSS').length === 0, of('XSS').join(' | '));
 const total = passed + failed;
 console.log('\n────────────────────────────────────────');
 console.log((failed === 0 ? 'ALL PASSED' : 'FAILURES') + ' — ' + passed + '/' + total + ' passing');

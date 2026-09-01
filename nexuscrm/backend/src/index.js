@@ -10415,6 +10415,14 @@ async function handleSites(env, req, auth, parts, body, origin) {
     const retest = testSiteHtml(optimizedHtml);
     return json({ name: site.name, published: !!site.published, test, audit, optimizedHtml, retest }, 200, origin);
   }
+  // GET /sites/:id — fetch a single site record. This was missing entirely: the
+  // collection could be listed and /html fetched, but there was no way to read one
+  // site's metadata, and any client trying it got a bare 404. Workspace-scoped.
+  if (req.method === 'GET' && parts.length === 2 && Number.isFinite(id)) {
+    const site = await env.DB.prepare('SELECT id,workspace_id,name,slug,published,created_at,updated_at,html,graph FROM sites WHERE id=? AND workspace_id=?').bind(id, ws).first();
+    if (!site) return err('Not found', 404, origin);
+    return json(site, 200, origin);
+  }
   if (req.method === 'GET' && parts[2] === 'html') {
     const site = await env.DB.prepare('SELECT * FROM sites WHERE id=? AND workspace_id=?').bind(id, ws).first();
     if (!site) return err('Site not found', 404, origin);
