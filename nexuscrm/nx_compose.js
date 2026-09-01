@@ -166,7 +166,7 @@ function nxComposeContent(plan) {
   const contact = (plan.contact && typeof plan.contact === 'object') ? plan.contact : {};
   const phone = __str(contact.phone || plan.phone).slice(0, 30);
   const email = __str(contact.email || plan.email).slice(0, 60);
-  return { name, owner, headline, sub, ctas, services, why, stats, projects, reviews, faqs, contact, phone, email, meta: __str(plan.description).slice(0, 160) };
+  return { name, owner, headline, sub, ctas, services, why, stats, projects, reviews, faqs, contact, phone, email, meta: __metaDescription(plan, name, headline, sub, services) };
 }
 
 // ── Composition Plan: direction → section order/variants/typography/rhythm/density ──
@@ -184,6 +184,26 @@ function nxContentShape(c) {
   else if (total <= 2 && copy < 160) archetype = 'statement-led';
   else if (reviews >= 2 && reviews >= services) archetype = 'proof-led';
   return { archetype, projects, services, reviews, stats, contentVolume: total };
+}
+
+// A meta description drives the search-result snippet AND the social preview
+// card. It was simply `plan.description`, so any brief without that field
+// shipped <meta name="description" content=""> — an empty snippet on every
+// generated page. Derive a real sentence from the content we DO have, and
+// never fabricate claims: this only restates the business's own words.
+function __metaDescription(plan, name, headline, sub, services) {
+  const clean = (x) => String(x == null ? '' : x).replace(/\s+/g, ' ').trim();
+  const direct = clean(plan && (plan.description || plan.meta));
+  if (direct) return direct.slice(0, 160);
+  const parts = [];
+  const h = clean(headline), sb = clean(sub);
+  if (h) parts.push(h.replace(/[.\s]+$/, ''));
+  if (sb && sb !== h) parts.push(sb.replace(/[.\s]+$/, ''));
+  const svc = (Array.isArray(services) ? services : []).map(x => clean(x && x.title)).filter(Boolean).slice(0, 3);
+  if (svc.length) parts.push(svc.join(', '));
+  const out = parts.join('. ');
+  const fallback = clean(name) ? clean(name) + ' — official website.' : '';
+  return (out ? (out.endsWith('.') ? out : out + '.') : fallback).slice(0, 160);
 }
 
 function nxComposePlan(content, directionId) {
@@ -382,8 +402,33 @@ function __feature(c, p) {
   return `<section class="c-feature c-feature-grid" id="feature" data-r><div class="c-wrap">${head}<div class="c-grid${items.length > 3 ? ' c-grid-3' : ''}">${items.slice(0, 6).map((it) => `<div class="c-card"><span class="c-card-k">${__e(it.icon || '◦')}</span><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div>`).join('')}</div></div></section>`;
 }
 
+// The story section printed c.sub as the lead AND `c.meta || c.sub` as the body.
+// Since c.meta defaults to c.sub, the hero subtitle appeared three times on the
+// same page. Duplicated copy reads as a broken generator, so: never repeat a
+// paragraph, and never pad with a restatement — if there is only one real
+// sentence, show one paragraph.
+function __storyCopy(c) {
+  // The hero already shows c.sub. Repeating it verbatim as the story lead is
+  // still duplication, so prefer any DISTINCT longer-form copy and only fall
+  // back to the subtitle when the brief genuinely has nothing else to say.
+  const heroSub = String(c.sub || '').trim();
+  const alt = [c.about, c.meta, c.blurb].map(x => String(x || '').trim()).find(x => x && x !== heroSub) || '';
+  const lead = alt || heroSub;
+  const bodyRaw = [c.meta, c.about].map(x => String(x || '').trim()).find(x => x && x !== lead && x !== heroSub) || '';
+  const body = bodyRaw;
+  const out = [];
+  if (lead) out.push(`<p class="c-lead">${__e(lead)}</p>`);
+  if (body) out.push(`<p class="c-body">${__e(body)}</p>`);
+  // If the only copy available is already on screen in the hero, say something
+  // structural instead of echoing it.
+  if (!out.length || (out.length === 1 && lead === heroSub && !body)) {
+    return `<p class="c-lead">${__e(c.name)} — how we work, and what we hold to.</p>`;
+  }
+  return out.join('');
+}
+
 function __story(c, p) {
-  return `<section class="c-story" id="story" data-r><div class="c-wrap c-story-inner"><div class="c-story-img">${__art(8, 700, 760, p.direction)}</div><div class="c-story-body"><span class="c-kicker">Our story</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'The work is the story' : 'Built on care')}</h2><p class="c-lead">${__e(c.sub)}</p><p class="c-body">${__e(c.meta || c.sub)}</p></div></div></section>`;
+  return `<section class="c-story" id="story" data-r><div class="c-wrap c-story-inner"><div class="c-story-img">${__art(8, 700, 760, p.direction)}</div><div class="c-story-body"><span class="c-kicker">Our story</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'The work is the story' : 'Built on care')}</h2>${__storyCopy(c)}</div></div></section>`;
 }
 
 function __work(c, p) {
@@ -449,7 +494,7 @@ function nxRenderDirected(content, directionId, plan) {
   }
   const main = lead.join('\n') + '\n<main id="main" class="c-main">' + body.join('\n') + '</main>\n' + tail.join('\n');
   const motion = (p && p.motion) || d.motion;
-  const html = `<!DOCTYPE html><html lang="en" data-dir="${d.id}" data-motion="${motion}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${__e(content.name)} — ${__e(d.name)}</title><meta name="description" content="${__e(content.meta)}"><style>${__css(d, p)}</style></head><body><div class="c-page" data-density="${p.density}">${main}</div><script>${__js(p)}</script></body></html>`;
+  const html = `<!DOCTYPE html><html lang="en" data-dir="${d.id}" data-motion="${motion}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${__e(content.name)} — ${__e(d.name)}</title><meta name="description" content="${__e(content.meta)}"><meta property="og:type" content="website"><meta property="og:title" content="${__e(content.name)}"><meta property="og:description" content="${__e(content.meta)}"><meta property="og:site_name" content="${__e(content.name)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${__e(content.name)}"><meta name="twitter:description" content="${__e(content.meta)}"><meta name="theme-color" content="${d.palette.bg}"><style>${__css(d, p)}</style></head><body><a class="c-skip" href="#main">Skip to content</a><div class="c-page" data-density="${p.density}">${main}</div><script>${__js(p)}</script></body></html>`;
   return { html, plan: p, content };
 }
 
@@ -467,6 +512,14 @@ body{font-family:var(--font);font-size:var(--body);background:var(--bg);color:va
 /* A long unbroken word, URL or email must never force horizontal scroll on a
    narrow viewport — the classic mobile-overflow defect. Break only where needed. */
 h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-break:normal}
+/* Keyboard focus MUST be visible. Nothing defined one, so a keyboard or
+   switch-control user had no idea where they were on the page. :focus-visible
+   keeps it out of the way of mouse users. */
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:2px}
+a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+/* Skip link — the <main> landmark existed but nothing let you jump to it. */
+.c-skip{position:absolute;left:-9999px;top:0;z-index:999;padding:12px 18px;background:var(--accent);color:#fff;font-weight:700}
+.c-skip:focus{left:8px;top:8px}
 img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 .c-wrap{max-width:1200px;margin-inline:auto;padding-inline:clamp(20px,4.5vw,56px)}
 .c-kicker{display:inline-block;font-family:var(--body);font-size:${t.caption};letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:16px}
@@ -709,8 +762,22 @@ function __js(p) {
   return `(function(){
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var els=[].slice.call(document.querySelectorAll('[data-r]'));
-  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target);}});},{threshold:.12});
-  els.forEach(function(e){io.observe(e);if(reduce)e.classList.add('on');});
+  // Reveal sections start at opacity:0, so ANY failure here leaves the whole
+  // page permanently blank. IntersectionObserver is unavailable in older
+  // browsers and some embedded webviews, and calling new on an undefined global
+  // throws — taking the rest of this script (counters, nav) down with it.
+  // Fail OPEN: if we cannot observe, everything is simply shown.
+  var showAll=function(){els.forEach(function(e){e.classList.add('on');});};
+  if(reduce||typeof IntersectionObserver!=='function'){showAll();}
+  else{
+    try{
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target);}});},{threshold:.12});
+      els.forEach(function(e){io.observe(e);});
+      // Safety net: if nothing has revealed after 3s (observer never fired, or
+      // the page is shorter than the viewport), show the content anyway.
+      setTimeout(function(){if(!document.querySelector('[data-r].on'))showAll();},3000);
+    }catch(err){showAll();}
+  }
   [].slice.call(document.querySelectorAll('[data-count]')).forEach(function(el){
     var n=parseFloat((el.getAttribute('data-count')||'0').replace(/,/g,''))||0;var cur=0;var step=Math.max(1,Math.ceil(n/30));
     var t=setInterval(function(){cur+=step;if(cur>=n){cur=n;clearInterval(t);}el.textContent=(cur>=1000?cur.toLocaleString():cur);},${countMs});

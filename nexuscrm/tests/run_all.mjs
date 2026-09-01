@@ -30,6 +30,7 @@ const SUITES = [
   'test_ast_validation.mjs',    // Blocking AST structural gate, deterministic auto-repair, per-node validation, LLM self-correction prompts
   'test_template_identity.mjs', // Reference template must never leak its original client's identity; no shipped unlock secrets; one escaping guarantee
   'test_computed_visual.mjs',   // Resolves the real CSS cascade: computed colours/fonts, dangling custom properties, per-direction visual identity
+  'test_runtime_integrity.mjs', // EXECUTES the generated page: runtime errors, fail-open reveal, keyboard focus, skip link, OG metadata, duplicate copy
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
