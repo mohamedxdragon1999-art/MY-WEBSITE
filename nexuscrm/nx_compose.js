@@ -389,7 +389,15 @@ function __hero(c, p) {
   const eyebrow = `<span class="c-kicker">${__e(c.name)} — 2026</span>`;
   const title = `<h1 class="c-display">${__e(c.headline)}</h1>`;
   const body = `<p class="c-lead">${__e(c.sub)}</p>`;
-  const actions = `<div class="c-actions"><a class="c-btn c-btn-primary" href="#contact">${__e(c.ctas.primary)}</a><a class="c-btn c-btn-ghost" href="#work">${__e(c.ctas.secondary)}</a></div>`;
+  // The secondary CTA hardcoded #work, but the work section is PRUNED when the
+  // brief has no projects — so on any project-less site this was a dead link
+  // that silently did nothing when clicked. Resolve it against the sections
+  // that were actually composed, and drop the CTA if none of them fit.
+  const __present = (id) => Array.isArray(p.sections) && p.sections.includes(id);
+  const __secondaryTarget = ['work', 'feature', 'story', 'reviews'].find(__present) || '';
+  const secondaryCta = __secondaryTarget
+    ? `<a class="c-btn c-btn-ghost" href="#${__secondaryTarget}">${__e(c.ctas.secondary)}</a>` : '';
+  const actions = `<div class="c-actions"><a class="c-btn c-btn-primary" href="#contact">${__e(c.ctas.primary)}</a>${secondaryCta}</div>`;
   if (v === 'editorial') {
     return `<section class="c-hero c-hero-editorial" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-meta"><span>Est. ${__e(c.owner)}</span><span class="c-rule"></span><span>High craft, considered</span></div></div><div class="c-hero-bleed">${__img({ seed: 3, w: 1200, h: 420, dir: p.direction, src: c.image, eager: true })}</div></section>`;
   }

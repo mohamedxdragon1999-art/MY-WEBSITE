@@ -36,6 +36,7 @@ const SUITES = [
   'test_edge_fixtures.mjs',     // Edge-case fixture discipline: empty/enormous/RTL/CJK/hostile input, known-bad must fail, known-good must not false-flag
   'test_image_pipeline.mjs',    // Images must render as real <img> (not raw data: text), honour caller URLs, reject unsafe schemes, declare dimensions + loading, and carry correct alt
   'test_component_contract.mjs',// Section shell contract: id/reveal/rhythm/emphasis + a heading in the document outline for EVERY section, enforced on the rendered page
+  'test_property_fuzz.mjs',     // Property-based fuzzing: invariants over hundreds of randomised plans, plus a memory bound on the validation gate
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
