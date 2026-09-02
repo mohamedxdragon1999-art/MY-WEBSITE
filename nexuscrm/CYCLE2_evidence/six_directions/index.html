@@ -1,17 +1,26 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Six Art Directions — one brief</title>
-<style>body{margin:0;background:#0b0d12;color:#e8ecf4;font:16px/1.6 system-ui,sans-serif}
-h1{font-size:26px;margin:0 0 6px}.sub{color:#94a0b8;margin:0 0 22px;font-size:14px}
-.wrap{max-width:1500px;margin:0 auto;padding:28px}
-table{border-collapse:collapse;width:100%;margin-bottom:26px;font-size:13px}
-th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #222836}th{color:#94a0b8;font-weight:600}
-.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:20px}
-.c{border:1px solid #222836;border-radius:12px;overflow:hidden;background:#11141c}
-.h{padding:10px 14px;font-size:13px;font-weight:700;border-bottom:1px solid #222836;display:flex;justify-content:space-between}
-.h span{color:#94a0b8;font-weight:400}
-iframe{width:100%;height:620px;border:0;background:#fff;display:block}</style></head><body><div class="wrap">
-<h1>Six art directions · one identical brief</h1>
-<p class="sub">Brief: <em>A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites.</em><br>Rendered via <code>POST /ai/build-site</code> with no AI provider configured — the deterministic design floor, passed through the blocking validation gate. Minimum pairwise structural distance <strong>0.593</strong> (threshold 0.20).</p>
-<table><tr><th>Direction</th><th>Hero</th><th>Features</th><th>Motion</th><th>Images</th><th>Gate</th><th>Bytes</th></tr>
-<tr><td><strong>signal-industrial</strong></td><td>aurora</td><td>spec</td><td>engineered</td><td>1</td><td>✅ pass</td><td>31,238</td></tr><tr><td><strong>editorial-minimal</strong></td><td>editorial</td><td>edlist</td><td>quiet</td><td>2</td><td>✅ pass</td><td>31,361</td></tr><tr><td><strong>cinematic-immersive</strong></td><td>fullbleed</td><td>bento</td><td>cinematic</td><td>5</td><td>✅ pass</td><td>36,793</td></tr><tr><td><strong>luxury-art</strong></td><td>minimal</td><td>edlist</td><td>slow</td><td>1</td><td>✅ pass</td><td>29,118</td></tr><tr><td><strong>bold-experimental</strong></td><td>overlap</td><td>alternating</td><td>energetic</td><td>5</td><td>✅ pass</td><td>36,687</td></tr><tr><td><strong>swiss-structured</strong></td><td>split</td><td>ruled</td><td>functional</td><td>2</td><td>✅ pass</td><td>30,496</td></tr></table>
-<div class="g"><div class="c"><div class="h"><b>signal-industrial</b><span>aurora · spec</span></div><iframe src="signal-industrial.html" loading="lazy" title="signal-industrial"></iframe></div><div class="c"><div class="h"><b>editorial-minimal</b><span>editorial · edlist</span></div><iframe src="editorial-minimal.html" loading="lazy" title="editorial-minimal"></iframe></div><div class="c"><div class="h"><b>cinematic-immersive</b><span>fullbleed · bento</span></div><iframe src="cinematic-immersive.html" loading="lazy" title="cinematic-immersive"></iframe></div><div class="c"><div class="h"><b>luxury-art</b><span>minimal · edlist</span></div><iframe src="luxury-art.html" loading="lazy" title="luxury-art"></iframe></div><div class="c"><div class="h"><b>bold-experimental</b><span>overlap · alternating</span></div><iframe src="bold-experimental.html" loading="lazy" title="bold-experimental"></iframe></div><div class="c"><div class="h"><b>swiss-structured</b><span>split · ruled</span></div><iframe src="swiss-structured.html" loading="lazy" title="swiss-structured"></iframe></div></div>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Website builder — current state</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#0a0c11;color:#e9edf5;font:15px/1.6 ui-sans-serif,system-ui,sans-serif}
+.wrap{max-width:1560px;margin:0 auto;padding:32px 28px 64px}
+h1{font-size:28px;margin:0 0 8px;letter-spacing:-.02em}
+.sub{color:#93a0b5;margin:0 0 28px;font-size:14px;max-width:90ch}
+.sub code{background:#151a24;padding:2px 6px;border-radius:4px}
+table{border-collapse:collapse;width:100%;margin-bottom:30px;font-size:13px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid #1e2530}
+th{color:#93a0b5;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+td b{color:#fff}
+.ok{color:#4ade80}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:22px}
+.c{border:1px solid #1e2530;border-radius:14px;overflow:hidden;background:#11151d}
+.h{padding:12px 15px;border-bottom:1px solid #1e2530;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.h b{font-size:14px}.h span{color:#93a0b5;font-size:12px}
+iframe{width:100%;height:700px;border:0;background:#fff;display:block}
+.note{margin-top:34px;padding:16px 18px;border:1px solid #1e2530;border-radius:12px;background:#11151d;font-size:13px;color:#b6c0d0}
+.note b{color:#fff}</style></head><body><div class="wrap">
+<h1>Website builder — current output</h1>
+<p class="sub">One identical brief rendered through <code>POST /ai/build-site</code> with <b>no AI provider configured</b> — this is the deterministic design floor, after the blocking validation gate. Minimum pairwise structural distance <b>0.593</b> (threshold 0.20; a recolour-only clone scores ~0.08). Brief: <em>A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites across the region.</em></p>
+<table><tr><th>Direction</th><th>Hero</th><th>Features</th><th>Motion</th><th>Scheme</th><th>Images</th><th>Tokens</th><th>Gate</th><th>Size</th></tr>
+<tr><td><b>signal-industrial</b></td><td>aurora</td><td>spec</td><td>engineered</td><td>dark</td><td>1</td><td>62</td><td class="ok">✅ 0 blocking</td><td>34 KB</td></tr><tr><td><b>editorial-minimal</b></td><td>editorial</td><td>edlist</td><td>quiet</td><td>light</td><td>2</td><td>62</td><td class="ok">✅ 0 blocking</td><td>34 KB</td></tr><tr><td><b>cinematic-immersive</b></td><td>fullbleed</td><td>bento</td><td>cinematic</td><td>dark</td><td>5</td><td>62</td><td class="ok">✅ 0 blocking</td><td>39 KB</td></tr><tr><td><b>luxury-art</b></td><td>minimal</td><td>edlist</td><td>slow</td><td>dark</td><td>1</td><td>62</td><td class="ok">✅ 0 blocking</td><td>32 KB</td></tr><tr><td><b>bold-experimental</b></td><td>overlap</td><td>alternating</td><td>energetic</td><td>dark</td><td>5</td><td>62</td><td class="ok">✅ 0 blocking</td><td>39 KB</td></tr><tr><td><b>swiss-structured</b></td><td>split</td><td>ruled</td><td>functional</td><td>light</td><td>2</td><td>62</td><td class="ok">✅ 0 blocking</td><td>33 KB</td></tr>
+</table>
+<div class="g"><div class="c"><div class="h"><b>signal-industrial</b><span>aurora hero · spec features</span></div><iframe src="signal-industrial.html" loading="lazy" title="signal-industrial"></iframe></div><div class="c"><div class="h"><b>editorial-minimal</b><span>editorial hero · edlist features</span></div><iframe src="editorial-minimal.html" loading="lazy" title="editorial-minimal"></iframe></div><div class="c"><div class="h"><b>cinematic-immersive</b><span>fullbleed hero · bento features</span></div><iframe src="cinematic-immersive.html" loading="lazy" title="cinematic-immersive"></iframe></div><div class="c"><div class="h"><b>luxury-art</b><span>minimal hero · edlist features</span></div><iframe src="luxury-art.html" loading="lazy" title="luxury-art"></iframe></div><div class="c"><div class="h"><b>bold-experimental</b><span>overlap hero · alternating features</span></div><iframe src="bold-experimental.html" loading="lazy" title="bold-experimental"></iframe></div><div class="c"><div class="h"><b>swiss-structured</b><span>split hero · ruled features</span></div><iframe src="swiss-structured.html" loading="lazy" title="swiss-structured"></iframe></div></div>
+<div class="note"><b>What to look for:</b> these are not recolours. Each direction changes the hero composition, the feature family, section order, rhythm, type pairing and motion. Scroll each frame — the differences are structural, not palette-deep.</div>
 </div></body></html>

@@ -1,5 +1,36 @@
-<!DOCTYPE html><html lang="en" dir="ltr" data-dir="editorial-minimal" data-motion="quiet"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Northgate Civil — Editorial Minimal</title><meta name="description" content="A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites."><meta property="og:type" content="website"><meta property="og:title" content="Northgate Civil"><meta property="og:description" content="A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites."><meta property="og:site_name" content="Northgate Civil"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Northgate Civil"><meta name="twitter:description" content="A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites."><meta name="theme-color" content="#F4F1EB"><style>
-:root{--bg:#F4F1EB;--bg2:#EAE6DC;--surf:#FBFAF6;--surf2:#EFECE2;--text:#1A1714;--muted:#6B655A;--faint:#7D7669;--accent:#B5402A;--accent2:#6A4A34;--line:rgba(26,23,20,.12);--rule:#1A1714;--disp:'Playfair Display', Georgia, serif;--font:'Playfair Display', Georgia, serif;--body:clamp(1.02rem,1.35vw,1.14rem);--rad:0px;--shadow:none;--measure:62ch;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--fs-caption:0.78rem;--fs-display:clamp(3.2rem,8.5vw,6.6rem);--fs-hero:clamp(2.6rem,6vw,4.6rem);--fs-section:clamp(1.7rem,3.4vw,2.6rem);--ease:cubic-bezier(.22,1,.36,1);--emph:1}
+<!DOCTYPE html><html lang="en" dir="ltr" data-dir="editorial-minimal" data-motion="quiet"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Northgate Civil — Editorial Minimal</title><meta name="description" content="A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites across the region."><meta property="og:type" content="website"><meta property="og:title" content="Northgate Civil"><meta property="og:description" content="A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites across the region."><meta property="og:site_name" content="Northgate Civil"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Northgate Civil"><meta name="twitter:description" content="A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites across the region."><meta name="theme-color" content="#F4F1EB"><style>
+:root{--bg:#F4F1EB;--bg2:#EAE6DC;--surf:#FBFAF6;--surf2:#EFECE2;--text:#1A1714;--muted:#6B655A;--faint:#7D7669;--accent:#B5402A;--accent2:#6A4A34;--line:rgba(26,23,20,.12);--rule:#1A1714;--disp:'Playfair Display', Georgia, serif;--font:'Söhne', 'Inter', system-ui, sans-serif;--body:clamp(1.02rem,1.35vw,1.14rem);--rad:0px;--shadow:none;--measure:62ch;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--fs-caption:0.78rem;--fs-display:clamp(3.2rem,8.5vw,6.6rem);--fs-hero:clamp(2.6rem,6vw,4.6rem);--fs-section:clamp(1.7rem,3.4vw,2.6rem);--ease:cubic-bezier(.22,1,.36,1);--emph:1;
+  /* ── DESIGN TOKEN LAYER ────────────────────────────────────────────────
+     Previously only raw primitives (one colour set, one radius, one shadow)
+     were exposed. Everything else — spacing, elevation, motion, stacking —
+     was hardcoded per rule, so it could drift, could not be themed, and could
+     not be audited. These are the scales a real design system exposes. */
+  /* Spacing: 4px base, geometric. Every gap/padding should come from here. */
+  --space-0:0;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;
+  --space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px;--space-10:128px;
+  /* Radius scale derived from the direction's own radius so themes stay coherent */
+  --rad-xs:0px;--rad-sm:0px;
+  --rad-md:0px;--rad-lg:0px;--rad-full:9999px;
+  /* Elevation: a scale, not a single shadow. Low alpha = premium depth. */
+  --elev-0:none;
+  --elev-1:0 1px 2px -1px rgba(0,0,0,.12);
+  --elev-2:0 8px 24px -12px rgba(0,0,0,.18);
+  --elev-3:none;
+  /* Motion: named durations + easings so timing is consistent and tunable */
+  --dur-fast:120ms;--dur-base:240ms;--dur-slow:480ms;
+  --ease-out:cubic-bezier(.22,1,.36,1);--ease-in-out:cubic-bezier(.65,0,.35,1);
+  /* Stacking: an explicit ladder prevents the classic ad-hoc z-index war */
+  --z-base:0;--z-raised:10;--z-sticky:50;--z-overlay:100;--z-modal:1000;
+  /* Interaction states, derived from the accent so they theme automatically */
+  --state-hover:color-mix(in oklab, var(--accent) 88%, white 12%);
+  --state-active:color-mix(in oklab, var(--accent) 82%, black 18%);
+  --state-focus:var(--accent);
+  --state-disabled:var(--faint);
+  /* Feedback colours — table stakes for forms, absent until now */
+  --success:#1f9d55;--warning:#c77700;--danger:#c8342b;--info:var(--accent)}
+/* Tell the browser which scheme this palette is, so native controls,
+   scrollbars and form widgets match instead of fighting the design. */
+:root{color-scheme:light}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:var(--font);font-size:var(--body);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
@@ -9,10 +40,22 @@ h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-
 /* Keyboard focus MUST be visible. Nothing defined one, so a keyboard or
    switch-control user had no idea where they were on the page. :focus-visible
    keeps it out of the way of mouse users. */
-:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:2px}
+:focus-visible{outline:3px solid var(--state-focus);outline-offset:3px;border-radius:var(--rad-xs)}
 /* Visually hidden, still announced. Lets a section carry a heading for the
    document outline without altering the visual design. */
 .c-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+/* Feedback + interaction utilities. These make the semantic tokens REAL rather
+   than declared-and-unused: any generated form, alert or toast consumes them. */
+.c-msg{padding:var(--space-3) var(--space-4);border-radius:var(--rad-sm);font-size:var(--fs-caption)}
+.c-msg-success{color:var(--success);border:1px solid var(--success)}
+.c-msg-warning{color:var(--warning);border:1px solid var(--warning)}
+.c-msg-danger{color:var(--danger);border:1px solid var(--danger)}
+.c-msg-info{color:var(--info);border:1px solid var(--info)}
+.c-btn:hover{background:var(--state-hover)}
+.c-btn:active{background:var(--state-active);transition-duration:var(--dur-fast)}
+.c-btn[disabled],.c-btn[aria-disabled="true"]{color:var(--state-disabled);pointer-events:none}
+.c-elev-2{box-shadow:var(--elev-2)}.c-elev-3{box-shadow:var(--elev-3)}
+.c-round{border-radius:var(--rad-full)}.c-round-lg{border-radius:var(--rad-lg)}.c-round-md{border-radius:var(--rad-md)}
 /* RTL: mirror the layout, not only the text run. Logical properties keep a
    single stylesheet correct in both directions instead of duplicating rules. */
 [dir="rtl"] .c-sec-left,[dir="rtl"] .c-hero-copy{text-align:right}
@@ -24,7 +67,7 @@ h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-
 .c-skip{min-height:44px;display:inline-flex;align-items:center}
 a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 /* Skip link — the <main> landmark existed but nothing let you jump to it. */
-.c-skip{position:absolute;left:-9999px;top:0;z-index:999;padding:12px 16px;background:var(--accent);color:#fff;font-weight:700}
+.c-skip{position:absolute;left:-9999px;top:0;z-index:var(--z-modal);padding:var(--space-3) var(--space-4);background:var(--accent);color:#fff;font-weight:700}
 .c-skip:focus{left:8px;top:8px}
 img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 .c-wrap{max-width:1200px;margin-inline:auto;padding-inline:clamp(20px,4.5vw,56px)}
@@ -39,7 +82,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
    least a 44x44px target. The padding+line-height here resolved to ~42px,
    just under the bar, so every button on every generated page was a
    marginal tap target on a phone. min-height enforces it directly. */
-.c-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;gap:8px;padding:12px 24px;font-family:var(--body);font-weight:700;font-size:0.74rem;letter-spacing:.12em;text-transform:uppercase;border-radius:var(--rad);transition:transform .3s,background .3s,color .3s,border-color .3s;white-space:nowrap}
+.c-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;gap:var(--space-2);padding:var(--space-3) var(--space-5);font-family:var(--body);font-weight:700;font-size:0.74rem;letter-spacing:.12em;text-transform:uppercase;border-radius:var(--rad);transition:transform var(--dur-base) var(--ease-out),background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out);white-space:nowrap}
 .c-btn-primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)}
 .c-btn-primary:hover{transform:translateY(-2px)}
 .c-btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:var(--rad)}
@@ -47,7 +90,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-btn-lg{padding:16px 32px}
 .c-actions{display:flex;gap:12px;margin-top:32px;flex-wrap:wrap}
 /* nav */
-.c-nav{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.c-nav{position:sticky;top:0;z-index:var(--z-sticky);background:var(--bg);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
 .c-bar{display:flex;align-items:center;justify-content:space-between;height:76px;gap:20px}
 .c-brand{font-family:var(--disp);font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
 .c-links{display:flex;gap:24px}.c-links a{font-size:.9rem;color:var(--muted);transition:color .2s}.c-links a:hover{color:var(--accent)}
@@ -67,7 +110,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-hero-bg{position:absolute;inset:0;overflow:hidden}
 .c-hero-bg svg{width:100%;height:100%;object-fit:cover}
 .c-hero-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),var(--bg) 92%)}
-.c-hero-fullbleed .c-hero-inner{position:relative;z-index:2}
+.c-hero-fullbleed .c-hero-inner{position:relative;z-index:var(--z-raised)}
 .c-hero-fullbleed .c-display{color:#fff}
 .c-hero-fullbleed .c-lead{color:rgba(255,255,255,.8)}
 /* minimal luxury */
@@ -81,7 +124,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
    glow is the ONLY decorative element in the whole direction, which is what
    lets a single hot accent read as a signal rather than as noise. */
 .c-hero-aurora{position:relative;overflow:hidden;isolation:isolate}
-.c-hero-aurora .c-hero-inner{padding-block:clamp(96px,13vw,160px);position:relative;z-index:2}
+.c-hero-aurora .c-hero-inner{padding-block:clamp(96px,13vw,160px);position:relative;z-index:var(--z-raised)}
 .c-hero-aurora .c-hero-copy{max-width:min(100%,58ch)}
 .c-aurora{position:absolute;inset:-25% -10%;z-index:0;filter:blur(70px);opacity:.5;pointer-events:none}
 .c-aurora i{position:absolute;display:block;border-radius:50%}
@@ -91,7 +134,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 @keyframes c-drift1{to{transform:translate3d(6%,4%,0) scale(1.12)}}
 @keyframes c-drift2{to{transform:translate3d(-5%,7%,0) scale(1.08)}}
 @keyframes c-drift3{to{transform:translate3d(4%,-6%,0) scale(1.15)}}
-.c-hero-grid-lines{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.5;
+.c-hero-grid-lines{position:absolute;inset:0;z-index:var(--z-raised);pointer-events:none;opacity:.5;
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
   background-size:76px 76px;
   -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 30%,transparent 78%);
@@ -155,7 +198,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 /* card grid */
 .c-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
 .c-grid-3{grid-template-columns:repeat(3,1fr)}
-.c-card{padding:24px;background:var(--surf);border:1px solid var(--line);border-radius:var(--rad)}
+.c-card{padding:var(--space-5);background:var(--surf);border:1px solid var(--line);border-radius:var(--rad-sm);box-shadow:var(--elev-1)}
 
 /* ruled grid — hairline modular cells, no elevated surface (Swiss) */
 .c-ruled{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:1px solid var(--rule)}
@@ -230,7 +273,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 [data-transition="bridge"]::before{content:"";position:absolute;left:calc(max(20px,4.5vw) + 0px);right:calc(max(20px,4.5vw) + 0px);top:0;height:6px;background:var(--line);opacity:.5;transform:translateX(0)}
 [data-transition="fade"]{position:relative;background-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.02) 30%,var(--bg) 100%)}
 [data-transition="bleed"]{border-top:1px solid var(--line)}
-[data-transition="overlap"]{position:relative;z-index:2;margin-top:calc(clamp(-40px,-5vw,-16px));border-radius:var(--rad) var(--rad) 0 0;background:var(--bg);box-shadow:0 -20px 60px -30px rgba(0,0,0,.4)}
+[data-transition="overlap"]{position:relative;z-index:var(--z-raised);margin-top:calc(clamp(-40px,-5vw,-16px));border-radius:var(--rad) var(--rad) 0 0;background:var(--bg);box-shadow:0 -32px 80px -40px rgba(0,0,0,.22)}
 [data-transition="flat"]{}
 /* ── VISUAL EMPHASIS BUDGET: only the hero(+CTA) are focal; the rest are supporting ── */
 [data-emphasis]{--emph:1}
@@ -255,10 +298,10 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 </style><meta name="robots" content="index,follow">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%9A%80%3C%2Ftext%3E%3C%2Fsvg%3E"><link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%9A%80%3C%2Ftext%3E%3C%2Fsvg%3E">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"LocalBusiness","name":"Northgate Civil — Editorial Minimal","description":"A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites."}</script>
-</head><body><a class="c-skip" href="#main">Skip to content</a><div class="c-page" data-density="airy"><header class="c-nav" data-r data-rhythm="dramatic" data-transition="flat" data-emphasis="low"><div class="c-wrap c-bar"><div class="c-brand">Northgate Civil</div><nav class="c-links"><a href="#feature">Work</a><a href="#story">Story</a><a href="#reviews">Clients</a><a href="#contact">Contact</a></nav><a class="c-btn c-btn-ghost" href="#contact">Get a free q</a></div></header>
-<main id="main" class="c-main"><section class="c-hero c-hero-editorial" id="home" data-r data-rhythm="compact" data-transition="fade" data-emphasis="max"><div class="c-wrap c-hero-inner"><div class="c-hero-copy"><span class="c-kicker">Northgate Civil — 2026</span><h1 class="c-display">Northgate Civil: quality you can rely on</h1><p class="c-lead">A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites.</p><div class="c-actions"><a class="c-btn c-btn-primary" href="#contact">Get a free q</a><a class="c-btn c-btn-ghost" href="#feature">Our services</a></div></div><div class="c-hero-meta"><span>Est. The Studio</span><span class="c-rule"></span><span>High craft, considered</span></div></div><div class="c-hero-bleed"><img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%22420%22%20viewBox%3D%220%200%201200%20420%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g3%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23EFECE2%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23B5402A%22%20stop-opacity%3D%22.55%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221200%22%20height%3D%22420%22%20fill%3D%22url(%23g3)%22%2F%3E%3Crect%20x%3D%22183%22%20y%3D%22141%22%20width%3D%2260%22%20height%3D%2240%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.12%22%2F%3E%3Crect%20x%3D%22320%22%20y%3D%22332%22%20width%3D%22113%22%20height%3D%22137%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.35%22%2F%3E%3Crect%20x%3D%22457%22%20y%3D%22103%22%20width%3D%22166%22%20height%3D%2274%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.28%22%2F%3E%3Crect%20x%3D%22594%22%20y%3D%22294%22%20width%3D%22219%22%20height%3D%22171%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.21%22%2F%3E%3Crect%20x%3D%22731%22%20y%3D%2265%22%20width%3D%2272%22%20height%3D%22108%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.13999999999999999%22%2F%3E%3Crect%20x%3D%22868%22%20y%3D%22256%22%20width%3D%22125%22%20height%3D%2245%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.37%22%2F%3E%3Crect%20x%3D%221005%22%20y%3D%2227%22%20width%3D%22178%22%20height%3D%22142%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.3%22%2F%3E%3Crect%20x%3D%221142%22%20y%3D%22218%22%20width%3D%22231%22%20height%3D%2279%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.22999999999999998%22%2F%3E%3Ccircle%20cx%3D%22519%22%20cy%3D%22267%22%20r%3D%2273%22%20fill%3D%22%236A4A34%22%20opacity%3D%22.18%22%2F%3E%3C%2Fsvg%3E" alt="" aria-hidden="true" width="1200" height="420" loading="eager" decoding="sync" fetchpriority="high" style="max-width:100%;height:auto;display:block"></div></section>
-<section class="c-strip" data-r data-rhythm="normal" data-transition="bridge" data-emphasis="low"><div class="c-wrap c-strip-row"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div></section>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LocalBusiness","name":"Northgate Civil — Editorial Minimal","description":"A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites across the region."}</script>
+</head><body><a class="c-skip" href="#main">Skip to content</a><div class="c-page" data-density="airy"><header class="c-nav" id="top" data-r data-rhythm="dramatic" data-transition="flat" data-emphasis="low"><div class="c-wrap c-bar"><div class="c-brand">Northgate Civil</div><nav class="c-links"><a href="#feature">Work</a><a href="#story">Story</a><a href="#reviews">Clients</a><a href="#contact">Contact</a></nav><a class="c-btn c-btn-ghost" href="#contact">Get a free q</a></div></header>
+<main id="main" class="c-main"><section class="c-hero c-hero-editorial" id="home" data-r data-rhythm="compact" data-transition="fade" data-emphasis="max"><div class="c-wrap c-hero-inner"><div class="c-hero-copy"><span class="c-kicker">Northgate Civil — 2026</span><h1 class="c-display">Northgate Civil: quality you can rely on</h1><p class="c-lead">A civil engineering and groundworks contractor handling drainage, excavation and surfacing for commercial sites across the region.</p><div class="c-actions"><a class="c-btn c-btn-primary" href="#contact">Get a free q</a><a class="c-btn c-btn-ghost" href="#feature">Our services</a></div></div><div class="c-hero-meta"><span>Est. The Studio</span><span class="c-rule"></span><span>High craft, considered</span></div></div><div class="c-hero-bleed"><img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%22420%22%20viewBox%3D%220%200%201200%20420%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g3%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23EFECE2%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23B5402A%22%20stop-opacity%3D%22.55%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221200%22%20height%3D%22420%22%20fill%3D%22url(%23g3)%22%2F%3E%3Crect%20x%3D%22183%22%20y%3D%22141%22%20width%3D%2260%22%20height%3D%2240%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.12%22%2F%3E%3Crect%20x%3D%22320%22%20y%3D%22332%22%20width%3D%22113%22%20height%3D%22137%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.35%22%2F%3E%3Crect%20x%3D%22457%22%20y%3D%22103%22%20width%3D%22166%22%20height%3D%2274%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.28%22%2F%3E%3Crect%20x%3D%22594%22%20y%3D%22294%22%20width%3D%22219%22%20height%3D%22171%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.21%22%2F%3E%3Crect%20x%3D%22731%22%20y%3D%2265%22%20width%3D%2272%22%20height%3D%22108%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.13999999999999999%22%2F%3E%3Crect%20x%3D%22868%22%20y%3D%22256%22%20width%3D%22125%22%20height%3D%2245%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.37%22%2F%3E%3Crect%20x%3D%221005%22%20y%3D%2227%22%20width%3D%22178%22%20height%3D%22142%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.3%22%2F%3E%3Crect%20x%3D%221142%22%20y%3D%22218%22%20width%3D%22231%22%20height%3D%2279%22%20fill%3D%22%236A4A34%22%20opacity%3D%220.22999999999999998%22%2F%3E%3Ccircle%20cx%3D%22519%22%20cy%3D%22267%22%20r%3D%2273%22%20fill%3D%22%236A4A34%22%20opacity%3D%22.18%22%2F%3E%3C%2Fsvg%3E" alt="" aria-hidden="true" width="1200" height="420" loading="eager" decoding="sync" fetchpriority="high" style="max-width:100%;height:auto;display:block"></div></section>
+<section class="c-strip" id="logos" data-r aria-hidden="true" data-rhythm="normal" data-transition="bridge" data-emphasis="low"><div class="c-wrap c-strip-row"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div></section>
 <section class="c-feature c-feature-edlist" id="feature" data-r data-rhythm="spacious" data-transition="flat" data-emphasis="med"><div class="c-wrap"><div class="c-sec-head c-sec-left"><span class="c-kicker">What we do</span><h2 class="c-sec-title">A considered craft</h2></div><div class="c-edlist"><div class="c-edrow"><div class="c-edrow-h"><span class="c-num">01</span><h3>Professional service</h3></div><p>Reliable, high-quality work — every time.</p></div><div class="c-edrow"><div class="c-edrow-h"><span class="c-num">02</span><h3>Fast turnaround</h3></div><p>Quick response and on-time delivery.</p></div><div class="c-edrow"><div class="c-edrow-h"><span class="c-num">03</span><h3>Fair pricing</h3></div><p>Transparent quotes, no surprises.</p></div></div></div></section>
 <section class="c-story" id="story" data-r data-rhythm="normal" data-transition="bleed" data-emphasis="med"><div class="c-wrap c-story-inner"><div class="c-story-img"><img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22700%22%20height%3D%22760%22%20viewBox%3D%220%200%20700%20760%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g8%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23EFECE2%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%236A4A34%22%20stop-opacity%3D%22.55%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22700%22%20height%3D%22760%22%20fill%3D%22url(%23g8)%22%2F%3E%3Crect%20x%3D%22488%22%20y%3D%22376%22%20width%3D%2260%22%20height%3D%2240%22%20fill%3D%22%23B5402A%22%20opacity%3D%220.12%22%2F%3E%3Crect%20x%3D%22625%22%20y%3D%22567%22%20width%3D%22113%22%20height%3D%22137%22%20fill%3D%22%23B5402A%22%20opacity%3D%220.35%22%2F%3E%3Crect%20x%3D%2262%22%20y%3D%22758%22%20width%3D%22166%22%20height%3D%2274%22%20fill%3D%22%23B5402A%22%20opacity%3D%220.28%22%2F%3E%3Crect%20x%3D%22199%22%20y%3D%22189%22%20width%3D%22219%22%20height%3D%22171%22%20fill%3D%22%23B5402A%22%20opacity%3D%220.21%22%2F%3E%3Crect%20x%3D%22336%22%20y%3D%22380%22%20width%3D%2272%22%20height%3D%22108%22%20fill%3D%22%23B5402A%22%20opacity%3D%220.13999999999999999%22%2F%3E%3Ccircle%20cx%3D%22684%22%20cy%3D%22712%22%20r%3D%2278%22%20fill%3D%22%23B5402A%22%20opacity%3D%22.18%22%2F%3E%3C%2Fsvg%3E" alt="" aria-hidden="true" width="700" height="760" decoding="async" style="max-width:100%;height:auto;display:block"></div><div class="c-story-body"><span class="c-kicker">Our story</span><h2 class="c-sec-title">Built on care</h2><p class="c-lead">Northgate Civil — how we work, and what we hold to.</p></div></div></section>
 <section class="c-reviews c-reviews-quote" id="reviews" data-r data-rhythm="compact" data-transition="fade" data-emphasis="med"><h2 class="c-sr-only">What clients say about Northgate Civil</h2><div class="c-wrap"><div class="c-quote-row"><figure class="c-quote"><blockquote>“Brilliant service from start to finish — highly recommended!”</blockquote><figcaption><b>A Happy Client</b><span></span></figcaption></figure></div></div></section>
