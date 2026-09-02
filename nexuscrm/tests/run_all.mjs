@@ -42,6 +42,7 @@ const SUITES = [
   'test_user_journey.mjs',      // END TO END: sign up -> generate -> save -> publish -> visit as an anonymous visitor -> edit -> snapshot -> restore
   'test_measurement_primitives.mjs', // The functions every verdict rests on: CSS length resolution, WCAG contrast, unit normalisation, cascade var resolution
   'test_ui_interaction.mjs',    // Drives the SHIPPED UI with real DOM events against the REAL worker: clicks, typing, modal, direction picker, payload
+  'test_module_architecture.mjs', // Strict-ESM module boundaries: named exports only, no require(), no globalThis leakage, private state stays private
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',

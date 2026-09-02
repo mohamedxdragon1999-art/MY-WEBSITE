@@ -13,6 +13,9 @@ import NX_VALIDATE_MOD from './nx_validate.js';
 // Cross-generation validation history, so a slow regression is visible without
 // anyone eyeballing individual pages.
 import NX_HISTORY_MOD from './nx_history.js';
+import { corsHeaders, json, err } from './middleware/http.js';
+import { hashPassword, verifyPassword, timingSafeEqual, bytesToB64, b64ToBytes, encryptSecret, decryptSecret, randomToken } from './security/crypto.js';
+import { isValidEmail, isIn, pick, sanitizeCustomFields, parseCustomFields } from './validators/input.js';
 // What changed in V4.1 (all review findings addressed):
 //  * Timestamps are ISO-8601 UTC everywhere (schema defaults + JS writes),
 //    so SQL comparisons like fire_at <= now work — delayed workflow steps
@@ -41,106 +44,11 @@ const nowISO = () => new Date().toISOString();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ── CORS ─────────────────────────────────────────────────────
-function corsHeaders(origin) {
-  return {
-    'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400',
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'SAMEORIGIN',
-    'Referrer-Policy': 'no-referrer-when-downgrade',
-  };
-}
-function json(data, status, origin) {
-  return new Response(JSON.stringify(data), {
-    status: status || 200,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
-  });
-}
-function err(message, status, origin) {
-  return json({ error: message }, status || 400, origin);
-}
-function pick(obj, keys) { const o = {}; keys.forEach(k => { if (obj[k] !== undefined) o[k] = obj[k]; }); return o; }
-// Custom fields arrive as an object {label: value} — store only plain
-// string values, capped, so the column can never hold garbage.
-function sanitizeCustomFields(cf) {
-  if (!cf || typeof cf !== 'object' || Array.isArray(cf)) return '{}';
-  const out = {};
-  for (const [k, v] of Object.entries(cf)) {
-    const key = String(k).slice(0, 60).trim();
-    if (!key) continue;
-    out[key] = String(v == null ? '' : v).slice(0, 500);
-  }
-  return JSON.stringify(out);
-}
-function parseCustomFields(cf) {
-  try { const p = JSON.parse(cf || '{}'); return p && typeof p === 'object' ? p : {}; }
-  catch { return {}; }
-}
+// CORS + JSON/error responses: extracted to ./middleware/http.js
+// Input validation + sanitisation: extracted to ./validators/input.js
 
 // ── CRYPTO ───────────────────────────────────────────────────
-async function hashPassword(password, saltB64) {
-  const enc = new TextEncoder();
-  const salt = saltB64 ? b64ToBytes(saltB64) : crypto.getRandomValues(new Uint8Array(16));
-  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, 256
-  );
-  return { hash: bytesToB64(new Uint8Array(bits)), salt: bytesToB64(salt) };
-}
-async function verifyPassword(password, hashB64, saltB64) {
-  const { hash } = await hashPassword(password, saltB64);
-  return timingSafeEqual(hash, hashB64);
-}
-function timingSafeEqual(a, b) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-function bytesToB64(bytes) { return btoa(String.fromCharCode(...bytes)); }
-function b64ToBytes(b64) { return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
-
-// ── SECRET-AT-REST ENCRYPTION (AES-256-GCM) ─────────────────
-// AI provider keys and the Resend API key are the most sensitive things
-// this database holds. Encrypting them with a secret that lives only in
-// Worker Secrets (never in D1, never in source control) means a
-// database-only leak exposes ciphertext, not usable keys.
-// Requires `wrangler secret put ENCRYPTION_KEY` (see DEPLOY.md).
-// If that secret isn't set, this degrades to storing plaintext rather
-// than hard-failing the whole app — but /ai/settings and /email/smtp both
-// report `encrypted: false` in that case so it's visible, not silent.
-let _encKeyCache = null;
-async function getEncryptionKey(env) {
-  if (!env.ENCRYPTION_KEY) return null;
-  if (_encKeyCache) return _encKeyCache;
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(env.ENCRYPTION_KEY));
-  _encKeyCache = await crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-  return _encKeyCache;
-}
-async function encryptSecret(env, plaintext) {
-  if (!plaintext) return plaintext;
-  const key = await getEncryptionKey(env);
-  if (!key) return plaintext;
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
-  return 'enc:v1:' + bytesToB64(iv) + ':' + bytesToB64(new Uint8Array(ct));
-}
-async function decryptSecret(env, stored) {
-  if (!stored || !stored.startsWith('enc:v1:')) return stored || '';
-  const key = await getEncryptionKey(env);
-  if (!key) throw new Error('This value is encrypted but ENCRYPTION_KEY is not configured on the backend — set it with `wrangler secret put ENCRYPTION_KEY` to decrypt it again.');
-  const [, , ivB64, ctB64] = stored.split(':');
-  try {
-    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(ivB64) }, key, b64ToBytes(ctB64));
-    return new TextDecoder().decode(pt);
-  } catch (e) { throw new Error('Failed to decrypt a stored key — ENCRYPTION_KEY may have changed since it was saved. Re-enter your API keys in Settings.'); }
-}
-function randomToken() {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return bytesToB64(bytes).replace(/[+/=]/g, c => ({ '+': '-', '/': '_', '=': '' }[c]));
-}
+// Crypto, secret-at-rest encryption and token generation: extracted to ./security/crypto.js
 // Natural-language date → ISO date. Understands "tomorrow", "today", "next
 // friday", "in 3 days", "monday", and YYYY-MM-DD. Returns null if unsure.
 function parseNaturalDate(str) {
@@ -205,9 +113,6 @@ async function createSession(env, userId, workspaceId, hours) {
 }
 
 // ── VALIDATION ───────────────────────────────────────────────
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-function isValidEmail(e) { return typeof e === 'string' && e.length <= 254 && EMAIL_RE.test(e); }
-function isIn(v, list) { return list.includes(v); }
 const CONTACT_STAGES = ['lead', 'prospect', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'customer', 'churned'];
 const WORKFLOW_TRIGGERS = ['new_contact', 'deal_stage_change', 'appointment_booked', 'invoice_paid', 'form_submitted', 'trigger_link', 'webhook', 'manual'];
 const WORKFLOW_ACTIONS = ['send_email', 'send_whatsapp', 'send_review_request', 'create_task', 'update_stage'];
@@ -3679,7 +3584,12 @@ function __D(name, dflt) {
     if (globalThis.__NX_DESIGN && globalThis.__NX_DESIGN[name]) return globalThis.__NX_DESIGN[name];
     if (globalThis[name] && typeof globalThis[name] === 'function') return globalThis[name];
   }
-  try { const D = (typeof require === 'function') ? require('./nx_design.js') : null; if (D && D[name]) return D[name]; } catch {}
+  // No require() fallback here: `require` is undefined under ESM, so the old
+  // `typeof require === 'function' ? require('./nx_design.js') : null` branch
+  // was unreachable dead code. nx_design lives at the workspace root (not in
+  // backend/src) and cannot be statically imported into the Worker bundle; the
+  // implementations are inlined above and published on globalThis, which is the
+  // path that actually resolves.
   return dflt;
 }
 
@@ -4924,7 +4834,8 @@ function __r(name, dflt) {
     if (globalThis.__NX_IR && globalThis.__NX_IR[name] !== undefined) return globalThis.__NX_IR[name];
     if (globalThis[name] !== undefined) return globalThis[name];
   }
-  try { if (typeof require === 'function') { const IR = require('./nx_ir.js'); if (IR[name] !== undefined) return IR[name]; } } catch {}
+  // Same as __dep above: no require() fallback under ESM. The IR API is inlined
+  // in this file and exposed via __NX_IR_API / globalThis.
   return dflt;
 }
 
@@ -6106,8 +6017,11 @@ function __dep(key, name, dflt) {
     if (globalThis[name] !== undefined && typeof globalThis[name] === 'function') return globalThis[name];
   }
   try {
-    if (typeof require === 'function') {
-      const m = key === 'design' ? require('./nx_design.js') : key === 'compose' ? require('./nx_compose.js') : key === 'ir' ? require('./nx_ir.js') : require('./nx_graph.js');
+    {
+      // Only nx_compose is a real sibling module in backend/src; design/ir/graph
+      // are inlined here and resolved from globalThis above.
+      const m = key === 'compose' ? NX_COMPOSE_MOD : null;
+      if (!m) return dflt;
       if (m && m[name] !== undefined) return m[name];
     }
   } catch {}
@@ -7581,6 +7495,10 @@ function __tpl() {
     const tm = globalThis.__NX_DEPS.template;
     return typeof tm === 'object' && tm.nxBuildTemplateSite ? tm : null;
   }
+  // Deliberately NOT a static import: nx_template.js lives at the workspace
+  // root, not in backend/src, so importing it would break the Worker bundle.
+  // It is an optional dependency supplied via globalThis by the host. This
+  // guard is unreachable under ESM and kept only for a CJS host.
   try { if (typeof require === 'function') { const m = require('./nx_template.js'); if (m && m.nxBuildTemplateSite) return m; } } catch {}
   return null;
 }
