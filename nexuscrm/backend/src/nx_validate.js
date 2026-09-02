@@ -299,7 +299,23 @@ function nxValidateAndRepair(generate, repair, opts) {
   for (let i = 1; i <= max && !report.pass; i++) {
     let next = null, applied = [];
     if (typeof repair === 'function') next = repair(html, report.blocking, i);
-    else { const r = nxAutoRepair(html, report.blocking); next = r.html; applied = r.applied; }
+    else {
+      // Phase 1.3: try SCOPE-LIMITED repair first. It fixes the smallest scope
+      // that resolves each violation and only widens on measured failure, so a
+      // single faulty element cannot trigger page-wide restyling. The blunt
+      // repairer stays as the final fallback.
+      let scoped = null;
+      try {
+        const { nxRepairScoped } = require('./nx_repair.js');
+        scoped = nxRepairScoped(html, report.blocking, (h) => nxValidatePage(h, opts));
+      } catch (e) { scoped = null; }
+      if (scoped && scoped.html !== html) {
+        next = scoped.html;
+        applied = scoped.applied.map((a) => `${a.rule} [${a.tier}] ${a.selector}: ${a.note}`);
+      } else {
+        const r = nxAutoRepair(html, report.blocking); next = r.html; applied = r.applied;
+      }
+    }
     if (!next || next === html) break;              // no progress — stop, do not spin
     const cand = nxValidatePage(next, opts);
     // Best-known-version rule: never replace a page with a worse candidate.
