@@ -1,0 +1,67 @@
+{
+  "editorial-minimal": {
+    "distFromBaseline": "0.995",
+    "hero": "editorial",
+    "feature": "edlist",
+    "reviews": "quote",
+    "order": "c-nav→c-hero#home→c-strip→c-feature#feature→c-story#story→c-work#work→c-reviews#reviews→c-cta#cta→c-contact#contact→c-footer",
+    "motion": "quiet",
+    "density": "airy",
+    "display": "clamp(3.2rem,8.5vw,6.6rem)",
+    "measure": "62ch",
+    "monotony": 15,
+    "cardDependency": 0
+  },
+  "cinematic-immersive": {
+    "distFromBaseline": "0.995",
+    "hero": "fullbleed",
+    "feature": "bento",
+    "reviews": "grid",
+    "order": "c-nav→c-hero#home→c-marquee→c-metrics#metrics→c-feature#feature→c-story#story→c-work#work→c-reviews#reviews→c-cta#cta→c-contact#contact→c-footer",
+    "motion": "cinematic",
+    "density": "balanced",
+    "display": "clamp(3.4rem,10vw,8rem)",
+    "measure": "58ch",
+    "monotony": 22,
+    "cardDependency": 0.167
+  },
+  "luxury-art": {
+    "distFromBaseline": "0.993",
+    "hero": "minimal",
+    "feature": "split",
+    "reviews": "single",
+    "order": "c-nav→c-hero#home→c-story#story→c-feature#feature→c-work#work→c-reviews#reviews→c-cta#cta→c-footer→c-contact#contact",
+    "motion": "slow",
+    "density": "airy",
+    "display": "clamp(3rem,7.5vw,5.8rem)",
+    "measure": "56ch",
+    "monotony": 20,
+    "cardDependency": 0
+  },
+  "bold-experimental": {
+    "distFromBaseline": "0.995",
+    "hero": "overlap",
+    "feature": "alternating",
+    "reviews": "grid",
+    "order": "c-nav→c-hero#home→c-marquee→c-feature#feature→c-metrics#metrics→c-work#work→c-reviews#reviews→c-cta#cta→c-contact#contact→c-footer",
+    "motion": "energetic",
+    "density": "dense",
+    "display": "clamp(4rem,13vw,10rem)",
+    "measure": "54ch",
+    "monotony": 31,
+    "cardDependency": 0.154
+  },
+  "swiss-structured": {
+    "distFromBaseline": "0.883",
+    "hero": "split",
+    "feature": "grid",
+    "reviews": "omitted",
+    "order": "c-nav→c-hero#home→c-metrics#metrics→c-feature#feature→c-story#story→c-work#work→c-cta#cta→c-footer→c-contact#contact",
+    "motion": "functional",
+    "density": "balanced",
+    "display": "clamp(3rem,8vw,5.6rem)",
+    "measure": "72ch",
+    "monotony": 40,
+    "cardDependency": 0.364
+  }
+}

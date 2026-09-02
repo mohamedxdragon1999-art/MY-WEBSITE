@@ -1,0 +1,21 @@
+{
+  "name": "nexuscrm",
+  "version": "1.0.0",
+  "description": "All 33 findings from the code review are fixed, every placeholder feature is now real, the AI layer is substantially upgraded, and everything is verified by automated tests.",
+  "main": "cors-proxy-worker.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node tests/run_all.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jsdom": "^29.1.1",
+    "playwright": "^1.62.1",
+    "sql.js": "^1.14.2",
+    "linkedom": "^0.18.5"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "editorial-minimal": {
+    "sections": "c-nav→c-hero→c-strip→c-feature→c-story→c-work→c-reviews→c-cta→c-contact→c-footer",
+    "hero": "c-hero-editorial",
+    "feature": "c-feature-edlist",
+    "motion": "quiet",
+    "density": "airy"
+  },
+  "cinematic-immersive": {
+    "sections": "c-nav→c-hero→c-marquee→c-metrics→c-feature→c-story→c-work→c-reviews→c-cta→c-contact→c-footer",
+    "hero": "c-hero-fullbleed",
+    "feature": "c-feature-bento",
+    "motion": "cinematic",
+    "density": "balanced"
+  },
+  "luxury-art": {
+    "sections": "c-nav→c-hero→c-story→c-feature→c-work→c-reviews→c-cta→c-footer→c-contact",
+    "hero": "c-hero-minimal",
+    "feature": "c-feature-split",
+    "motion": "slow",
+    "density": "airy"
+  },
+  "bold-experimental": {
+    "sections": "c-nav→c-hero→c-marquee→c-feature→c-metrics→c-work→c-reviews→c-cta→c-contact→c-footer",
+    "hero": "c-hero-overlap",
+    "feature": "c-feature-alt",
+    "motion": "energetic",
+    "density": "dense"
+  },
+  "swiss-structured": {
+    "sections": "c-nav→c-hero→c-metrics→c-feature→c-story→c-work→c-cta→c-footer→c-contact",
+    "hero": "c-hero-split",
+    "feature": "c-feature-grid",
+    "motion": "functional",
+    "density": "balanced"
+  }
+}

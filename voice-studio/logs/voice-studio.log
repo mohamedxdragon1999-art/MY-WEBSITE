@@ -1,0 +1,158 @@
+{"ts": "2026-07-31T17:39:42", "level": "INFO", "msg": "startup", "version": "0.0.51", "tenants": 1, "cpu_concurrency": 4, "net_concurrency": 32, "brain_keys": 1, "brain_capacity_rpm": 18}
+{"ts": "2026-07-31T17:39:43", "level": "INFO", "msg": "brain_prewarm", "warmed": "openrouter"}
+{"ts": "2026-07-31T17:39:44", "level": "INFO", "msg": "request", "rid": "4aa117d91abb44dd", "path": "/api/health", "status": 200, "ms": 689.1}
+{"ts": "2026-07-31T17:39:48", "level": "INFO", "msg": "request", "rid": "9741f407520a41d4", "path": "/api/stt-status", "status": 200, "ms": 2.5}
+{"ts": "2026-07-31T17:39:52", "level": "INFO", "msg": "request", "rid": "98d3f7de0c754fa4", "path": "/api/voice-status", "status": 200, "ms": 3864.5}
+{"ts": "2026-07-31T17:39:52", "level": "INFO", "msg": "request", "rid": "6596956b9240430e", "path": "/api/engines", "status": 200, "ms": 4335.3}
+{"ts": "2026-07-31T17:39:53", "level": "INFO", "msg": "request", "rid": "c8e0c5eee92f4c75", "path": "/api/pool", "status": 200, "ms": 4.0}
+{"ts": "2026-07-31T17:39:53", "level": "INFO", "msg": "request", "rid": "a37e4eb2c2d04076", "path": "/api/keys", "status": 200, "ms": 7.8}
+{"ts": "2026-07-31T17:39:53", "level": "INFO", "msg": "request", "rid": "262b878c03bc4e68", "path": "/api/nim-models", "status": 200, "ms": 240.2}
+{"ts": "2026-07-31T17:40:08", "level": "INFO", "msg": "request", "rid": "b9cf30de7ac94d53", "path": "/api/verify-key", "status": 200, "ms": 7151.0}
+{"ts": "2026-07-31T17:40:08", "level": "INFO", "msg": "request", "rid": "714a28a7ef384d9b", "path": "/api/keys", "status": 200, "ms": 4.9}
+{"ts": "2026-07-31T17:40:08", "level": "INFO", "msg": "request", "rid": "b8bdbd79a4b84fd1", "path": "/api/pool", "status": 200, "ms": 3.9}
+{"ts": "2026-07-31T17:40:09", "level": "INFO", "msg": "request", "rid": "286efe3cf01e4434", "path": "/api/nim-models", "status": 200, "ms": 232.8}
+{"ts": "2026-07-31T17:43:06", "level": "INFO", "msg": "request", "rid": "68e9073012c24d5f", "path": "/api/reply-stream", "status": 200, "ms": 4.0}
+{"ts": "2026-07-31T17:43:12", "level": "INFO", "msg": "brain_offline_fallback", "rid": "39cf6942298e4a00"}
+{"ts": "2026-07-31T17:43:12", "level": "INFO", "msg": "request", "rid": "39cf6942298e4a00", "path": "/api/reply", "status": 200, "ms": 7491.0}
+{"ts": "2026-07-31T17:43:12", "level": "INFO", "msg": "brain_offline_fallback", "rid": "dcb5379a44a14a8a"}
+{"ts": "2026-07-31T17:43:12", "level": "INFO", "msg": "request", "rid": "dcb5379a44a14a8a", "path": "/api/reply", "status": 200, "ms": 7326.5}
+{"ts": "2026-07-31T17:43:19", "level": "INFO", "msg": "brain_offline_fallback", "rid": "bb42a226608647cf"}
+{"ts": "2026-07-31T17:43:19", "level": "INFO", "msg": "request", "rid": "bb42a226608647cf", "path": "/api/reply", "status": 200, "ms": 7326.2}
+{"ts": "2026-07-31T17:43:33", "level": "INFO", "msg": "request", "rid": "f6331575d33f4a13", "path": "/api/tts", "status": 200, "ms": 1240.0}
+{"ts": "2026-07-31T17:43:33", "level": "INFO", "msg": "request", "rid": "42b100f431dd46fd", "path": "/api/tts", "status": 200, "ms": 1270.5}
+{"ts": "2026-07-31T17:43:33", "level": "INFO", "msg": "request", "rid": "75fcca19d90c48e1", "path": "/api/tts", "status": 200, "ms": 1461.8}
+{"ts": "2026-07-31T17:43:45", "level": "INFO", "msg": "brain_offline_fallback", "rid": "f5f0418da1ee45f5"}
+{"ts": "2026-07-31T17:43:45", "level": "INFO", "msg": "request", "rid": "f5f0418da1ee45f5", "path": "/api/reply", "status": 200, "ms": 399.8}
+{"ts": "2026-07-31T17:43:45", "level": "INFO", "msg": "brain_offline_fallback", "rid": "8062a2631172481a"}
+{"ts": "2026-07-31T17:43:45", "level": "INFO", "msg": "request", "rid": "8062a2631172481a", "path": "/api/reply", "status": 200, "ms": 214.7}
+{"ts": "2026-07-31T17:43:46", "level": "INFO", "msg": "brain_offline_fallback", "rid": "8cf8304f09b74996"}
+{"ts": "2026-07-31T17:43:46", "level": "INFO", "msg": "request", "rid": "8cf8304f09b74996", "path": "/api/reply", "status": 200, "ms": 201.1}
+{"ts": "2026-07-31T17:43:47", "level": "INFO", "msg": "brain_offline_fallback", "rid": "606567b5108a4618"}
+{"ts": "2026-07-31T17:43:47", "level": "INFO", "msg": "request", "rid": "606567b5108a4618", "path": "/api/reply", "status": 200, "ms": 229.0}
+{"ts": "2026-07-31T17:43:47", "level": "INFO", "msg": "brain_offline_fallback", "rid": "e53664314a36414f"}
+{"ts": "2026-07-31T17:43:47", "level": "INFO", "msg": "request", "rid": "e53664314a36414f", "path": "/api/reply", "status": 200, "ms": 245.8}
+{"ts": "2026-07-31T17:43:48", "level": "INFO", "msg": "request", "rid": "eda4fa48260d45c8", "path": "/api/reply-stream", "status": 200, "ms": 1.7}
+{"ts": "2026-07-31T17:43:49", "level": "INFO", "msg": "request", "rid": "bae5a78dddfe40de", "path": "/api/tts", "status": 200, "ms": 991.0}
+{"ts": "2026-07-31T17:43:49", "level": "INFO", "msg": "request", "rid": "a369e74ea47c4bc2", "path": "/api/tts", "status": 200, "ms": 1247.5}
+{"ts": "2026-07-31T17:43:51", "level": "INFO", "msg": "brain_offline_fallback", "rid": "7b676ae423fb4e06"}
+{"ts": "2026-07-31T17:43:51", "level": "INFO", "msg": "request", "rid": "7b676ae423fb4e06", "path": "/api/reply", "status": 200, "ms": 199.0}
+{"ts": "2026-07-31T17:44:03", "level": "INFO", "msg": "request", "rid": "8f15b6862a8a41d4", "path": "/api/keys", "status": 200, "ms": 1.5}
+{"ts": "2026-07-31T17:44:19", "level": "INFO", "msg": "brain_offline_fallback", "rid": "fe61fc54d7c3456a"}
+{"ts": "2026-07-31T17:44:19", "level": "INFO", "msg": "request", "rid": "fe61fc54d7c3456a", "path": "/api/reply", "status": 200, "ms": 662.1}
+{"ts": "2026-07-31T17:44:19", "level": "INFO", "msg": "brain_offline_fallback", "rid": "7686ff8df8c64e98"}
+{"ts": "2026-07-31T17:44:19", "level": "INFO", "msg": "request", "rid": "7686ff8df8c64e98", "path": "/api/reply", "status": 200, "ms": 281.1}
+{"ts": "2026-07-31T17:44:20", "level": "INFO", "msg": "brain_offline_fallback", "rid": "5b6573b7615944b0"}
+{"ts": "2026-07-31T17:44:20", "level": "INFO", "msg": "request", "rid": "5b6573b7615944b0", "path": "/api/reply", "status": 200, "ms": 274.8}
+{"ts": "2026-07-31T17:44:21", "level": "INFO", "msg": "brain_offline_fallback", "rid": "9b007c9eeeb64706"}
+{"ts": "2026-07-31T17:44:21", "level": "INFO", "msg": "request", "rid": "9b007c9eeeb64706", "path": "/api/reply", "status": 200, "ms": 279.3}
+{"ts": "2026-07-31T17:44:24", "level": "INFO", "msg": "request", "rid": "8941e57e46c3455d", "path": "/api/reply-stream", "status": 200, "ms": 3.3}
+{"ts": "2026-07-31T17:44:24", "level": "INFO", "msg": "request", "rid": "1e8ff5a6d7524baf", "path": "/api/tts", "status": 200, "ms": 2.5}
+{"ts": "2026-07-31T17:44:24", "level": "INFO", "msg": "request", "rid": "6e264b3b0e80451a", "path": "/api/tts", "status": 200, "ms": 3.6}
+{"ts": "2026-07-31T17:44:34", "level": "INFO", "msg": "brain_offline_fallback", "rid": "f1ce55912bd94916"}
+{"ts": "2026-07-31T17:44:34", "level": "INFO", "msg": "request", "rid": "f1ce55912bd94916", "path": "/api/reply", "status": 200, "ms": 420.8}
+{"ts": "2026-07-31T17:44:35", "level": "INFO", "msg": "brain_offline_fallback", "rid": "289bebc4895d4b33"}
+{"ts": "2026-07-31T17:44:35", "level": "INFO", "msg": "request", "rid": "289bebc4895d4b33", "path": "/api/reply", "status": 200, "ms": 192.8}
+{"ts": "2026-07-31T17:44:38", "level": "INFO", "msg": "request", "rid": "336cf433c9474920", "path": "/api/reply-stream", "status": 200, "ms": 2.4}
+{"ts": "2026-07-31T17:44:39", "level": "INFO", "msg": "request", "rid": "b611d83923704c4f", "path": "/api/tts", "status": 200, "ms": 1.6}
+{"ts": "2026-07-31T17:44:39", "level": "INFO", "msg": "request", "rid": "cc169f30754a4ffe", "path": "/api/tts", "status": 200, "ms": 2.6}
+{"ts": "2026-07-31T17:44:49", "level": "INFO", "msg": "request", "rid": "004dde1f55e74587", "path": "/api/verify-key", "status": 200, "ms": 338.5}
+{"ts": "2026-07-31T17:44:49", "level": "INFO", "msg": "request", "rid": "5350a5a453274cca", "path": "/api/keys", "status": 200, "ms": 3.6}
+{"ts": "2026-07-31T17:44:49", "level": "INFO", "msg": "request", "rid": "ac24cf4344d84a7d", "path": "/api/pool", "status": 200, "ms": 3.5}
+{"ts": "2026-07-31T17:44:49", "level": "INFO", "msg": "request", "rid": "baee52941a644b4e", "path": "/api/nim-models", "status": 200, "ms": 86.4}
+{"ts": "2026-07-31T17:44:52", "level": "INFO", "msg": "request", "rid": "241c6f5f914447d4", "path": "/api/nim-models", "status": 200, "ms": 87.1}
+{"ts": "2026-07-31T17:45:32", "level": "INFO", "msg": "request", "rid": "7c9f12f434124e82", "path": "/api/reply-stream", "status": 200, "ms": 2.2}
+{"ts": "2026-07-31T17:45:35", "level": "INFO", "msg": "brain_offline_fallback", "rid": "4bb8a4bd50bd4d16"}
+{"ts": "2026-07-31T17:45:35", "level": "INFO", "msg": "request", "rid": "4bb8a4bd50bd4d16", "path": "/api/reply", "status": 200, "ms": 7457.6}
+{"ts": "2026-07-31T17:45:35", "level": "INFO", "msg": "brain_offline_fallback", "rid": "4fcea93c5e89477b"}
+{"ts": "2026-07-31T17:45:35", "level": "INFO", "msg": "request", "rid": "4fcea93c5e89477b", "path": "/api/reply", "status": 200, "ms": 7240.0}
+{"ts": "2026-07-31T17:45:36", "level": "INFO", "msg": "brain_offline_fallback", "rid": "1caf387928384806"}
+{"ts": "2026-07-31T17:45:36", "level": "INFO", "msg": "request", "rid": "1caf387928384806", "path": "/api/reply", "status": 200, "ms": 7228.2}
+{"ts": "2026-07-31T17:45:37", "level": "INFO", "msg": "brain_offline_fallback", "rid": "d4276584ae3e44f6"}
+{"ts": "2026-07-31T17:45:37", "level": "INFO", "msg": "request", "rid": "d4276584ae3e44f6", "path": "/api/reply", "status": 200, "ms": 7238.1}
+{"ts": "2026-07-31T17:45:46", "level": "INFO", "msg": "request", "rid": "d05060d2d7ba4c5c", "path": "/api/tts", "status": 200, "ms": 1.6}
+{"ts": "2026-07-31T17:45:46", "level": "INFO", "msg": "request", "rid": "2762c72df12048aa", "path": "/api/tts", "status": 200, "ms": 2.6}
+{"ts": "2026-07-31T17:45:57", "level": "INFO", "msg": "brain_offline_fallback", "rid": "0c7b164c66024186"}
+{"ts": "2026-07-31T17:45:57", "level": "INFO", "msg": "request", "rid": "0c7b164c66024186", "path": "/api/reply", "status": 200, "ms": 265.6}
+{"ts": "2026-07-31T17:45:57", "level": "INFO", "msg": "brain_offline_fallback", "rid": "7e5ae140f5924d4c"}
+{"ts": "2026-07-31T17:45:57", "level": "INFO", "msg": "request", "rid": "7e5ae140f5924d4c", "path": "/api/reply", "status": 200, "ms": 115.2}
+{"ts": "2026-07-31T17:45:57", "level": "INFO", "msg": "request", "rid": "9718543572534c7a", "path": "/api/reply-stream", "status": 200, "ms": 2.0}
+{"ts": "2026-07-31T17:45:59", "level": "INFO", "msg": "brain_offline_fallback", "rid": "04261e33089e4e9a"}
+{"ts": "2026-07-31T17:45:59", "level": "INFO", "msg": "request", "rid": "04261e33089e4e9a", "path": "/api/reply", "status": 200, "ms": 251.9}
+{"ts": "2026-07-31T17:46:02", "level": "INFO", "msg": "brain_offline_fallback", "rid": "40a4561b33734358"}
+{"ts": "2026-07-31T17:46:02", "level": "INFO", "msg": "request", "rid": "40a4561b33734358", "path": "/api/reply", "status": 200, "ms": 7166.2}
+{"ts": "2026-07-31T17:46:10", "level": "INFO", "msg": "request", "rid": "6d0de97e32634953", "path": "/api/tts", "status": 200, "ms": 1.8}
+{"ts": "2026-07-31T17:46:10", "level": "INFO", "msg": "request", "rid": "4635568b973942f7", "path": "/api/tts", "status": 200, "ms": 2.9}
+{"ts": "2026-07-31T17:46:19", "level": "INFO", "msg": "brain_offline_fallback", "rid": "e7f4be73bbc54a99"}
+{"ts": "2026-07-31T17:46:19", "level": "INFO", "msg": "request", "rid": "e7f4be73bbc54a99", "path": "/api/reply", "status": 200, "ms": 437.8}
+{"ts": "2026-07-31T17:46:20", "level": "INFO", "msg": "request", "rid": "b5418bb8e774451a", "path": "/api/reply-stream", "status": 200, "ms": 1.9}
+{"ts": "2026-07-31T17:46:27", "level": "INFO", "msg": "request", "rid": "71479aed586a451c", "path": "/api/tts", "status": 200, "ms": 1.7}
+{"ts": "2026-07-31T17:46:27", "level": "INFO", "msg": "request", "rid": "88db2f309c3149bb", "path": "/api/tts", "status": 200, "ms": 2.7}
+{"ts": "2026-07-31T17:52:54", "level": "INFO", "msg": "startup", "version": "0.0.51", "tenants": 1, "cpu_concurrency": 4, "net_concurrency": 32, "brain_keys": 1, "brain_capacity_rpm": 18}
+{"ts": "2026-07-31T17:52:54", "level": "INFO", "msg": "request", "rid": "c2cf63acb9604913", "path": "/api/health", "status": 200, "ms": 3.0}
+{"ts": "2026-07-31T17:52:55", "level": "INFO", "msg": "brain_prewarm", "warmed": "openrouter"}
+{"ts": "2026-07-31T17:52:55", "level": "INFO", "msg": "request", "rid": "0d4aa4049768423c", "path": "/api/stt-status", "status": 200, "ms": 1.7}
+{"ts": "2026-07-31T17:52:56", "level": "INFO", "msg": "request", "rid": "8d31ccb001e24f6f", "path": "/api/engines", "status": 200, "ms": 1155.4}
+{"ts": "2026-07-31T17:52:56", "level": "INFO", "msg": "request", "rid": "2c406ba518c34c14", "path": "/api/pool", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:53:18", "level": "INFO", "msg": "brain_offline_fallback", "rid": "cdf2b8a9b60e4631"}
+{"ts": "2026-07-31T17:53:18", "level": "INFO", "msg": "request", "rid": "cdf2b8a9b60e4631", "path": "/api/reply", "status": 200, "ms": 322.1}
+{"ts": "2026-07-31T17:53:20", "level": "INFO", "msg": "request", "rid": "2c35ab4b9ec448fc", "path": "/api/reply-stream", "status": 200, "ms": 4.7}
+{"ts": "2026-07-31T17:53:21", "level": "INFO", "msg": "request", "rid": "c69520f00f3849e4", "path": "/api/tts", "status": 200, "ms": 717.8}
+{"ts": "2026-07-31T17:53:21", "level": "INFO", "msg": "request", "rid": "c5fa2a4a3bc04ee7", "path": "/api/tts", "status": 200, "ms": 750.1}
+{"ts": "2026-07-31T17:53:21", "level": "INFO", "msg": "request", "rid": "2b6a3d9b67d34430", "path": "/api/tts", "status": 200, "ms": 768.0}
+{"ts": "2026-07-31T17:53:30", "level": "INFO", "msg": "brain_offline_fallback", "rid": "b1f551eb7cf44f05"}
+{"ts": "2026-07-31T17:53:30", "level": "INFO", "msg": "request", "rid": "b1f551eb7cf44f05", "path": "/api/reply", "status": 200, "ms": 197.6}
+{"ts": "2026-07-31T17:53:30", "level": "INFO", "msg": "brain_offline_fallback", "rid": "21c0e7d335604c50"}
+{"ts": "2026-07-31T17:53:30", "level": "INFO", "msg": "request", "rid": "21c0e7d335604c50", "path": "/api/reply", "status": 200, "ms": 162.6}
+{"ts": "2026-07-31T17:53:31", "level": "INFO", "msg": "request", "rid": "d7395c6fe6e74db0", "path": "/api/reply-stream", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:53:32", "level": "INFO", "msg": "request", "rid": "90e4de828faa4c4e", "path": "/api/tts", "status": 200, "ms": 955.0}
+{"ts": "2026-07-31T17:53:33", "level": "INFO", "msg": "request", "rid": "14172ea2d5ce4c3a", "path": "/api/tts", "status": 200, "ms": 2022.7}
+{"ts": "2026-07-31T17:53:37", "level": "INFO", "msg": "brain_offline_fallback", "rid": "72ad81d9b24b4523"}
+{"ts": "2026-07-31T17:53:37", "level": "INFO", "msg": "request", "rid": "72ad81d9b24b4523", "path": "/api/reply", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:53:45", "level": "INFO", "msg": "request", "rid": "e2f30d39f2bf4271", "path": "/api/tts", "status": 200, "ms": 1795.6}
+{"ts": "2026-07-31T17:53:46", "level": "INFO", "msg": "request", "rid": "a0f0156968ab47c8", "path": "/api/tts", "status": 200, "ms": 2047.2}
+{"ts": "2026-07-31T17:53:55", "level": "INFO", "msg": "brain_offline_fallback", "rid": "8849b85904194da9"}
+{"ts": "2026-07-31T17:53:55", "level": "INFO", "msg": "request", "rid": "8849b85904194da9", "path": "/api/reply", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:53:55", "level": "INFO", "msg": "brain_offline_fallback", "rid": "955dc27cce124d79"}
+{"ts": "2026-07-31T17:53:55", "level": "INFO", "msg": "request", "rid": "955dc27cce124d79", "path": "/api/reply", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:53:56", "level": "INFO", "msg": "brain_offline_fallback", "rid": "c117b6cec205477e"}
+{"ts": "2026-07-31T17:53:56", "level": "INFO", "msg": "request", "rid": "c117b6cec205477e", "path": "/api/reply", "status": 200, "ms": 1.6}
+{"ts": "2026-07-31T17:53:57", "level": "INFO", "msg": "brain_offline_fallback", "rid": "396ddda4aa094348"}
+{"ts": "2026-07-31T17:53:57", "level": "INFO", "msg": "request", "rid": "396ddda4aa094348", "path": "/api/reply", "status": 200, "ms": 1.6}
+{"ts": "2026-07-31T17:53:58", "level": "INFO", "msg": "request", "rid": "ebe554d76fee4f4c", "path": "/api/reply-stream", "status": 200, "ms": 1.1}
+{"ts": "2026-07-31T17:53:58", "level": "INFO", "msg": "request", "rid": "d51a074b10bd4d1c", "path": "/api/tts", "status": 200, "ms": 1.6}
+{"ts": "2026-07-31T17:53:58", "level": "INFO", "msg": "request", "rid": "559f5f1e7112479c", "path": "/api/tts", "status": 200, "ms": 2.0}
+{"ts": "2026-07-31T17:54:01", "level": "INFO", "msg": "brain_offline_fallback", "rid": "c88c871f2f8b446b"}
+{"ts": "2026-07-31T17:54:01", "level": "INFO", "msg": "request", "rid": "c88c871f2f8b446b", "path": "/api/reply", "status": 200, "ms": 200.8}
+{"ts": "2026-07-31T17:54:17", "level": "INFO", "msg": "request", "rid": "e79ff4c7eec3400c", "path": "/api/reply-stream", "status": 200, "ms": 2.8}
+{"ts": "2026-07-31T17:54:17", "level": "INFO", "msg": "request", "rid": "b0fa09774a2e46e1", "path": "/api/tts", "status": 200, "ms": 1.7}
+{"ts": "2026-07-31T17:54:17", "level": "INFO", "msg": "request", "rid": "111f08cde0f848a4", "path": "/api/tts", "status": 200, "ms": 2.8}
+{"ts": "2026-07-31T17:54:26", "level": "INFO", "msg": "request", "rid": "72c9e6ef8289466f", "path": "/api/keys/reset", "status": 200, "ms": 1.7}
+{"ts": "2026-07-31T17:54:55", "level": "INFO", "msg": "brain_offline_fallback", "rid": "6bbd0c2441a346a0"}
+{"ts": "2026-07-31T17:54:55", "level": "INFO", "msg": "request", "rid": "6bbd0c2441a346a0", "path": "/api/reply", "status": 200, "ms": 190.2}
+{"ts": "2026-07-31T17:54:58", "level": "INFO", "msg": "request", "rid": "5dc8dc613f9b43dc", "path": "/api/reply-stream", "status": 200, "ms": 2.4}
+{"ts": "2026-07-31T17:54:59", "level": "INFO", "msg": "request", "rid": "b5d3d1a419f64b21", "path": "/api/tts", "status": 200, "ms": 1118.6}
+{"ts": "2026-07-31T17:54:59", "level": "INFO", "msg": "request", "rid": "d9f4a014ed8b4218", "path": "/api/tts", "status": 200, "ms": 1395.6}
+{"ts": "2026-07-31T17:55:06", "level": "INFO", "msg": "brain_offline_fallback", "rid": "ce89b28f53544ba9"}
+{"ts": "2026-07-31T17:55:06", "level": "INFO", "msg": "request", "rid": "ce89b28f53544ba9", "path": "/api/reply", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:55:07", "level": "INFO", "msg": "brain_offline_fallback", "rid": "89c6ebc628d249a2"}
+{"ts": "2026-07-31T17:55:07", "level": "INFO", "msg": "request", "rid": "89c6ebc628d249a2", "path": "/api/reply", "status": 200, "ms": 1.6}
+{"ts": "2026-07-31T17:55:08", "level": "INFO", "msg": "brain_offline_fallback", "rid": "37f2ff4ba1f04c1b"}
+{"ts": "2026-07-31T17:55:08", "level": "INFO", "msg": "request", "rid": "37f2ff4ba1f04c1b", "path": "/api/reply", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:55:08", "level": "INFO", "msg": "request", "rid": "e1cd79afd15f44d2", "path": "/api/reply-stream", "status": 200, "ms": 1.2}
+{"ts": "2026-07-31T17:55:08", "level": "INFO", "msg": "request", "rid": "d8cc15d2b8314a9c", "path": "/api/tts", "status": 200, "ms": 1.7}
+{"ts": "2026-07-31T17:55:08", "level": "INFO", "msg": "request", "rid": "36625609cfbd4f42", "path": "/api/tts", "status": 200, "ms": 2.1}
+{"ts": "2026-07-31T17:55:09", "level": "INFO", "msg": "brain_offline_fallback", "rid": "07c4370e974046be"}
+{"ts": "2026-07-31T17:55:09", "level": "INFO", "msg": "request", "rid": "07c4370e974046be", "path": "/api/reply", "status": 200, "ms": 1.3}
+{"ts": "2026-07-31T17:55:17", "level": "INFO", "msg": "brain_offline_fallback", "rid": "7ca193f8d964459e"}
+{"ts": "2026-07-31T17:55:17", "level": "INFO", "msg": "request", "rid": "7ca193f8d964459e", "path": "/api/reply", "status": 200, "ms": 1.2}
+{"ts": "2026-07-31T17:55:18", "level": "INFO", "msg": "brain_offline_fallback", "rid": "f87dc437bc2548b9"}
+{"ts": "2026-07-31T17:55:18", "level": "INFO", "msg": "request", "rid": "f87dc437bc2548b9", "path": "/api/reply", "status": 200, "ms": 1.7}
+{"ts": "2026-07-31T17:55:19", "level": "INFO", "msg": "brain_offline_fallback", "rid": "66618690936e4f1f"}
+{"ts": "2026-07-31T17:55:19", "level": "INFO", "msg": "request", "rid": "66618690936e4f1f", "path": "/api/reply", "status": 200, "ms": 1.5}
+{"ts": "2026-07-31T17:55:19", "level": "INFO", "msg": "brain_offline_fallback", "rid": "b2986d58c1394a6f"}
+{"ts": "2026-07-31T17:55:19", "level": "INFO", "msg": "request", "rid": "b2986d58c1394a6f", "path": "/api/reply", "status": 200, "ms": 1.5}
+{"ts": "2026-07-31T17:55:19", "level": "INFO", "msg": "brain_offline_fallback", "rid": "e84b15107b344f4c"}
+{"ts": "2026-07-31T17:55:19", "level": "INFO", "msg": "request", "rid": "e84b15107b344f4c", "path": "/api/reply", "status": 200, "ms": 1.2}
+{"ts": "2026-07-31T17:55:22", "level": "INFO", "msg": "request", "rid": "0d50062f461b4f06", "path": "/api/reply-stream", "status": 200, "ms": 1.1}
+{"ts": "2026-07-31T17:55:22", "level": "INFO", "msg": "request", "rid": "36c77924913b4a5b", "path": "/api/tts", "status": 200, "ms": 2.4}
+{"ts": "2026-07-31T17:55:22", "level": "INFO", "msg": "request", "rid": "c2bdd532ee4344b3", "path": "/api/tts", "status": 200, "ms": 2.8}

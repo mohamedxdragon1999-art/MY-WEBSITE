@@ -1,0 +1,118 @@
+{
+  "_readme": "PERMANENT REGRESSION CORPUS (Phase 1.4). Every bug found in a real cycle becomes a fixture here, forever. Fixtures are DATA, not code, so adding one never means editing a suite. Three classes: 'bad' MUST be caught, 'good' MUST NOT be flagged, 'edge' must not crash. Each entry records the cycle it came from and what actually broke.",
+  "bad": [
+    {
+      "id": "unclosed-container",
+      "cycle": 4,
+      "found": "AST validation",
+      "bug": "an unclosed <div> silently changed the rendered layout; the browser repaired it its own way",
+      "expect": "html-validity",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><div><p>x</p></main></body></html>"
+    },
+    {
+      "id": "flow-inside-paragraph",
+      "cycle": 4,
+      "found": "AST validation",
+      "bug": "a <div> inside a <p> makes the browser close the paragraph early, changing layout",
+      "expect": "html-validity",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><p><div>x</div></p></main></body></html>"
+    },
+    {
+      "id": "placeholder-copy",
+      "cycle": 4,
+      "found": "copy audit",
+      "bug": "placeholder text must never ship to a customer",
+      "expect": "placeholder",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><p>Lorem ipsum dolor sit amet.</p></main></body></html>"
+    },
+    {
+      "id": "oversized-fixed-width",
+      "cycle": 5,
+      "found": "layout engine",
+      "bug": "a fixed width wider than the viewport forces horizontal scrolling on mobile",
+      "expect": "overflow-x",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><div style=\"width:3000px\">wide</div></main></body></html>"
+    },
+    {
+      "id": "unshrinkable-min-width",
+      "cycle": 6,
+      "found": "scoped repair",
+      "bug": "an inline min-width cannot be overridden by a stylesheet, so page-level repair silently failed",
+      "expect": "overflow-x",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><div style=\"min-width:4000px\">wide</div></main></body></html>"
+    },
+    {
+      "id": "headless-section",
+      "cycle": 3,
+      "found": "component contract",
+      "bug": "metrics and two review variants shipped with no heading, so they were absent from the document outline",
+      "expect": "section-contract",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><section id=\"x\" data-r data-rhythm=\"normal\" data-emphasis=\"low\"><p>no heading</p></section></main></body></html>"
+    },
+    {
+      "id": "tiny-tap-target",
+      "cycle": 5,
+      "found": "layout engine",
+      "bug": "every button resolved to ~42px tall, under the 44px minimum, on every generated page",
+      "expect": "touch-target",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><a class=\"tiny\" href=\"#s\">x</a><section id=\"s\"><h2>S</h2></section></main></body></html>"
+    }
+  ],
+  "good": [
+    {
+      "id": "minimal-clean-page",
+      "cycle": 3,
+      "why": "a bare but valid document must never be flagged; an over-strict section audit once failed this",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>Studio</title><meta name=\"description\" content=\"A studio for considered interiors.\"></head><body><main><h1>Objects of permanence</h1><p>A studio for considered interiors that age gracefully.</p></main></body></html>"
+    },
+    {
+      "id": "transparent-anchor-content",
+      "cycle": 4,
+      "why": "<a> is a transparent content model in HTML5, so a figure inside a link is valid; a bad rule once flagged all six directions",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><a href=\"#s\" aria-label=\"View the Pier 7 project\"><figure><img src=\"x.jpg\" alt=\"Work\" width=\"600\" height=\"400\"></figure></a><section id=\"s\" data-r data-rhythm=\"normal\" data-emphasis=\"med\"><h2>S</h2><p>Body.</p></section></main></body></html>"
+    },
+    {
+      "id": "inline-links-in-prose",
+      "cycle": 5,
+      "why": "a 44px tap-target rule must not apply to links inside a sentence",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><p>Read our <a href=\"#s\">policy</a> for details.</p><section id=\"s\" data-r data-rhythm=\"normal\" data-emphasis=\"med\"><h2>S</h2><p>Body.</p></section></main></body></html>"
+    }
+  ],
+  "edge": [
+    {
+      "id": "empty-body",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body></body></html>"
+    },
+    {
+      "id": "no-head",
+      "html": "<!DOCTYPE html><html><body><main><h1>H</h1></main></body></html>"
+    },
+    {
+      "id": "rtl-arabic",
+      "html": "<!DOCTYPE html><html lang=\"ar\" dir=\"rtl\"><head><title>\u0627\u0633\u062a\u0648\u062f\u064a\u0648</title><meta name=\"description\" content=\"\u0648\u0635\u0641\"></head><body><main><h1>\u0646\u062d\u0646 \u0646\u0628\u0646\u064a \u0645\u0648\u0627\u0642\u0639</h1></main></body></html>"
+    },
+    {
+      "id": "deeply-nested",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>t</title><meta name=\"description\" content=\"d\"></head><body><main><h1>H</h1><div><div><div><div><div><p>deep</p></div></div></div></div></div></main></body></html>"
+    },
+    {
+      "id": "entities-and-emoji",
+      "html": "<!DOCTYPE html><html lang=\"en\"><head><title>Caf&eacute; \u2615</title><meta name=\"description\" content=\"d\"></head><body><main><h1>\u00dcn\u00efc\u00f6d\u00e9 \ud83c\udf89 &amp; entities</h1></main></body></html>"
+    }
+  ],
+  "slop": {
+    "_readme": "Anti-generic rules distilled from the high-end-visual-design skill in SKILLS.zip. These are craft regressions: output that validates but looks machine-made.",
+    "bannedDisplayFonts": [
+      "Inter",
+      "Roboto",
+      "Arial",
+      "Open Sans",
+      "Helvetica"
+    ],
+    "maxShadowAlpha": 0.3,
+    "bannedTransitionTimings": [
+      "linear",
+      "ease-in-out"
+    ]
+  }
+}

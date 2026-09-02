@@ -10,6 +10,11 @@
 node_modules/
 npm-debug.log*
 
+# Auto-deploy state — machine-local, never commit (contains deployment URL)
+nexuscrm/backend/.deployed.json
+# The locally stored ENCRYPTION_KEY copy — a SECRET, never commit
+nexuscrm/backend/.encryption-key
+
 # ── Voice Studio (Python) ─────────────────────────────────────────
 __pycache__/
 *.py[cod]
@@ -23,3 +28,29 @@ voice-studio/models/
 # ── OS junk ───────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+.nvidia-test-key
+
+# Real NVIDIA key for local integration testing ONLY — never commit (rotated after testing).
+# NOTE: the bare `.nvidia-test-key` entry above already matches at ANY depth; this
+# path-anchored line is kept only for clarity.
+nexuscrm/.nvidia-test-key
+
+# ── Credential file shapes, matched at ANY depth ──────────────────
+# Path-anchored rules miss a secret the moment it is created in a different
+# directory, so these are deliberately recursive.
+*.p12
+*.pfx
+*.jks
+*credentials*.json
+*service-account*.json
+*-key.json
+*apikey*.json
+*api-keys*.json
+*api_keys*.json
+.secrets/
+secrets/
+
+# deploy runtime artifacts
+nexuscrm/backend/.deploy-status.json
+image-search/
+3d-scene-examples.html

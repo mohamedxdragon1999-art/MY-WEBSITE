@@ -1,0 +1,198 @@
+{
+  "brief": {
+    "name": "Atelier North",
+    "description": "A premium interiors studio making bespoke furniture, lighting and textiles.",
+    "deterministic": true
+  },
+  "generatedFrom": "POST /ai/agentic-build (live route)",
+  "directions": {
+    "editorial-minimal": {
+      "hero": "editorial",
+      "feature": "edlist",
+      "reviews": "quote",
+      "motion": "quiet",
+      "density": "airy",
+      "sectionOrder": [
+        "c-nav",
+        "c-hero#home",
+        "c-strip",
+        "c-feature#feature",
+        "c-story#story",
+        "c-reviews#reviews",
+        "c-cta#cta",
+        "c-contact#contact",
+        "c-footer"
+      ],
+      "sectionCount": 9,
+      "typeScale": {
+        "display": "clamp(3.2rem,8.5vw,6.6rem)",
+        "hero": "clamp(2.6rem,6vw,4.6rem)",
+        "section": "clamp(1.7rem,3.4vw,2.6rem)}\n.c-sec-head{margin-bottom:clamp(28px,4vw,52px)}.c-sec-left .c-sec-title{max-width:22ch}\n.c-btn{display:inline-flex",
+        "body": "clamp(1.02rem,1.35vw,1.14rem)",
+        "caption": "0.78rem",
+        "btn": "0.74rem"
+      },
+      "measure": "62ch",
+      "cardDependency": 0,
+      "monotony": 15,
+      "layoutDistinctness": 0.4,
+      "rhythmVariety": 1,
+      "componentDiversity": 9,
+      "explanation": "Chosen direction: Editorial Minimal.\nWhy: Strong typography, generous whitespace, restrained surfaces, editorial grid, asymmetric alignment, minimal decoration, quiet motion..\nComposition: editorial hero, edlist feature treatment, dramatic → compact → normal → spacious → normal → compact → dramatic rhythm.\nTypography: editorial serif display with a restrained body measure (62ch).\nDensity: airy. Motion: quiet.",
+      "bytes": 24250
+    },
+    "cinematic-immersive": {
+      "hero": "fullbleed",
+      "feature": "bento",
+      "reviews": "single",
+      "motion": "cinematic",
+      "density": "balanced",
+      "sectionOrder": [
+        "c-nav",
+        "c-hero#home",
+        "c-marquee",
+        "c-metrics#metrics",
+        "c-feature#feature",
+        "c-story#story",
+        "c-reviews#reviews",
+        "c-cta#cta",
+        "c-contact#contact",
+        "c-footer"
+      ],
+      "sectionCount": 10,
+      "typeScale": {
+        "display": "clamp(3.4rem,10vw,8rem)",
+        "hero": "clamp(2.4rem,6vw,4.8rem)",
+        "section": "clamp(1.9rem,4vw,3.1rem)}\n.c-sec-head{margin-bottom:clamp(28px,4vw,52px)}.c-sec-left .c-sec-title{max-width:22ch}\n.c-btn{display:inline-flex",
+        "body": "clamp(1.05rem,1.4vw,1.2rem)",
+        "caption": "0.8rem",
+        "btn": "0.75rem"
+      },
+      "measure": "58ch",
+      "cardDependency": 0,
+      "monotony": 15,
+      "layoutDistinctness": 0.4,
+      "rhythmVariety": 1,
+      "componentDiversity": 10,
+      "explanation": "Chosen direction: Cinematic Immersive.\nWhy: Large visual hero, deep layering, dramatic scale, controlled depth, image dominance, slower motion, strong transitions..\nComposition: fullbleed hero, bento feature treatment, dramatic → compact → spacious → normal → dramatic → normal → compact → dramatic rhythm.\nTypography: editorial serif display with a restrained body measure (58ch).\nDensity: balanced. Motion: cinematic.",
+      "bytes": 29193
+    },
+    "luxury-art": {
+      "hero": "minimal",
+      "feature": "edlist",
+      "reviews": "single",
+      "motion": "slow",
+      "density": "airy",
+      "sectionOrder": [
+        "c-nav",
+        "c-hero#home",
+        "c-story#story",
+        "c-feature#feature",
+        "c-reviews#reviews",
+        "c-cta#cta",
+        "c-contact#contact",
+        "c-footer"
+      ],
+      "sectionCount": 8,
+      "typeScale": {
+        "display": "clamp(3rem,7.5vw,5.8rem)",
+        "hero": "clamp(2.3rem,5.4vw,4.2rem)",
+        "section": "clamp(1.6rem,3vw,2.3rem)}\n.c-sec-head{margin-bottom:clamp(28px,4vw,52px)}.c-sec-left .c-sec-title{max-width:22ch}\n.c-btn{display:inline-flex",
+        "body": "clamp(1.02rem,1.3vw,1.12rem)",
+        "caption": "0.72rem",
+        "btn": "0.72rem"
+      },
+      "measure": "56ch",
+      "cardDependency": 0,
+      "monotony": 20,
+      "layoutDistinctness": 0.4,
+      "rhythmVariety": 0.75,
+      "componentDiversity": 8,
+      "explanation": "Chosen direction: Luxury Art-Directed.\nWhy: High negative space, refined typography, minimal palette, large visual moments, asymmetry, subtle surfaces, slow precise motion..\nComposition: minimal hero, split feature treatment, dramatic → spacious → normal → spacious → normal → dramatic → normal rhythm.\nTypography: editorial serif display with a restrained body measure (56ch).\nDensity: airy. Motion: slow.",
+      "bytes": 22168
+    },
+    "bold-experimental": {
+      "hero": "overlap",
+      "feature": "alternating",
+      "reviews": "single",
+      "motion": "energetic",
+      "density": "dense",
+      "sectionOrder": [
+        "c-nav",
+        "c-hero#home",
+        "c-marquee",
+        "c-feature#feature",
+        "c-metrics#metrics",
+        "c-reviews#reviews",
+        "c-cta#cta",
+        "c-contact#contact",
+        "c-footer"
+      ],
+      "sectionCount": 9,
+      "typeScale": {
+        "display": "clamp(4rem,13vw,10rem)",
+        "hero": "clamp(3rem,9vw,7rem)",
+        "section": "clamp(2.2rem,5.5vw,4rem)}\n.c-sec-head{margin-bottom:clamp(28px,4vw,52px)}.c-sec-left .c-sec-title{max-width:22ch}\n.c-btn{display:inline-flex",
+        "body": "clamp(1.05rem,1.4vw,1.2rem)",
+        "caption": "0.78rem",
+        "btn": "0.78rem"
+      },
+      "measure": "54ch",
+      "cardDependency": 0,
+      "monotony": 25,
+      "layoutDistinctness": 0.2,
+      "rhythmVariety": 0.75,
+      "componentDiversity": 9,
+      "explanation": "Chosen direction: Bold Experimental.\nWhy: Unexpected composition, strong contrast, large/small scale variation, overlap, experimental grid, expressive motion..\nComposition: overlap hero, alternating feature treatment, dramatic → compact → dramatic → normal → compact → dramatic → compact rhythm.\nTypography: editorial serif display with a restrained body measure (54ch).\nDensity: dense. Motion: energetic.",
+      "bytes": 28983
+    },
+    "swiss-structured": {
+      "hero": "split",
+      "feature": "ruled",
+      "reviews": null,
+      "motion": "functional",
+      "density": "balanced",
+      "sectionOrder": [
+        "c-nav",
+        "c-hero#home",
+        "c-metrics#metrics",
+        "c-feature#feature",
+        "c-story#story",
+        "c-cta#cta",
+        "c-contact#contact",
+        "c-footer"
+      ],
+      "sectionCount": 8,
+      "typeScale": {
+        "display": "clamp(3rem,8vw,5.6rem)",
+        "hero": "clamp(2.2rem,4.8vw,3.6rem)",
+        "section": "clamp(1.5rem,2.8vw,2.1rem)}\n.c-sec-head{margin-bottom:clamp(28px,4vw,52px)}.c-sec-left .c-sec-title{max-width:22ch}\n.c-btn{display:inline-flex",
+        "body": "clamp(1rem,1.25vw,1.08rem)",
+        "caption": "0.75rem",
+        "btn": "0.74rem"
+      },
+      "measure": "72ch",
+      "cardDependency": 0,
+      "monotony": 25,
+      "layoutDistinctness": 0.4,
+      "rhythmVariety": 0.5,
+      "componentDiversity": 8,
+      "explanation": "Chosen direction: Modern Swiss.\nWhy: Strong grid, strict alignment, controlled typography, clear information hierarchy, restrained decoration, precise spacing, functional motion..\nComposition: split hero, ruled feature treatment, normal → compact → normal → normal → compact → normal → compact rhythm.\nTypography: editorial serif display with a restrained body measure (72ch).\nDensity: balanced. Motion: functional.",
+      "bytes": 23424
+    }
+  },
+  "pairwiseDistance": {
+    "editorial-minimal | cinematic-immersive": 0.566,
+    "editorial-minimal | luxury-art": 0.422,
+    "editorial-minimal | bold-experimental": 0.637,
+    "editorial-minimal | swiss-structured": 0.56,
+    "cinematic-immersive | luxury-art": 0.489,
+    "cinematic-immersive | bold-experimental": 0.489,
+    "cinematic-immersive | swiss-structured": 0.489,
+    "luxury-art | bold-experimental": 0.56,
+    "luxury-art | swiss-structured": 0.558,
+    "bold-experimental | swiss-structured": 0.629
+  },
+  "minPairwiseDistance": 0.422,
+  "verdict": "PASS — directions are structurally distinct on the live route"
+}
