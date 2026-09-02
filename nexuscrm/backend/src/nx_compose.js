@@ -156,11 +156,11 @@ function nxComposeContent(plan) {
   const ctas = { primary: __str(plan.cta_primary).slice(0, 28) || 'Start a project', secondary: __str(plan.cta_secondary).slice(0, 28) || 'See our work' };
   const services = __arr(plan.services || plan.features).slice(0, 6).map(s => {
     if (typeof s === 'string') return { title: s.slice(0, 32), text: '' };
-    return { title: __str(s && s.title).slice(0, 40), text: __str(s && (s.desc || s.text)).slice(0, 140), icon: __str(s && s.icon).slice(0, 12) };
+    return { title: __str(s && s.title).slice(0, 40), text: __str(s && (s.desc || s.text)).slice(0, 140), icon: __str(s && s.icon).slice(0, 12), image: __safeImg(s && s.image) };
   }).filter(s => s.title || s.text);
   const why = __arr(plan.why_us || plan.why).map(w => (typeof w === 'string' ? w : __str(w && (w.check || w.title)))).filter(Boolean).slice(0, 5);
   const stats = __arr(plan.stats).slice(0, 4).map(s => ({ value: (s && s.value != null && __str(s.value) !== '') ? s.value : '0', label: __str(s && (s.label || s.name)).slice(0, 30) })).filter(s => s.label);
-  const projects = __arr(plan.projects).slice(0, 6).map(p => ({ title: __str(p && p.title).slice(0, 60), cat: __str(p && (p.cat || p.cls)).slice(0, 30), text: __str(p && p.text).slice(0, 110) })).filter(p => p.title);
+  const projects = __arr(plan.projects).slice(0, 6).map(p => ({ title: __str(p && p.title).slice(0, 60), cat: __str(p && (p.cat || p.cls)).slice(0, 30), image: __safeImg(p && p.image), text: __str(p && p.text).slice(0, 110) })).filter(p => p.title);
   const reviews = __arr(plan.reviews || plan.testimonials).slice(0, 4).map(r => ({ quote: __str(r && (r.text || r.quote)).slice(0, 220), author: __str(r && (r.name || r.author)).slice(0, 40), role: __str(r && (r.role || r.via)).slice(0, 30), stars: Math.max(1, Math.min(5, Number(r && r.stars) || 5)) })).filter(r => r.quote);
   const faqs = __arr(plan.faqs || plan.faq).slice(0, 6).map(f => ({ q: __str(f && f.q).slice(0, 100), a: __str(f && f.a).slice(0, 200) })).filter(f => f.q);
   const contact = (plan.contact && typeof plan.contact === 'object') ? plan.contact : {};
@@ -211,6 +211,18 @@ function __metaDescription(plan, name, headline, sub, services) {
 // left-to-right is not a cosmetic issue — the page is unreadable. Detect it
 // from the copy itself so an Arabic brief simply works.
 const __RTL_RANGE = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0780-\u07BF\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
+// A caller-supplied image URL must survive normalisation (it was being dropped
+// entirely, so every brief silently fell back to generated placeholder art) —
+// but it must not become an injection vector. Allow only http(s), protocol-
+// relative and site-relative paths; reject javascript:, data:, vbscript: etc.
+function __safeImg(u) {
+  const v = String(u == null ? '' : u).trim();
+  if (!v || v.length > 2000) return '';
+  if (/^(https?:)?\/\//i.test(v)) return v;   // absolute or protocol-relative
+  if (/^\/[^\/]/.test(v)) return v;            // site-relative
+  return '';                                   // anything else (js:, data:, …)
+}
+
 function nxDetectDirection(content) {
   // Weight AUTHORED fields only. The composer injects English defaults for any
   // slot the brief left empty (a generic sub-headline, CTA labels), and mixing
@@ -332,6 +344,29 @@ function __art(seed, w, h, dir) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g${seed}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${base}"/><stop offset="1" stop-color="${b}" stop-opacity=".55"/></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g${seed})"/>${rects}<circle cx="${(seed * 173) % w}" cy="${(seed * 89) % h}" r="${70 + (seed % 50)}" fill="${a}" opacity=".18"/></svg>`;
   return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
+
+// ── IMAGE COMPONENT ───────────────────────────────────────────────────────
+// __art() returns a bare data: URI. Every call site interpolated that string
+// straight into markup, so the URI rendered as VISIBLE TEXT instead of an
+// image — on every generated page. This wraps it properly and, critically,
+// uses a caller-supplied image when the brief provides one (those URLs were
+// being silently discarded).
+//
+// Emits width/height (prevents layout shift / CLS), loading + decoding hints,
+// and real alt text. Decorative art gets alt="" + aria-hidden so screen
+// readers skip it rather than announcing a meaningless placeholder.
+function __img(opts) {
+  const o = opts || {};
+  const w = o.w || 800, h = o.h || 600;
+  const src = (typeof o.src === 'string' && o.src.trim()) ? o.src.trim() : __art(o.seed || 0, w, h, o.dir);
+  const decorative = !o.alt;
+  const altAttr = decorative ? 'alt="" aria-hidden="true"' : `alt="${__e(o.alt)}"`;
+  const cls = o.cls ? ` class="${__e(o.cls)}"` : '';
+  const eager = !!o.eager;   // above-the-fold art must not be lazily fetched
+  return `<img${cls} src="${__e(src)}" ${altAttr} width="${w}" height="${h}"`
+    + ` loading="${eager ? 'eager' : 'lazy'}" decoding="${eager ? 'sync' : 'async'}"`
+    + `${eager ? ' fetchpriority="high"' : ''} style="max-width:100%;height:auto;display:block">`;
+}
 // Escape for HTML text AND attribute contexts. The single quote is included
 // deliberately: nx_render.js already had a separate __escAttr covering it while
 // this pipeline did not, so the two generators in the same builder carried
@@ -356,10 +391,10 @@ function __hero(c, p) {
   const body = `<p class="c-lead">${__e(c.sub)}</p>`;
   const actions = `<div class="c-actions"><a class="c-btn c-btn-primary" href="#contact">${__e(c.ctas.primary)}</a><a class="c-btn c-btn-ghost" href="#work">${__e(c.ctas.secondary)}</a></div>`;
   if (v === 'editorial') {
-    return `<section class="c-hero c-hero-editorial" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-meta"><span>Est. ${__e(c.owner)}</span><span class="c-rule"></span><span>High craft, considered</span></div></div><div class="c-hero-bleed">${__art(3, 1200, 420, p.direction)}</div></section>`;
+    return `<section class="c-hero c-hero-editorial" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-meta"><span>Est. ${__e(c.owner)}</span><span class="c-rule"></span><span>High craft, considered</span></div></div><div class="c-hero-bleed">${__img({ seed: 3, w: 1200, h: 420, dir: p.direction, src: c.image, eager: true })}</div></section>`;
   }
   if (v === 'fullbleed') {
-    return `<section class="c-hero c-hero-fullbleed" id="home" data-r><div class="c-hero-bg">${__art(5, 1600, 1000, p.direction)}<div class="c-hero-veil"></div></div><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div></div></section>`;
+    return `<section class="c-hero c-hero-fullbleed" id="home" data-r><div class="c-hero-bg">${__img({ seed: 5, w: 1600, h: 1000, dir: p.direction, src: c.image, eager: true })}<div class="c-hero-veil"></div></div><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div></div></section>`;
   }
   if (v === 'minimal') {
     return `<section class="c-hero c-hero-minimal" id="home" data-r><div class="c-wrap c-hero-inner">${eyebrow}${title}${body}<div class="c-hero-actions">${actions}</div></div></section>`;
@@ -383,10 +418,10 @@ function __hero(c, p) {
       + `</div></section>`;
   }
   if (v === 'overlap') {
-    return `<section class="c-hero c-hero-overlap" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-badges">${__art(2, 520, 340, p.direction)}${__art(7, 380, 240, p.direction)}</div></div></section>`;
+    return `<section class="c-hero c-hero-overlap" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-badges">${__img({ seed: 2, w: 520, h: 340, dir: p.direction, src: c.image })}${__img({ seed: 7, w: 380, h: 240, dir: p.direction, src: c.image })}</div></div></section>`;
   }
   // split
-  return `<section class="c-hero c-hero-split" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-img">${__art(4, 720, 720, p.direction)}</div></div></section>`;
+  return `<section class="c-hero c-hero-split" id="home" data-r><div class="c-wrap c-hero-inner"><div class="c-hero-copy">${eyebrow}${title}${body}${actions}</div><div class="c-hero-img">${__img({ seed: 4, w: 720, h: 720, dir: p.direction, src: c.image })}</div></div></section>`;
 }
 
 function __logoStrip(c, p) {
@@ -408,13 +443,13 @@ function __feature(c, p) {
     return `<section class="c-feature c-feature-edlist" id="feature" data-r><div class="c-wrap">${head}<div class="c-edlist">${items.slice(0, 4).map((it, i) => `<div class="c-edrow"><div class="c-edrow-h">${num(i)}<h3>${__e(it.title)}</h3></div><p>${__e(it.text || c.sub)}</p></div>`).join('')}</div></div></section>`;
   }
   if (mode === 'alternating') {
-    return `<section class="c-feature c-feature-alt" id="feature" data-r><div class="c-wrap">${head}<div class="c-altlist">${items.slice(0, 4).map((it, i) => `<div class="c-altrow"><div class="c-altrow-num">${num(i)}</div><div class="c-altrow-body"><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div><div class="c-altrow-img">${__art(i, 420, 260, p.direction)}</div></div>`).join('')}</div></div></section>`;
+    return `<section class="c-feature c-feature-alt" id="feature" data-r><div class="c-wrap">${head}<div class="c-altlist">${items.slice(0, 4).map((it, i) => `<div class="c-altrow"><div class="c-altrow-num">${num(i)}</div><div class="c-altrow-body"><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div><div class="c-altrow-img">${__img({ seed: i, w: 420, h: 260, dir: p.direction, src: it.image, alt: it.title ? (it.title + ' — illustration') : '' })}</div></div>`).join('')}</div></div></section>`;
   }
   if (mode === 'bento') {
-    return `<section class="c-feature c-feature-bento" id="feature" data-r><div class="c-wrap">${head}<div class="c-bento">${items.slice(0, 3).map((it, i) => `<div class="c-bento-cell ${i === 0 ? 'c-bento-big' : ''}"><div class="c-bento-img">${__art(i + 1, i === 0 ? 640 : 320, i === 0 ? 440 : 200, p.direction)}</div><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div>`).join('')}</div></div></section>`;
+    return `<section class="c-feature c-feature-bento" id="feature" data-r><div class="c-wrap">${head}<div class="c-bento">${items.slice(0, 3).map((it, i) => `<div class="c-bento-cell ${i === 0 ? 'c-bento-big' : ''}"><div class="c-bento-img">${__img({ seed: i + 1, w: i === 0 ? 640 : 320, h: i === 0 ? 440 : 200, dir: p.direction, src: it.image, alt: it.title ? (it.title + ' — illustration') : '' })}</div><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div>`).join('')}</div></div></section>`;
   }
   if (mode === 'split') {
-    return `<section class="c-feature c-feature-split" id="feature" data-r><div class="c-wrap c-split"><div class="c-split-img">${__art(6, 640, 800, p.direction)}</div><div class="c-split-body">${head}${items.slice(0, 3).map(it => `<div class="c-split-item"><span class="c-dot"></span><div><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div></div>`).join('')}</div></div></section>`;
+    return `<section class="c-feature c-feature-split" id="feature" data-r><div class="c-wrap c-split"><div class="c-split-img">${__img({ seed: 6, w: 640, h: 800, dir: p.direction, src: c.image })}</div><div class="c-split-body">${head}${items.slice(0, 3).map(it => `<div class="c-split-item"><span class="c-dot"></span><div><h3>${__e(it.title)}</h3><p>${__e(it.text || c.sub)}</p></div></div>`).join('')}</div></div></section>`;
   }
   if (mode === 'spec') {
     // Spec sheet — the engineered treatment: each capability is a numbered
@@ -464,12 +499,12 @@ function __storyCopy(c) {
 }
 
 function __story(c, p) {
-  return `<section class="c-story" id="story" data-r><div class="c-wrap c-story-inner"><div class="c-story-img">${__art(8, 700, 760, p.direction)}</div><div class="c-story-body"><span class="c-kicker">Our story</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'The work is the story' : 'Built on care')}</h2>${__storyCopy(c)}</div></div></section>`;
+  return `<section class="c-story" id="story" data-r><div class="c-wrap c-story-inner"><div class="c-story-img">${__img({ seed: 8, w: 700, h: 760, dir: p.direction, src: c.image })}</div><div class="c-story-body"><span class="c-kicker">Our story</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'The work is the story' : 'Built on care')}</h2>${__storyCopy(c)}</div></div></section>`;
 }
 
 function __work(c, p) {
   const items = c.projects.length ? c.projects.slice(0, 6) : [{ title: 'Selected work', cat: 'Case study', text: c.sub }];
-  return `<section class="c-work" id="work" data-r><div class="c-wrap"><div class="c-sec-head c-sec-left"><span class="c-kicker">Selected</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'WORK' : 'Selected projects')}</h2></div><div class="c-work-grid">${items.map((it, i) => `<a class="c-work-item" href="#contact"><figure>${__art(i + 2, 640, 460, p.direction)}</figure><div class="c-work-meta"><span class="c-work-cat">${__e(it.cat)}</span><h3>${__e(it.title)}</h3><p>${__e(it.text)}</p></div></a>`).join('')}</div></div></section>`;
+  return `<section class="c-work" id="work" data-r><div class="c-wrap"><div class="c-sec-head c-sec-left"><span class="c-kicker">Selected</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'WORK' : 'Selected projects')}</h2></div><div class="c-work-grid">${items.map((it, i) => `<a class="c-work-item" href="#contact"><figure>${__img({ seed: i + 2, w: 640, h: 460, dir: p.direction, src: it.image, alt: it.title ? (it.title + (it.cat ? ' — ' + it.cat : '')) : '' })}</figure><div class="c-work-meta"><span class="c-work-cat">${__e(it.cat)}</span><h3>${__e(it.title)}</h3><p>${__e(it.text)}</p></div></a>`).join('')}</div></div></section>`;
 }
 
 function __reviews(c, p) {
