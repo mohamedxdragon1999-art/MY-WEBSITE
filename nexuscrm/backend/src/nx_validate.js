@@ -19,6 +19,7 @@ const { nxAstSyntaxGate, nxAstDeepAudit } = require('./nx_ast.js');
 const { nxCascade } = require('./nx_cascade.js');
 const { nxMeasure, NX_VIEWPORTS } = require('./nx_layout.js');
 const { nxAuditCopy } = require('./nx_copy.js');
+const { nxAuditSections } = require('./nx_components.js');
 
 function __lum(h) {
   const m = String(h || '').replace('#', '');
@@ -78,6 +79,17 @@ function nxValidatePage(html, opts) {
     perViewport.push({ viewport: r.viewport, issues: r.issues.length });
     for (const i of r.issues) add(i);
   }
+
+  // ── SECTION SHELL CONTRACT (Phase 2.2) ──
+  // Hand-authored shells drifted: some sections shipped with no heading, so
+  // they were absent from the document outline. Enforce the contract on the
+  // rendered page, not just at construction time.
+  try {
+    for (const i of nxAuditSections(doc)) {
+      add({ severity: i.rule === 'no-heading' ? 'blocking' : 'warning', category: 'structure',
+        rule: 'section-contract', selector: i.id, measured: i.rule, message: i.message });
+    }
+  } catch (e) { /* never break a build on an audit */ }
 
   // ── COPY (§4.1) ──
   const copy = nxAuditCopy(doc);

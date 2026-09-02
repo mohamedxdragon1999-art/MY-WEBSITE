@@ -89,7 +89,10 @@ console.log('\n== E. Design tokens are enforced at generation time (§3.1) ==');
   for (const d of DIRS) {
     const css = (pages[d].match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
     const off = new Set();
-    for (const m of css.matchAll(/(?:margin|padding|gap|row-gap|column-gap)[a-z-]*\s*:\s*([^;}]+)/g)) {
+    // The visually-hidden idiom (.c-sr-only) requires margin:-1px by definition —
+    // it is a clipping technique, not spacing, so it is exempt from the scale.
+    const scoped = css.replace(/\.c-sr-only\{[^}]*\}/g, '');
+    for (const m of scoped.matchAll(/(?:margin|padding|gap|row-gap|column-gap)[a-z-]*\s*:\s*([^;}]+)/g)) {
       for (const n of m[1].matchAll(/(-?\d+(?:\.\d+)?)px/g)) {
         const v = Math.abs(+n[1]); if (v && !SCALE.has(v)) off.add(v);
       }

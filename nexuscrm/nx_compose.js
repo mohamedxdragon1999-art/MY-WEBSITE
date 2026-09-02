@@ -432,7 +432,10 @@ function __marquee(c, p) {
   return `<div class="c-marquee" data-r><div class="c-marquee-track">${items.map(t => `<span>${__e(t)}</span><i>·</i>`).join('')}</div></div>`;
 }
 function __metrics(c, p) {
-  return `<section class="c-metrics" id="metrics" data-r><div class="c-wrap c-metrics-grid">${(c.stats.length ? c.stats : [{ value: '0', label: 'Start here' }]).map((s, i) => `<div class="c-metric"><b data-count="${__e(s.value)}">${__e(s.value)}</b><span>${__e(s.label)}</span></div>`).join('')}</div></section>`;
+  // A visually-titleless section still needs a heading, or it is absent from the
+  // document outline for screen readers and search engines. Rendered sr-only so
+  // the design is unchanged.
+  return `<section class="c-metrics" id="metrics" data-r><h2 class="c-sr-only">${__e(c.name)} by the numbers</h2><div class="c-wrap c-metrics-grid">${(c.stats.length ? c.stats : [{ value: '0', label: 'Start here' }]).map((s, i) => `<div class="c-metric"><b data-count="${__e(s.value)}">${__e(s.value)}</b><span>${__e(s.label)}</span></div>`).join('')}</div></section>`;
 }
 
 function __feature(c, p) {
@@ -511,10 +514,10 @@ function __reviews(c, p) {
   const items = c.reviews.length ? c.reviews.slice(0, 4) : [{ quote: c.sub, author: c.owner, role: 'Client' }];
   const star = () => '★'.repeat(5);
   if (p.reviewMode === 'single') {
-    return `<section class="c-reviews c-reviews-single" id="reviews" data-r><div class="c-wrap"><div class="c-quote-large"><span class="c-mark">“</span><p>${__e(items[0].quote)}</p><div class="c-quote-by"><b>${__e(items[0].author)}</b><span>${__e(items[0].role)}</span><span class="c-stars">${star()}</span></div></div></div></section>`;
+    return `<section class="c-reviews c-reviews-single" id="reviews" data-r><h2 class="c-sr-only">What clients say about ${__e(c.name)}</h2><div class="c-wrap"><div class="c-quote-large"><span class="c-mark">“</span><p>${__e(items[0].quote)}</p><div class="c-quote-by"><b>${__e(items[0].author)}</b><span>${__e(items[0].role)}</span><span class="c-stars">${star()}</span></div></div></div></section>`;
   }
   if (p.reviewMode === 'quote') {
-    return `<section class="c-reviews c-reviews-quote" id="reviews" data-r><div class="c-wrap"><div class="c-quote-row">${items.slice(0, 2).map(it => `<figure class="c-quote"><blockquote>“${__e(it.quote)}”</blockquote><figcaption><b>${__e(it.author)}</b><span>${__e(it.role)}</span></figcaption></figure>`).join('')}</div></div></section>`;
+    return `<section class="c-reviews c-reviews-quote" id="reviews" data-r><h2 class="c-sr-only">What clients say about ${__e(c.name)}</h2><div class="c-wrap"><div class="c-quote-row">${items.slice(0, 2).map(it => `<figure class="c-quote"><blockquote>“${__e(it.quote)}”</blockquote><figcaption><b>${__e(it.author)}</b><span>${__e(it.role)}</span></figcaption></figure>`).join('')}</div></div></section>`;
   }
   return `<section class="c-reviews c-reviews-grid" id="reviews" data-r><div class="c-wrap"><div class="c-sec-head c-sec-left"><span class="c-kicker">Clients</span><h2 class="c-sec-title">What they say</h2></div><div class="c-reviewGrid">${items.map(it => `<div class="c-review"><span class="c-stars">${star()}</span><blockquote>“${__e(it.quote)}”</blockquote><div class="c-review-by"><b>${__e(it.author)}</b><span>${__e(it.role)}</span></div></div>`).join('')}</div></div></section>`;
 }
@@ -588,6 +591,9 @@ h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-
    switch-control user had no idea where they were on the page. :focus-visible
    keeps it out of the way of mouse users. */
 :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:2px}
+/* Visually hidden, still announced. Lets a section carry a heading for the
+   document outline without altering the visual design. */
+.c-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
 /* RTL: mirror the layout, not only the text run. Logical properties keep a
    single stylesheet correct in both directions instead of duplicating rules. */
 [dir="rtl"] .c-sec-left,[dir="rtl"] .c-hero-copy{text-align:right}
