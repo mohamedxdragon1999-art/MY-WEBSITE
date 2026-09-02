@@ -563,9 +563,29 @@ function nxRenderDirected(content, directionId, plan) {
   // Landmark structure: `nav` and `footer` are page furniture and must sit
   // OUTSIDE <main>; everything between them is the document's main content.
   // Without a <main> landmark, screen-reader users get no "skip to content" target.
-  const parts = p.sections.map((s, i) => ({
+  // ── PLAN NORMALISATION ────────────────────────────────────────────────
+  // The plan is trusted input, but it can arrive from an AI patch, an import or
+  // an API caller. Fuzzing the plan layer found three real failure modes:
+  // a non-array `sections` threw (.map of a string), duplicated entries emitted
+  // duplicate element ids AND two <h1> elements, and an empty list produced a
+  // page with no <h1> at all. Normalise once, here, rather than trusting it.
+  const __known = Object.keys(render);
+  let __sections = Array.isArray(p.sections) ? p.sections : [];
+  const __seen = new Set();
+  __sections = __sections
+    .filter((x) => typeof x === 'string' && __known.includes(x))   // drop nulls/unknown keys
+    .filter((x) => (__seen.has(x) ? false : (__seen.add(x), true)));// each section at most once
+  // A page must always have a hero (it carries the only <h1>) and a footer.
+  if (!__sections.includes('hero')) __sections.unshift('hero');
+  if (!__sections.includes('footer')) __sections.push('footer');
+  if (__sections[__sections.length - 1] !== 'footer') {
+    __sections = __sections.filter((x) => x !== 'footer').concat(['footer']);
+  }
+  const np = Object.assign({}, p, { sections: __sections });
+
+  const parts = np.sections.map((s, i) => ({
     key: s,
-    html: __injectRhythm(render[s] ? render[s](content, p) : '', p.rhythm ? p.rhythm[i] : '', p.transitions ? p.transitions[i] : '', p.emphasisTiers ? p.emphasisTiers[i] : ''),
+    html: __injectRhythm(render[s] ? render[s](content, np) : '', Array.isArray(np.rhythm) ? np.rhythm[i] : '', Array.isArray(np.transitions) ? np.transitions[i] : '', Array.isArray(np.emphasisTiers) ? np.emphasisTiers[i] : ''),
   }));
   const lead = [], body = [], tail = [];
   let seenMain = false;
@@ -577,16 +597,43 @@ function nxRenderDirected(content, directionId, plan) {
   const main = lead.join('\n') + '\n<main id="main" class="c-main">' + body.join('\n') + '</main>\n' + tail.join('\n');
   const motion = (p && p.motion) || d.motion;
   const __textDir = nxDetectDirection(content);
-  const html = `<!DOCTYPE html><html lang="${nxDetectLang(content)}" dir="${__textDir}" data-dir="${d.id}" data-motion="${motion}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${__e(content.name)} — ${__e(d.name)}</title><meta name="description" content="${__e(content.meta)}"><meta property="og:type" content="website"><meta property="og:title" content="${__e(content.name)}"><meta property="og:description" content="${__e(content.meta)}"><meta property="og:site_name" content="${__e(content.name)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${__e(content.name)}"><meta name="twitter:description" content="${__e(content.meta)}"><meta name="theme-color" content="${d.palette.bg}"><style>${__css(d, p)}</style></head><body><a class="c-skip" href="#main">Skip to content</a><div class="c-page" data-density="${p.density}">${main}</div><script>${__js(p)}</script></body></html>`;
+  const html = `<!DOCTYPE html><html lang="${nxDetectLang(content)}" dir="${__textDir}" data-dir="${d.id}" data-motion="${__e(motion)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${__e(content.name)} — ${__e(d.name)}</title><meta name="description" content="${__e(content.meta)}"><meta property="og:type" content="website"><meta property="og:title" content="${__e(content.name)}"><meta property="og:description" content="${__e(content.meta)}"><meta property="og:site_name" content="${__e(content.name)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${__e(content.name)}"><meta name="twitter:description" content="${__e(content.meta)}"><meta name="theme-color" content="${d.palette.bg}"><style>${__css(d, np)}</style></head><body><a class="c-skip" href="#main">Skip to content</a><div class="c-page" data-density="${__e(np.density)}">${main}</div><script>${__js(np)}</script></body></html>`;
   return { html, plan: p, content };
 }
 
 // ── DIRECTION DESIGN SYSTEM CSS ──────────────────────────────────────────────
+// ── CSS VALUE SANITISER ───────────────────────────────────────────────────
+// Palette/type/shadow values are interpolated straight into a <style> block. A
+// plan can be supplied by an AI patch, an import, or an API caller, so a value
+// containing "}</style><script>" escaped the stylesheet and executed — a real,
+// demonstrated XSS. Strip the characters that can terminate a declaration,
+// a rule, or the element itself. Nothing legitimate in a colour, length, font
+// stack or shadow needs < > ; { } or an @-rule.
+function __cssVal(v, fallback) {
+  const raw = String(v == null ? '' : v);
+  const clean = raw.replace(/[<>{}:;]/g, (ch) => (ch === ':' ? ':' : ''))
+    .replace(/[<>{};]/g, '')
+    .replace(/@import|expression\s*\(|javascript:|behaviou?r\s*:/gi, '')
+    .trim();
+  // A value that was entirely unsafe, or is now empty, falls back rather than
+  // emitting a broken declaration.
+  return clean && clean.length <= 200 ? clean : String(fallback == null ? '' : fallback);
+}
+function __cssNum(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= 400 ? n : fallback;
+}
+
 function __css(d, p) {
   // A plan may override the direction's type/palette so patches change the render.
-  const t = (p && p.type) || d.type; const pal = (p && p.palette) || d.palette;
-  const radius = (p && p.radius != null) ? p.radius : d.radius;
-  const shadow = (p && p.shadow != null) ? p.shadow : d.shadow;
+  // Sanitise every plan-supplied value, and fall back to the direction's own
+  // token when a value is missing or unusable — a partial palette must not
+  // yield `--bg:undefined`.
+  const rawT = (p && p.type) || d.type; const rawPal = (p && p.palette) || d.palette;
+  const t = {}; for (const k of Object.keys(d.type)) t[k] = __cssVal(rawT && rawT[k], d.type[k]);
+  const pal = {}; for (const k of Object.keys(d.palette)) pal[k] = __cssVal(rawPal && rawPal[k], d.palette[k]);
+  const radius = __cssNum((p && p.radius != null) ? p.radius : d.radius, d.radius);
+  const shadow = __cssVal((p && p.shadow != null) ? p.shadow : d.shadow, d.shadow);
   return `
 :root{--bg:${pal.bg};--bg2:${pal.bg2};--surf:${pal.surface};--surf2:${pal.surface2};--text:${pal.text};--muted:${pal.muted};--faint:${pal.faint};--accent:${pal.accent};--accent2:${pal.accent2};--line:${pal.line};--rule:${pal.rule};--disp:${t.family};--font:${t.bodyFamily || t.family};--body:${t.body};--rad:${radius}px;--shadow:${shadow};--measure:${t.measure};--mono:${t.mono || "'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace"};--fs-caption:${t.caption};--fs-display:${t.display};--fs-hero:${t.hero};--fs-section:${t.section};--ease:cubic-bezier(.22,1,.36,1);--emph:1}
 *{box-sizing:border-box;margin:0;padding:0}

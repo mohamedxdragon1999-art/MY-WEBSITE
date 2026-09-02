@@ -37,6 +37,7 @@ const SUITES = [
   'test_image_pipeline.mjs',    // Images must render as real <img> (not raw data: text), honour caller URLs, reject unsafe schemes, declare dimensions + loading, and carry correct alt
   'test_component_contract.mjs',// Section shell contract: id/reveal/rhythm/emphasis + a heading in the document outline for EVERY section, enforced on the rendered page
   'test_property_fuzz.mjs',     // Property-based fuzzing: invariants over hundreds of randomised plans, plus a memory bound on the validation gate
+  'test_plan_hardening.mjs',    // Plan/graph layer as untrusted input: malformed sections, CSS/attribute injection via palette+type, fallbacks, invariants
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
