@@ -10,6 +10,7 @@ import NX_AST_MOD from './nx_ast.js';
 // Full validation pipeline: structure + layout + contrast + copy, aggregated
 // into one severity-tagged violation list.
 import NX_VALIDATE_MOD from './nx_validate.js';
+import NX_CONTENT_MOD from './nx_content.js';
 // Cross-generation validation history, so a slow regression is visible without
 // anyone eyeballing individual pages.
 import NX_HISTORY_MOD from './nx_history.js';
@@ -2568,15 +2569,24 @@ async function publicTriggerClick(env, ctx, slug, query, origin, ip) {
 
 // Fill missing plan fields with sensible defaults so the AI always has
 // complete material, even when the scan found little.
-function normalizePlan(plan, name, desc) {
+function normalizePlan(plan, name, desc, directionId) {
   const p = plan && typeof plan === 'object' ? { ...plan } : {};
   const biz = name || 'Our Business';
   p.site_name = String(p.site_name || name || 'Our Website').slice(0, 120);
   p.tagline = String(p.tagline || '').slice(0, 100) || `${biz} — trusted local service`;
-  p.hero_headline = String(p.hero_headline || '').slice(0, 100) || `${biz}: quality you can rely on`;
-  p.hero_sub = String(p.hero_sub || '').slice(0, 200) || (desc ? desc.split('.')[0] + '.' : 'Professional service, done right.');
-  p.cta_primary = String(p.cta_primary || 'Get a free quote').slice(0, 40);
-  p.cta_secondary = String(p.cta_secondary || 'Our services').slice(0, 40);
+  // Phase 3: derive fallback copy from the brief's own vocabulary and inferred
+  // industry rather than a single hardcoded line. Without this, every generated
+  // site said "<name>: quality you can rely on" / "Get a free quote" — the
+  // blueprint layer filled these BEFORE the composer's content intelligence
+  // could ever run, so the design varied while the words never did.
+  let __gen = null;
+  try {
+    __gen = NX_CONTENT_MOD.nxGenerateCopy({ site_name: p.site_name, description: desc || p.hero_sub, services: p.services }, directionId || p.direction || '');
+  } catch (e) { __gen = null; }
+  p.hero_headline = String(p.hero_headline || '').slice(0, 100) || (__gen && __gen.headline) || `${biz}: quality you can rely on`;
+  p.hero_sub = String(p.hero_sub || '').slice(0, 200) || (__gen && __gen.sub) || (desc ? desc.split('.')[0] + '.' : 'Professional service, done right.');
+  p.cta_primary = String(p.cta_primary || '').slice(0, 40) || (__gen && __gen.ctaPrimary) || 'Get a free quote';
+  p.cta_secondary = String(p.cta_secondary || '').slice(0, 40) || (__gen && __gen.ctaSecondary) || 'Our services';
   if (!Array.isArray(p.marquee_items) || !p.marquee_items.length) p.marquee_items = ['Trusted locally', 'Fast response', 'Fair pricing', 'Quality guaranteed', 'Friendly service'];
   if (!Array.isArray(p.stats) || !p.stats.length) p.stats = [{ value: 10, label: 'Years experience' }, { value: 500, label: 'Happy clients' }, { value: 100, label: '% Satisfaction' }];
   if (!Array.isArray(p.services) || !p.services.length) p.services = [{ icon: '🛠️', title: 'Professional service', desc: 'Reliable, high-quality work — every time.' }, { icon: '⚡', title: 'Fast turnaround', desc: 'Quick response and on-time delivery.' }, { icon: '🤝', title: 'Fair pricing', desc: 'Transparent quotes, no surprises.' }];
@@ -7549,7 +7559,7 @@ async function generateSiteHtml(env, ws, opts) {
   const w = await getWorkspace(env, ws);
   const designId = isValidDesignId(opts.design_id) ? opts.design_id : 'sentinel';
   const name = String(opts.name || 'My Website').slice(0, 120);
-  const plan = normalizePlan(opts.plan, name, String(opts.description || ''));
+  const plan = normalizePlan(opts.plan, name, String(opts.description || ''), opts.direction || '');
   const desc = String(opts.description || '').slice(0, 800);
   // Deterministic Blueprint plan (industry + computed content) merged over the
   // normalized plan — used as the guaranteed content floor and for no-AI builds.

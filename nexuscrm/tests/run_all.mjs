@@ -48,6 +48,7 @@ const SUITES = [
   'test_scoped_repair.mjs',     // Phase 1.3: repair the smallest scope that fixes the fault; escalate element->container->page only on measured failure
   'test_regression_corpus.mjs', // Phase 1.4: every historical bug is a permanent DATA fixture (bad/good/edge) + anti-slop craft rules from the SKILLS pack
   'test_design_tokens.mjs',     // Token contract: full scales (space/radius/elevation/motion/z), state + feedback tokens, colour-scheme, ascending scales
+  'test_content_intelligence.mjs', // Phase 3: industry-inferred, voice-aware, slot-budgeted copy; no invented facts; user copy always wins
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',

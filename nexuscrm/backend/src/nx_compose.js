@@ -147,13 +147,18 @@ function __str(v) {
   }
   return '';
 }
-function nxComposeContent(plan) {
+function nxComposeContent(plan, directionId) {
   plan = (plan && typeof plan === 'object' && !Array.isArray(plan)) ? plan : {};
+  // Phase 3: slot-fitted, industry- and voice-aware copy. Previously every
+  // fallback was ONE hardcoded string per slot, so six visually distinct
+  // directions all shipped identical words.
+  let __copy = null;
+  try { __copy = require('./nx_content.js').nxGenerateCopy(plan, directionId); } catch (e) { __copy = null; }
   const name = __str(plan.site_name || plan.name).slice(0, 60) || 'Studio';
   const owner = __str(plan.ownerName || plan.owner).split(' ')[0] || 'The Studio';
-  const headline = __str(plan.hero_headline || plan.tagline).slice(0, 90) || 'Made to be remembered.';
-  const sub = __str(plan.hero_sub || plan.description).slice(0, 180) || 'A considered, high-craft site for people who care about the details.';
-  const ctas = { primary: __str(plan.cta_primary).slice(0, 28) || 'Start a project', secondary: __str(plan.cta_secondary).slice(0, 28) || 'See our work' };
+  const headline = __str(plan.hero_headline || plan.tagline).slice(0, 90) || (__copy && __copy.headline) || 'Made to be remembered.';
+  const sub = __str(plan.hero_sub || plan.description).slice(0, 180) || (__copy && __copy.sub) || 'A considered, high-craft site for people who care about the details.';
+  const ctas = { primary: __str(plan.cta_primary).slice(0, 28) || (__copy && __copy.ctaPrimary) || 'Start a project', secondary: __str(plan.cta_secondary).slice(0, 28) || (__copy && __copy.ctaSecondary) || 'See our work' };
   const services = __arr(plan.services || plan.features).slice(0, 6).map(s => {
     if (typeof s === 'string') return { title: s.slice(0, 32), text: '' };
     return { title: __str(s && s.title).slice(0, 40), text: __str(s && (s.desc || s.text)).slice(0, 140), icon: __str(s && s.icon).slice(0, 12), image: __safeImg(s && s.image) };
@@ -166,7 +171,7 @@ function nxComposeContent(plan) {
   const contact = (plan.contact && typeof plan.contact === 'object') ? plan.contact : {};
   const phone = __str(contact.phone || plan.phone).slice(0, 30);
   const email = __str(contact.email || plan.email).slice(0, 60);
-  return { name, owner, headline, sub, ctas, services, why, stats, projects, reviews, faqs, contact, phone, email, meta: __metaDescription(plan, name, headline, sub, services) };
+  return { copy: __copy, name, owner, headline, sub, ctas, services, why, stats, projects, reviews, faqs, contact, phone, email, meta: __metaDescription(plan, name, headline, sub, services) };
 }
 
 // ── Composition Plan: direction → section order/variants/typography/rhythm/density ──
@@ -1008,7 +1013,7 @@ function __js(p) {
 // the loop has a real weakness to find, and the fix is measured on rendered DOM.
 function nxComposeDegrade(content, directionId) {
   const d = NX_COMPOSE_DIRECTIONS[directionId] || NX_COMPOSE_DIRECTIONS['editorial-minimal'];
-  content = nxComposeContent(content);          // normalize so renderers get c.ctas etc.
+  content = nxComposeContent(content, directionId);   // normalize (voice-aware copy needs the direction)
   const base = nxComposePlan(content, directionId);
   const flatType = (() => { const o = Object.assign({}, base.type); const big = o.display; ['display', 'hero', 'section', 'body', 'caption', 'btn'].forEach((k) => { o[k] = big; }); return o; })();
   const lowPal = Object.assign({}, base.palette);
@@ -1053,8 +1058,10 @@ function nxComposeDiagnose(meas) {
 const nxCompose = (content, opts) => {
   const direction = opts && opts.direction;
   let plan, html;
-  const c = nxComposeContent(content);
+  // Resolve the direction FIRST: copy generation is voice-aware, so it needs
+  // to know which direction it is writing for.
   const dir = NX_COMPOSE_DIRECTIONS[direction] ? direction : 'editorial-minimal';
+  const c = nxComposeContent(content, dir);
   plan = nxComposePlan(c, dir);
   html = nxRenderDirected(c, dir, plan).html;
   return { html, plan, explanation: nxDesignExplanation(content || {}, c, dir), content: c };
