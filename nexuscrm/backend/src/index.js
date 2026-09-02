@@ -9955,6 +9955,7 @@ async function runAgenticLoop(build, ctx) {
   // Nothing reaches the caller un-repaired, and if blockers survive the budget
   // we say so explicitly rather than quietly shipping a broken page.
   let validation = null, validationLog = [], validationRepaired = false;
+  const __valStart = Date.now();
   try {
     const gate = NX_VALIDATE_MOD.nxValidateAndRepair(() => html, null, { maxIterations: 4 });
     if (gate && gate.html) {
@@ -9972,6 +9973,8 @@ async function runAgenticLoop(build, ctx) {
       blockingRules: validation.blocking.map(b => b.rule),
       warningCount: validation.warnings.length,
       repairs: validationLog.flatMap(l => l.repairs || []),
+      ms: Date.now() - __valStart,
+      renderer: validation.renderer, browserValidated: validation.browserValidated,
     });
   } catch (e) { /* history must never break a build */ }
 

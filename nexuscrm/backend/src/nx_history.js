@@ -27,6 +27,11 @@ function nxRecordGeneration(rec) {
     blockingRules: (rec && rec.blockingRules) || [],
     warningCount: (rec && rec.warningCount) || 0,
     repairs: (rec && rec.repairs) || [],
+    // §1.5 observability: quality alone is not enough to run this at scale — a
+    // flawless pipeline that is slow or expensive will not survive real usage.
+    ms: Math.max(0, (rec && rec.ms) || 0),
+    renderer: String((rec && rec.renderer) || 'approximate'),
+    browserValidated: !!(rec && rec.browserValidated),
   };
   __entries.push(e);
   while (__entries.length > NX_HISTORY_LIMIT) __entries.shift();
@@ -53,8 +58,17 @@ function nxHistoryStats() {
     for (const r of e.repairs) { const k = String(r).split(':')[0]; repairCount[k] = (repairCount[k] || 0) + 1; }
   }
   const top = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([rule, count]) => ({ rule, count }));
+  const times = __entries.map(e => e.ms).filter(n => n > 0).sort((a, b) => a - b);
+  const pct = (q) => times.length ? times[Math.min(times.length - 1, Math.floor(times.length * q))] : null;
+  // A rising repair rate is the early signal that the generator or the checker
+  // is drifting — visible here long before anyone eyeballs an individual page.
+  const repairRate = Math.round((__entries.filter(e => e.repaired).length / total) * 100);
+  const unverified = __entries.filter(e => !e.browserValidated).length;
   return {
     total,
+    medianMs: pct(0.5), p95Ms: pct(0.95),
+    repairRate,
+    unverifiedRenders: unverified,
     cleanFirstPass: clean,
     needed1: one,
     needed2plus: many,

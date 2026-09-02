@@ -33,6 +33,7 @@ const SUITES = [
   'test_runtime_integrity.mjs', // EXECUTES the generated page: runtime errors, fail-open reveal, keyboard focus, skip link, OG metadata, duplicate copy
   'test_validation_pipeline.mjs',// Layout geometry at 4 viewports, design-token discipline, copy quality, severity-tagged violations, non-regressing repair loop
   'test_validation_gate.mjs',   // Validation must GATE and auto-repair every generation, refuse regressions, declare survivors, and log history across generations
+  'test_edge_fixtures.mjs',     // Edge-case fixture discipline: empty/enormous/RTL/CJK/hostile input, known-bad must fail, known-good must not false-flag
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',

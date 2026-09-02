@@ -206,6 +206,42 @@ function __metaDescription(plan, name, headline, sub, services) {
   return (out ? (out.endsWith('.') ? out : out + '.') : fallback).slice(0, 160);
 }
 
+// Script direction is a property of the CONTENT, not a setting the caller must
+// remember to pass. Arabic, Hebrew, Persian, Urdu and Thaana text rendered
+// left-to-right is not a cosmetic issue — the page is unreadable. Detect it
+// from the copy itself so an Arabic brief simply works.
+const __RTL_RANGE = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0780-\u07BF\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
+function nxDetectDirection(content) {
+  // Weight AUTHORED fields only. The composer injects English defaults for any
+  // slot the brief left empty (a generic sub-headline, CTA labels), and mixing
+  // those into the sample diluted a fully-Arabic brief to 35% RTL — under the
+  // threshold — so the page rendered left-to-right. Name and headline are the
+  // fields a user always writes themselves, so they decide.
+  const authored = [content && content.name, content && content.headline].filter(Boolean).join(' ');
+  const secondary = [...(((content && content.services) || []).slice(0, 4).map(x => (x && x.title) || ''))]
+    .filter(Boolean).join(' ');
+  const sample = (authored + ' ' + secondary).trim();
+  if (!sample) return 'ltr';
+  const rtl = (sample.match(new RegExp(__RTL_RANGE.source, 'g')) || []).length;
+  const letters = (sample.match(/[\p{L}]/gu) || []).length;
+  // Majority test: a single foreign word in an English page must not flip it.
+  return (letters && rtl / letters > 0.4) ? 'rtl' : 'ltr';
+}
+
+// Best-effort BCP-47 tag from the script actually used. Declaring Hebrew text
+// as lang="ar" misleads screen readers, which pick a voice from this attribute.
+function nxDetectLang(content) {
+  const sample = [content && content.name, content && content.headline].filter(Boolean).join(' ');
+  if (/[\u0590-\u05FF\uFB1D-\uFB4F]/.test(sample)) return 'he';
+  if (/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(sample)) return 'ar';
+  if (/[\u0700-\u074F]/.test(sample)) return 'syr';
+  if (/[\u0780-\u07BF]/.test(sample)) return 'dv';
+  if (/[\u3040-\u30FF]/.test(sample)) return 'ja';
+  if (/[\uAC00-\uD7AF]/.test(sample)) return 'ko';
+  if (/[\u4E00-\u9FFF]/.test(sample)) return 'zh';
+  return 'en';
+}
+
 function nxComposePlan(content, directionId) {
   const d = NX_COMPOSE_DIRECTIONS[directionId] || NX_COMPOSE_DIRECTIONS['editorial-minimal'];
   const has = (arr) => Array.isArray(arr) && arr.length > 0;
@@ -494,7 +530,8 @@ function nxRenderDirected(content, directionId, plan) {
   }
   const main = lead.join('\n') + '\n<main id="main" class="c-main">' + body.join('\n') + '</main>\n' + tail.join('\n');
   const motion = (p && p.motion) || d.motion;
-  const html = `<!DOCTYPE html><html lang="en" data-dir="${d.id}" data-motion="${motion}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${__e(content.name)} — ${__e(d.name)}</title><meta name="description" content="${__e(content.meta)}"><meta property="og:type" content="website"><meta property="og:title" content="${__e(content.name)}"><meta property="og:description" content="${__e(content.meta)}"><meta property="og:site_name" content="${__e(content.name)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${__e(content.name)}"><meta name="twitter:description" content="${__e(content.meta)}"><meta name="theme-color" content="${d.palette.bg}"><style>${__css(d, p)}</style></head><body><a class="c-skip" href="#main">Skip to content</a><div class="c-page" data-density="${p.density}">${main}</div><script>${__js(p)}</script></body></html>`;
+  const __textDir = nxDetectDirection(content);
+  const html = `<!DOCTYPE html><html lang="${nxDetectLang(content)}" dir="${__textDir}" data-dir="${d.id}" data-motion="${motion}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${__e(content.name)} — ${__e(d.name)}</title><meta name="description" content="${__e(content.meta)}"><meta property="og:type" content="website"><meta property="og:title" content="${__e(content.name)}"><meta property="og:description" content="${__e(content.meta)}"><meta property="og:site_name" content="${__e(content.name)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${__e(content.name)}"><meta name="twitter:description" content="${__e(content.meta)}"><meta name="theme-color" content="${d.palette.bg}"><style>${__css(d, p)}</style></head><body><a class="c-skip" href="#main">Skip to content</a><div class="c-page" data-density="${p.density}">${main}</div><script>${__js(p)}</script></body></html>`;
   return { html, plan: p, content };
 }
 
@@ -516,6 +553,11 @@ h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-
    switch-control user had no idea where they were on the page. :focus-visible
    keeps it out of the way of mouse users. */
 :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:2px}
+/* RTL: mirror the layout, not only the text run. Logical properties keep a
+   single stylesheet correct in both directions instead of duplicating rules. */
+[dir="rtl"] .c-sec-left,[dir="rtl"] .c-hero-copy{text-align:right}
+[dir="rtl"] .c-spec-row{direction:rtl}
+[dir="rtl"] .c-marquee-track{animation-direction:reverse}
 /* Standalone navigation/footer links are tap targets too. Inline links inside
    prose are deliberately excluded — 44px does not apply mid-sentence. */
 .c-nav a,.c-footer-links a,.c-nav-links a{display:inline-flex;align-items:center;min-height:44px}
@@ -852,7 +894,7 @@ const nxCompose = (content, opts) => {
 
 const nx_compose_api = {
   NX_COMPOSE_DIRECTIONS, NX_COMPOSE_ORDER, NX_COMPOSE_TRANSITIONS,
-  nxComposeContent, nxComposePlan, nxContentShape, nxDesignExplanation, nxRenderDirected, nxCompose,
+  nxComposeContent, nxComposePlan, nxContentShape, nxDesignExplanation, nxRenderDirected, nxCompose, nxDetectDirection, nxDetectLang,
   nxComposeDegrade, nxComposePatchPlan, nxComposeDiagnose,
 };
 
