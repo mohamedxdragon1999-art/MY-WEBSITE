@@ -381,7 +381,7 @@ function __nav(c, p) {
   const links = p.sections.filter(s => ['feature', 'story', 'work', 'reviews', 'contact', 'metrics'].includes(s)).slice(0, 5);
   const mk = (label, id) => `<a href="#${id}">${__e(label)}</a>`;
   const map = { feature: 'Work', story: 'Story', work: 'Projects', reviews: 'Clients', contact: 'Contact', metrics: 'Numbers' };
-  return `<header class="c-nav" data-r><div class="c-wrap c-bar"><div class="c-brand">${__e(c.name)}</div><nav class="c-links">${links.map(x => mk(map[x] || x, x)).join('')}</nav><a class="c-btn c-btn-ghost" href="#contact">${__e(c.ctas.primary)}</a></div></header>`;
+  return `<header class="c-nav" id="top" data-r><div class="c-wrap c-bar"><div class="c-brand">${__e(c.name)}</div><nav class="c-links">${links.map(x => mk(map[x] || x, x)).join('')}</nav><a class="c-btn c-btn-ghost" href="#contact">${__e(c.ctas.primary)}</a></div></header>`;
 }
 
 function __hero(c, p) {
@@ -433,11 +433,16 @@ function __hero(c, p) {
 }
 
 function __logoStrip(c, p) {
-  return `<section class="c-strip" data-r><div class="c-wrap c-strip-row">${['A', 'B', 'C', 'D', 'E'].map(x => `<span>${x}</span>`).join('')}</div></section>`;
+  // Decorative logo strip: addressable id + hidden from assistive tech, matching
+  // how the marquee is treated. Placeholder letters carry no meaning to announce.
+  return `<section class="c-strip" id="logos" data-r aria-hidden="true"><div class="c-wrap c-strip-row">${['A', 'B', 'C', 'D', 'E'].map(x => `<span>${x}</span>`).join('')}</div></section>`;
 }
 function __marquee(c, p) {
   const items = (c.why && c.why.length ? c.why : ['Considered', 'Crafted', 'Precise', 'Timeless']).slice(0, 6);
-  return `<div class="c-marquee" data-r><div class="c-marquee-track">${items.map(t => `<span>${__e(t)}</span><i>·</i>`).join('')}</div></div>`;
+  // Decorative furniture: give it a stable id (so it is addressable like every
+  // other section) and aria-hidden (a scrolling word list is noise for screen
+  // readers, and it duplicates copy that already appears elsewhere).
+  return `<div class="c-marquee" id="marquee" data-r aria-hidden="true"><div class="c-marquee-track">${items.map(t => `<span>${__e(t)}</span><i>·</i>`).join('')}</div></div>`;
 }
 function __metrics(c, p) {
   // A visually-titleless section still needs a heading, or it is absent from the
@@ -581,7 +586,21 @@ function nxRenderDirected(content, directionId, plan) {
   if (__sections[__sections.length - 1] !== 'footer') {
     __sections = __sections.filter((x) => x !== 'footer').concat(['footer']);
   }
-  const np = Object.assign({}, p, { sections: __sections });
+  // A non-array rhythm/transitions/emphasisTiers (an AI patch can produce one)
+  // previously left EVERY section without a rhythm beat — the whole rhythm
+  // system silently switched off. Fall back to the direction's own motif and
+  // resize to match the final section list.
+  const __motif = (d.rhythm && d.rhythm.length) ? d.rhythm : ['normal'];
+  const __rhythm = Array.isArray(p.rhythm) && p.rhythm.length
+    ? __sections.map((_, i) => p.rhythm[i] || __motif[i % __motif.length])
+    : __sections.map((_, i) => __motif[i % __motif.length]);
+  const __trans = Array.isArray(p.transitions) && p.transitions.length
+    ? __sections.map((_, i) => p.transitions[i] || 'fade')
+    : __sections.map((_, i) => (i === 0 ? 'flat' : 'fade'));
+  const __tiers = Array.isArray(p.emphasisTiers) && p.emphasisTiers.length
+    ? __sections.map((_, i) => p.emphasisTiers[i] || 'med')
+    : __sections.map(() => 'med');
+  const np = Object.assign({}, p, { sections: __sections, rhythm: __rhythm, transitions: __trans, emphasisTiers: __tiers });
 
   const parts = np.sections.map((s, i) => ({
     key: s,

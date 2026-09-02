@@ -57,11 +57,37 @@ function __acquireDoc(html) {
 // Exposed so a long-running host can drop the environment if it wants to.
 function nxValidateReset() { /* no shared state to release with linkedom */ }
 
+// ── SEVERITY POLICY (Phase 1.2) ───────────────────────────────────────────
+// One table, in code, decides what ships. Previously severity was assigned
+// ad-hoc at each call site, so the same class of defect could be blocking in
+// one path and a warning in another.
+//
+// BLOCKING  — the page is broken for a real user. Never ships unrepaired.
+// WARNING   — quality signal. Ships, but is surfaced rather than hidden.
+const NX_BLOCKING_RULES = new Set([
+  'overflow', 'overflow-x', 'overlap', 'off-canvas', 'clipping',
+  'touch-target', 'contrast', 'broken-image', 'broken-link', 'dead-anchor',
+  'placeholder', 'zero-size', 'html-validity', 'semantics', 'unparseable',
+  'undefined-token', 'page-error', 'section-contract',
+]);
+const NX_WARNING_RULES = new Set([
+  'cliche', 'slot-overflow', 'repetition', 'readability', 'line-length',
+  'rhythm', 'judge-score', 'genericness',
+]);
+/** Classify a rule. Unknown rules default to WARNING so a new check can never
+ *  block shipping until it is deliberately promoted. */
+function nxSeverityFor(rule, fallback) {
+  if (NX_BLOCKING_RULES.has(rule)) return 'blocking';
+  if (NX_WARNING_RULES.has(rule)) return 'warning';
+  return fallback || 'warning';
+}
+
 function nxValidatePage(html, opts) {
   opts = opts || {};
   const viewports = opts.viewports || NX_VIEWPORTS;
   const violations = [];
-  const add = (v) => violations.push(v);
+  // Every violation is classified by the policy table, not by its call site.
+  const add = (v) => violations.push(Object.assign({}, v, { severity: nxSeverityFor(v.rule, v.severity) }));
 
   // ── STRUCTURE (blocking: malformed markup changes layout silently) ──
   const gate = nxAstSyntaxGate(html);
@@ -201,6 +227,59 @@ function nxAutoRepair(html, blocking) {
   return { html: out, applied };
 }
 
+// ── BROWSER-BACKED VALIDATION (Phase 1.1) ─────────────────────────────────
+// Runs the synchronous gate, then augments it with REAL rendered measurements
+// when Chromium is available. The two are merged into one violation list so
+// callers have a single source of truth.
+//
+// The visual-verification flag is derived from what actually happened, never
+// assumed: `browserValidated` is true only if a browser really rendered the
+// page. When it is false the report says so and explains why, so no consumer
+// can mistake approximate geometry for verified pixels.
+async function nxValidatePageAsync(html, opts) {
+  opts = opts || {};
+  const base = nxValidatePage(html, opts);
+  if (opts.browser === false) return base;
+
+  let br = null;
+  try {
+    const { nxBrowserMeasure } = require('./nx_browser.js');
+    br = await nxBrowserMeasure(html, opts);
+  } catch (e) {
+    br = { available: false, reason: 'browser module unavailable: ' + String(e && e.message || e).slice(0, 120) };
+  }
+
+  if (!br || !br.available) {
+    return Object.assign({}, base, {
+      renderer: 'approximate',
+      browserValidated: false,
+      browserReason: (br && br.reason) || 'no browser',
+      // Explicit, machine-readable flag so a UI can badge the output.
+      visuallyUnverified: true,
+      note: base.note + ' Chromium was not available at runtime (' + ((br && br.reason) || 'unknown') + '), so this page is VISUALLY UNVERIFIED.',
+    });
+  }
+
+  // Real measurements supersede the estimates for the rules they cover.
+  const estimatedRules = new Set(['overflow-x', 'touch-target', 'zero-size', 'line-length']);
+  const kept = base.violations.filter((v) => !(v.source !== 'browser' && estimatedRules.has(v.rule)));
+  const merged = kept.concat(br.violations.map((v) => Object.assign({}, v, { severity: nxSeverityFor(v.rule, v.severity) })));
+  const blocking = merged.filter((v) => v.severity === 'blocking');
+  const warnings = merged.filter((v) => v.severity === 'warning');
+  return {
+    pass: blocking.length === 0,
+    blocking, warnings, violations: merged,
+    perViewport: br.viewports.map((v) => ({ viewport: v.viewport, issues: v.issues })),
+    screenshots: br.viewports.map((v) => ({ viewport: v.viewport, png: v.screenshot || null })),
+    readability: base.readability,
+    renderer: 'chromium',
+    engine: br.engine, browserVersion: br.version,
+    browserValidated: true,
+    visuallyUnverified: false,
+    note: 'Layout, overlap, tap targets and contrast were measured in real Chromium at ' + br.viewports.length + ' viewports.',
+  };
+}
+
 // §5/§6: iterate a generator against its own violations.
 function nxValidateAndRepair(generate, repair, opts) {
   opts = opts || {};
@@ -234,4 +313,26 @@ function nxValidateAndRepair(generate, repair, opts) {
   };
 }
 
-module.exports = { nxValidatePage, nxValidateReset, nxValidateAndRepair, nxAutoRepair, nxContrast };
+// Async counterpart of nxValidateAndRepair using browser-backed verdicts.
+async function nxValidateAndRepairAsync(generate, repair, opts) {
+  opts = opts || {};
+  const max = Math.max(1, Math.min(6, opts.maxIterations || 4));
+  const fix = (typeof repair === 'function') ? repair : (h, blocking) => nxAutoRepair(h, blocking).html;
+  const log = [];
+  let html = typeof generate === 'function' ? await generate() : String(generate || '');
+  let report = await nxValidatePageAsync(html, opts);
+  log.push({ iteration: 0, blocking: report.blocking.length, warnings: report.warnings.length, repairs: [] });
+  for (let i = 1; i <= max && !report.pass; i++) {
+    let next = null, applied = [];
+    if (typeof repair === 'function') next = await repair(html, report.blocking, i);
+    else { const r = nxAutoRepair(html, report.blocking); next = r.html; applied = r.applied; }
+    if (!next || next === html) break;
+    const cand = await nxValidatePageAsync(next, opts);
+    if (cand.blocking.length >= report.blocking.length) break;   // never accept a regression
+    html = next; report = cand;
+    log.push({ iteration: i, blocking: report.blocking.length, warnings: report.warnings.length, repairs: applied });
+  }
+  return { html, report, iterations: log.length, log, repaired: log.length > 1, shippedWithBlockers: !report.pass, unresolved: report.blocking };
+}
+
+module.exports = { nxValidatePage, nxValidatePageAsync, nxValidateAndRepairAsync, nxSeverityFor, NX_BLOCKING_RULES, NX_WARNING_RULES, nxValidateReset, nxValidateAndRepair, nxAutoRepair, nxContrast };

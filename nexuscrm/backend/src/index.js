@@ -9875,7 +9875,13 @@ async function runAgenticLoop(build, ctx) {
   let validation = null, validationLog = [], validationRepaired = false;
   const __valStart = Date.now();
   try {
-    const gate = NX_VALIDATE_MOD.nxValidateAndRepair(() => html, null, { maxIterations: 4 });
+    // Phase 1.1: prefer the browser-backed gate. It renders in real Chromium at
+    // every required viewport and measures actual geometry; if no browser is
+    // available it degrades to approximate mode and flags the output as
+    // VISUALLY UNVERIFIED rather than silently claiming verification.
+    const gate = (typeof NX_VALIDATE_MOD.nxValidateAndRepairAsync === 'function')
+      ? await NX_VALIDATE_MOD.nxValidateAndRepairAsync(() => html, null, { maxIterations: 4 })
+      : NX_VALIDATE_MOD.nxValidateAndRepair(() => html, null, { maxIterations: 4 });
     if (gate && gate.html) {
       html = gate.html;
       validation = gate.report;
@@ -9919,6 +9925,10 @@ async function runAgenticLoop(build, ctx) {
       repaired: validationRepaired, repairLog: validationLog,
       // Never let a caller believe this was pixel-verified.
       browserValidated: validation.browserValidated, renderer: validation.renderer, note: validation.note,
+      // Explicit machine-readable flag for any consumer/UI.
+      visuallyUnverified: validation.visuallyUnverified !== false,
+      browserReason: validation.browserReason || '',
+      engine: validation.engine || '', browserVersion: validation.browserVersion || '',
     } : null };
 }
 
