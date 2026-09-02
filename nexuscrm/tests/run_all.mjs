@@ -46,6 +46,7 @@ const SUITES = [
   'test_browser_gate.mjs',      // Phase 1.1/1.2: real-Chromium rendering wired inline with honest fallback flags, and one severity policy that gates shipping
   'test_cross_cycle_hardening.mjs', // Attacks cycles 1-6 from untried angles: repair idempotence/safety, scrub word boundaries, parallelism, determinism
   'test_scoped_repair.mjs',     // Phase 1.3: repair the smallest scope that fixes the fault; escalate element->container->page only on measured failure
+  'test_regression_corpus.mjs', // Phase 1.4: every historical bug is a permanent DATA fixture (bad/good/edge) + anti-slop craft rules from the SKILLS pack
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',

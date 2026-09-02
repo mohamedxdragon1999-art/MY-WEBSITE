@@ -11,7 +11,7 @@ const NX_COMPOSE_DIRECTIONS = {
   'editorial-minimal': {
     id: 'editorial-minimal', name: 'Editorial Minimal', family: 'type-led',
     palette: { bg: '#F4F1EB', bg2: '#EAE6DC', surface: '#FBFAF6', surface2: '#EFECE2', text: '#1A1714', muted: '#6B655A', faint: '#7D7669', accent: '#B5402A', accent2: '#6A4A34', line: 'rgba(26,23,20,.12)', rule: '#1A1714' },
-    type: { family: "'Playfair Display', Georgia, serif", body: "'Helvetica Neue', Arial, sans-serif", display: 'clamp(3.2rem,8.5vw,6.6rem)', hero: 'clamp(2.6rem,6vw,4.6rem)', section: 'clamp(1.7rem,3.4vw,2.6rem)', body: 'clamp(1.02rem,1.35vw,1.14rem)', caption: '0.78rem', btn: '0.74rem', measure: '62ch' },
+    type: { family: "'Playfair Display', Georgia, serif", bodyFamily: "'Söhne', 'Inter', system-ui, sans-serif", body: "'Helvetica Neue', Arial, sans-serif", display: 'clamp(3.2rem,8.5vw,6.6rem)', hero: 'clamp(2.6rem,6vw,4.6rem)', section: 'clamp(1.7rem,3.4vw,2.6rem)', body: 'clamp(1.02rem,1.35vw,1.14rem)', caption: '0.78rem', btn: '0.74rem', measure: '62ch' },
     radius: 0, shadow: 'none', surfaceFx: 'none',
     heroVariant: 'editorial', featureMode: 'edlist', reviewMode: 'quote',
     sectionOrder: ['nav', 'hero', 'logos', 'feature', 'story', 'work', 'reviews', 'cta', 'contact', 'footer'],
@@ -22,7 +22,7 @@ const NX_COMPOSE_DIRECTIONS = {
   'cinematic-immersive': {
     id: 'cinematic-immersive', name: 'Cinematic Immersive', family: 'image-led',
     palette: { bg: '#07090D', bg2: '#0B0E14', surface: '#12161F', surface2: '#171D2A', text: '#EAF0F6', muted: '#94A1B4', faint: '#5A6678', accent: '#FF6A2B', accent2: '#FFB23E', line: 'rgba(255,255,255,.10)', rule: 'rgba(255,255,255,.16)' },
-    type: { family: "'Space Grotesk', 'Inter', sans-serif", body: "'Inter', system-ui, sans-serif", display: 'clamp(3.4rem,10vw,8rem)', hero: 'clamp(2.4rem,6vw,4.8rem)', section: 'clamp(1.9rem,4vw,3.1rem)', body: 'clamp(1.05rem,1.4vw,1.2rem)', caption: '0.8rem', btn: '0.75rem', measure: '58ch' },
+    type: { family: "'Space Grotesk', 'Inter', sans-serif", bodyFamily: "'Inter', system-ui, sans-serif", body: "'Inter', system-ui, sans-serif", display: 'clamp(3.4rem,10vw,8rem)', hero: 'clamp(2.4rem,6vw,4.8rem)', section: 'clamp(1.9rem,4vw,3.1rem)', body: 'clamp(1.05rem,1.4vw,1.2rem)', caption: '0.8rem', btn: '0.75rem', measure: '58ch' },
     radius: 18, shadow: '0 40px 90px -30px rgba(0,0,0,.8)', surfaceFx: 'glass',
     heroVariant: 'fullbleed', featureMode: 'bento', reviewMode: 'grid',
     sectionOrder: ['nav', 'hero', 'marquee', 'metrics', 'feature', 'story', 'work', 'reviews', 'cta', 'contact', 'footer'],
@@ -33,7 +33,7 @@ const NX_COMPOSE_DIRECTIONS = {
   'luxury-art': {
     id: 'luxury-art', name: 'Luxury Art-Directed', family: 'editorial',
     palette: { bg: '#0E0C09', bg2: '#14110C', surface: '#1B1712', surface2: '#221C14', text: '#F3ECDD', muted: '#A99C82', faint: '#6E6250', accent: '#C9A961', accent2: '#E4CF9A', line: 'rgba(201,169,97,.22)', rule: 'rgba(201,169,97,.4)' },
-    type: { family: "'Playfair Display', 'Didot', Georgia, serif", body: "'Helvetica Neue', Arial, sans-serif", display: 'clamp(3rem,7.5vw,5.8rem)', hero: 'clamp(2.3rem,5.4vw,4.2rem)', section: 'clamp(1.6rem,3vw,2.3rem)', body: 'clamp(1.02rem,1.3vw,1.12rem)', caption: '0.72rem', btn: '0.72rem', measure: '56ch' },
+    type: { family: "'Playfair Display', 'Didot', Georgia, serif", bodyFamily: "'Söhne', 'Inter', system-ui, sans-serif", body: "'Helvetica Neue', Arial, sans-serif", display: 'clamp(3rem,7.5vw,5.8rem)', hero: 'clamp(2.3rem,5.4vw,4.2rem)', section: 'clamp(1.6rem,3vw,2.3rem)', body: 'clamp(1.02rem,1.3vw,1.12rem)', caption: '0.72rem', btn: '0.72rem', measure: '56ch' },
     radius: 2, shadow: '0 30px 80px -40px rgba(0,0,0,.7)', surfaceFx: 'metallic',
     heroVariant: 'minimal', featureMode: 'split', reviewMode: 'single',
     sectionOrder: ['nav', 'hero', 'story', 'feature', 'work', 'reviews', 'cta', 'footer'],
@@ -44,7 +44,7 @@ const NX_COMPOSE_DIRECTIONS = {
   'bold-experimental': {
     id: 'bold-experimental', name: 'Bold Experimental', family: 'type-led',
     palette: { bg: '#101014', bg2: '#16161C', surface: '#1E1E26', surface2: '#25252F', text: '#F2F2F5', muted: '#A0A0AC', faint: '#6A6A78', accent: '#FF3E7A', accent2: '#4C6EFF', line: 'rgba(255,255,255,.12)', rule: 'rgba(255,255,255,.2)' },
-    type: { family: "'Archivo Black', 'Space Grotesk', sans-serif", body: "'Inter', system-ui, sans-serif", display: 'clamp(4rem,13vw,10rem)', hero: 'clamp(3rem,9vw,7rem)', section: 'clamp(2.2rem,5.5vw,4rem)', body: 'clamp(1.05rem,1.4vw,1.2rem)', caption: '0.78rem', btn: '0.78rem', measure: '54ch' },
+    type: { family: "'Archivo Black', 'Space Grotesk', sans-serif", bodyFamily: "'Space Grotesk', 'Inter', system-ui, sans-serif", body: "'Inter', system-ui, sans-serif", display: 'clamp(4rem,13vw,10rem)', hero: 'clamp(3rem,9vw,7rem)', section: 'clamp(2.2rem,5.5vw,4rem)', body: 'clamp(1.05rem,1.4vw,1.2rem)', caption: '0.78rem', btn: '0.78rem', measure: '54ch' },
     radius: 0, shadow: '6px 6px 0 var(--accent)', surfaceFx: 'flat',
     heroVariant: 'overlap', featureMode: 'alternating', reviewMode: 'grid',
     sectionOrder: ['nav', 'hero', 'marquee', 'feature', 'metrics', 'work', 'reviews', 'cta', 'contact', 'footer'],
@@ -103,7 +103,7 @@ const NX_COMPOSE_DIRECTIONS = {
   'swiss-structured': {
     id: 'swiss-structured', name: 'Modern Swiss', family: 'systematic',
     palette: { bg: '#FAFAF8', bg2: '#F2F2EE', surface: '#FFFFFF', surface2: '#EBEBE5', text: '#111210', muted: '#5A5C55', faint: '#8A8C83', accent: '#1B4DE4', accent2: '#0A0A0A', line: 'rgba(17,18,16,.14)', rule: '#111210' },
-    type: { family: "'Inter', 'Helvetica Neue', sans-serif", body: "'Inter', system-ui, sans-serif", display: 'clamp(3rem,8vw,5.6rem)', hero: 'clamp(2.2rem,4.8vw,3.6rem)', section: 'clamp(1.5rem,2.8vw,2.1rem)', body: 'clamp(1rem,1.25vw,1.08rem)', caption: '0.75rem', btn: '0.74rem', measure: '72ch' },
+    type: { family: "'Söhne', 'Neue Haas Grotesk Display', 'Helvetica Neue', Helvetica, sans-serif", bodyFamily: "'Inter', system-ui, sans-serif", body: "'Inter', system-ui, sans-serif", display: 'clamp(3rem,8vw,5.6rem)', hero: 'clamp(2.2rem,4.8vw,3.6rem)', section: 'clamp(1.5rem,2.8vw,2.1rem)', body: 'clamp(1rem,1.25vw,1.08rem)', caption: '0.75rem', btn: '0.74rem', measure: '72ch' },
     radius: 0, shadow: 'none', surfaceFx: 'none',
     heroVariant: 'split', featureMode: 'ruled', reviewMode: 'quote',
     sectionOrder: ['nav', 'hero', 'metrics', 'feature', 'story', 'work', 'cta', 'footer'],
@@ -896,7 +896,7 @@ ${p.surfaceFx === 'panel' ? `
 [data-transition="bridge"]::before{content:"";position:absolute;left:calc(max(20px,4.5vw) + 0px);right:calc(max(20px,4.5vw) + 0px);top:0;height:6px;background:var(--line);opacity:.5;transform:translateX(0)}
 [data-transition="fade"]{position:relative;background-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.02) 30%,var(--bg) 100%)}
 [data-transition="bleed"]{border-top:1px solid var(--line)}
-[data-transition="overlap"]{position:relative;z-index:2;margin-top:calc(clamp(-40px,-5vw,-16px));border-radius:var(--rad) var(--rad) 0 0;background:var(--bg);box-shadow:0 -20px 60px -30px rgba(0,0,0,.4)}
+[data-transition="overlap"]{position:relative;z-index:2;margin-top:calc(clamp(-40px,-5vw,-16px));border-radius:var(--rad) var(--rad) 0 0;background:var(--bg);box-shadow:0 -32px 80px -40px rgba(0,0,0,.22)}
 [data-transition="flat"]{}
 /* ── VISUAL EMPHASIS BUDGET: only the hero(+CTA) are focal; the rest are supporting ── */
 [data-emphasis]{--emph:1}
