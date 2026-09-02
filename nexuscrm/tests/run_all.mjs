@@ -41,6 +41,7 @@ const SUITES = [
   'test_refine_loop.mjs',       // degrade -> diagnose -> patch -> re-render must converge, improve real metrics, never regress or flatten identity
   'test_user_journey.mjs',      // END TO END: sign up -> generate -> save -> publish -> visit as an anonymous visitor -> edit -> snapshot -> restore
   'test_measurement_primitives.mjs', // The functions every verdict rests on: CSS length resolution, WCAG contrast, unit normalisation, cascade var resolution
+  'test_ui_interaction.mjs',    // Drives the SHIPPED UI with real DOM events against the REAL worker: clicks, typing, modal, direction picker, payload
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
@@ -112,7 +113,13 @@ console.log('NexusCRM full battery — ' + SUITES.length + ' suites\n');
 const t0 = Date.now();
 const results = [];
 for (const suite of SUITES) {
-  const proc = spawnSync(process.execPath, [join(__dirname, suite)], { encoding: 'utf8', timeout: 10 * 60 * 1000 });
+  // maxBuffer defaults to 1MB. A verbose suite that exceeds it is KILLED with a
+  // truncated stdout, which the runner then reports as "CRASHED / no summary" —
+  // and because suites run in sequence the victim can appear to be a different,
+  // perfectly healthy suite each run. Give it real headroom.
+  const proc = spawnSync(process.execPath, [join(__dirname, suite)], {
+    encoding: 'utf8', timeout: 10 * 60 * 1000, maxBuffer: 64 * 1024 * 1024,
+  });
   const out = proc.stdout || '';
   const m = out.match(/(?:RESULTS?|DEEP RESULTS|EDGE RESULTS|DEPLOY RESULTS|AI ROBUSTNESS RESULTS|CONCURRENCY RESULTS|ISOLATION RESULTS|FUZZ RESULTS):\s*(.+)$/m);
   const cov = out.match(/^ROUTE_COVERAGE_JSON: (.+)$/m);
