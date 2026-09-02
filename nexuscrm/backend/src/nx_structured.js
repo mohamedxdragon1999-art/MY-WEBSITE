@@ -30,11 +30,23 @@ function parseCSSVars(html) {
   return { vars, scale };
 }
 
+// Normalise a CSS length to PIXELS. The previous version stripped the unit and
+// parsed the bare number, so `1.5rem` measured as 1.5 while the visually
+// identical `24px` measured as 24 — a 16x error. Every consumer compares these
+// numerically (typeUniformity, signature distance, scale monotonicity), so two
+// identical type scales expressed in different units scored 0.455 apart.
+const NX_ROOT_PX = 16;      // browser default root font-size
+const NX_VW_PX = 1440 / 100; // desktop reference viewport for vw/vmin
 function clampNum(v) {
-  const m = String(v || '').match(/clamp\(([^,]+),([^,]+),([^)]+)\)/);
+  const str = String(v == null ? '' : v).trim();
+  const m = str.match(/clamp\(([^,]+),([^,]+),([^)]+)\)/);
   if (m) return clampNum(m[1]) * 0.3 + clampNum(m[2]) * 0.4 + clampNum(m[3]) * 0.3;
-  const n = parseFloat(String(v).replace(/[^\d.]/g, ''));
-  return Number.isFinite(n) ? n : 0;
+  const num = parseFloat(str);
+  if (!Number.isFinite(num)) return 0;
+  if (/(?:^|[\d.])r?em\s*$/i.test(str)) return num * NX_ROOT_PX;
+  if (/vw\s*$/i.test(str) || /vmin\s*$/i.test(str) || /vh\s*$/i.test(str)) return num * NX_VW_PX;
+  if (/%\s*$/.test(str)) return num * NX_ROOT_PX / 100;
+  return num;   // px, or a unitless number
 }
 
 function num(v) { const n = parseFloat(String(v).replace(/[^\d.]/g, '')); return Number.isFinite(n) ? n : 0; }

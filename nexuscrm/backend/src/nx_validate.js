@@ -27,8 +27,12 @@ const { nxAuditCopy } = require('./nx_copy.js');
 const { nxAuditSections } = require('./nx_components.js');
 
 function __lum(h) {
-  const m = String(h || '').replace('#', '');
-  if (m.length < 6) return null;
+  const m = String(h || '').replace('#', '').trim();
+  // Must be exactly six hex digits. The old check only tested LENGTH, so
+  // 'rgb(0,0,0)' and '#gggggg' parsed to NaN and produced a NaN ratio — which
+  // silently compared false against every threshold, so a genuinely failing
+  // colour pair could pass the contrast gate unnoticed.
+  if (!/^[0-9a-f]{6}$/i.test(m)) return null;
   const c = [0, 2, 4].map(i => parseInt(m.slice(i, i + 2), 16) / 255)
     .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];

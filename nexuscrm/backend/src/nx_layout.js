@@ -76,8 +76,26 @@ function __splitTop(s) {
   return out;
 }
 function __calc(expr, ctx) {
-  // Substitute each length token with its px value, then evaluate arithmetic.
-  const substituted = expr.replace(/(-?[\d.]+)(px|rem|em|vw|vh|vmin|ch|%)/gi, (mm) => {
+  // Resolve nested functions FIRST. Real stylesheets write
+  // calc(clamp(10px,1vw,20px) * 2); substituting bare length tokens alone left
+  // the clamp( wrapper behind, the arithmetic guard rejected it, and the whole
+  // declaration silently resolved to null — i.e. unmeasured.
+  let work = String(expr);
+  for (let pass = 0; pass < 4; pass++) {
+    const m = /(clamp|min|max)\(/i.exec(work);
+    if (!m) break;
+    let depth = 0, end = -1;
+    for (let i = m.index + m[0].length - 1; i < work.length; i++) {
+      if (work[i] === '(') depth++;
+      else if (work[i] === ')') { depth--; if (!depth) { end = i; break; } }
+    }
+    if (end < 0) break;
+    const whole = work.slice(m.index, end + 1);
+    const val = nxResolveLength(whole, ctx);
+    if (val == null) break;
+    work = work.slice(0, m.index) + String(val) + work.slice(end + 1);
+  }
+  const substituted = work.replace(/(-?[\d.]+)(px|rem|em|vw|vh|vmin|ch|%)/gi, (mm) => {
     const n = nxResolveLength(mm, ctx); return n == null ? 'NaN' : String(n);
   });
   if (!/^[\s0-9.+\-*/()NaN]+$/.test(substituted)) return null;

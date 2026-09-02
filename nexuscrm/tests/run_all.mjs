@@ -40,6 +40,7 @@ const SUITES = [
   'test_plan_hardening.mjs',    // Plan/graph layer as untrusted input: malformed sections, CSS/attribute injection via palette+type, fallbacks, invariants
   'test_refine_loop.mjs',       // degrade -> diagnose -> patch -> re-render must converge, improve real metrics, never regress or flatten identity
   'test_user_journey.mjs',      // END TO END: sign up -> generate -> save -> publish -> visit as an anonymous visitor -> edit -> snapshot -> restore
+  'test_measurement_primitives.mjs', // The functions every verdict rests on: CSS length resolution, WCAG contrast, unit normalisation, cascade var resolution
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',
