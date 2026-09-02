@@ -643,6 +643,16 @@ function __cssNum(v, fallback) {
   return Number.isFinite(n) && n >= 0 && n <= 400 ? n : fallback;
 }
 
+// Decide light vs dark from the actual background luminance rather than a
+// hand-maintained flag that can drift out of sync with the palette.
+function __isDarkPalette(pal) {
+  const m = String((pal && pal.bg) || '').replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(m)) return false;
+  const c = [0, 2, 4].map((i) => parseInt(m.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+  return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) < 0.5;
+}
+
 function __css(d, p) {
   // A plan may override the direction's type/palette so patches change the render.
   // Sanitise every plan-supplied value, and fall back to the direction's own
@@ -654,7 +664,38 @@ function __css(d, p) {
   const radius = __cssNum((p && p.radius != null) ? p.radius : d.radius, d.radius);
   const shadow = __cssVal((p && p.shadow != null) ? p.shadow : d.shadow, d.shadow);
   return `
-:root{--bg:${pal.bg};--bg2:${pal.bg2};--surf:${pal.surface};--surf2:${pal.surface2};--text:${pal.text};--muted:${pal.muted};--faint:${pal.faint};--accent:${pal.accent};--accent2:${pal.accent2};--line:${pal.line};--rule:${pal.rule};--disp:${t.family};--font:${t.bodyFamily || t.family};--body:${t.body};--rad:${radius}px;--shadow:${shadow};--measure:${t.measure};--mono:${t.mono || "'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace"};--fs-caption:${t.caption};--fs-display:${t.display};--fs-hero:${t.hero};--fs-section:${t.section};--ease:cubic-bezier(.22,1,.36,1);--emph:1}
+:root{--bg:${pal.bg};--bg2:${pal.bg2};--surf:${pal.surface};--surf2:${pal.surface2};--text:${pal.text};--muted:${pal.muted};--faint:${pal.faint};--accent:${pal.accent};--accent2:${pal.accent2};--line:${pal.line};--rule:${pal.rule};--disp:${t.family};--font:${t.bodyFamily || t.family};--body:${t.body};--rad:${radius}px;--shadow:${shadow};--measure:${t.measure};--mono:${t.mono || "'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace"};--fs-caption:${t.caption};--fs-display:${t.display};--fs-hero:${t.hero};--fs-section:${t.section};--ease:cubic-bezier(.22,1,.36,1);--emph:1;
+  /* ── DESIGN TOKEN LAYER ────────────────────────────────────────────────
+     Previously only raw primitives (one colour set, one radius, one shadow)
+     were exposed. Everything else — spacing, elevation, motion, stacking —
+     was hardcoded per rule, so it could drift, could not be themed, and could
+     not be audited. These are the scales a real design system exposes. */
+  /* Spacing: 4px base, geometric. Every gap/padding should come from here. */
+  --space-0:0;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;
+  --space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px;--space-10:128px;
+  /* Radius scale derived from the direction's own radius so themes stay coherent */
+  --rad-xs:${Math.max(0, Math.round(radius * 0.5))}px;--rad-sm:${radius}px;
+  --rad-md:${Math.round(radius * 1.6)}px;--rad-lg:${Math.round(radius * 2.4)}px;--rad-full:9999px;
+  /* Elevation: a scale, not a single shadow. Low alpha = premium depth. */
+  --elev-0:none;
+  --elev-1:0 1px 2px -1px rgba(0,0,0,.12);
+  --elev-2:0 8px 24px -12px rgba(0,0,0,.18);
+  --elev-3:${shadow};
+  /* Motion: named durations + easings so timing is consistent and tunable */
+  --dur-fast:120ms;--dur-base:240ms;--dur-slow:480ms;
+  --ease-out:cubic-bezier(.22,1,.36,1);--ease-in-out:cubic-bezier(.65,0,.35,1);
+  /* Stacking: an explicit ladder prevents the classic ad-hoc z-index war */
+  --z-base:0;--z-raised:10;--z-sticky:50;--z-overlay:100;--z-modal:1000;
+  /* Interaction states, derived from the accent so they theme automatically */
+  --state-hover:color-mix(in oklab, var(--accent) 88%, white 12%);
+  --state-active:color-mix(in oklab, var(--accent) 82%, black 18%);
+  --state-focus:var(--accent);
+  --state-disabled:var(--faint);
+  /* Feedback colours — table stakes for forms, absent until now */
+  --success:#1f9d55;--warning:#c77700;--danger:#c8342b;--info:var(--accent)}
+/* Tell the browser which scheme this palette is, so native controls,
+   scrollbars and form widgets match instead of fighting the design. */
+:root{color-scheme:${__isDarkPalette(pal) ? 'dark' : 'light'}}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:var(--font);font-size:var(--body);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
@@ -664,10 +705,22 @@ h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-
 /* Keyboard focus MUST be visible. Nothing defined one, so a keyboard or
    switch-control user had no idea where they were on the page. :focus-visible
    keeps it out of the way of mouse users. */
-:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:2px}
+:focus-visible{outline:3px solid var(--state-focus);outline-offset:3px;border-radius:var(--rad-xs)}
 /* Visually hidden, still announced. Lets a section carry a heading for the
    document outline without altering the visual design. */
 .c-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+/* Feedback + interaction utilities. These make the semantic tokens REAL rather
+   than declared-and-unused: any generated form, alert or toast consumes them. */
+.c-msg{padding:var(--space-3) var(--space-4);border-radius:var(--rad-sm);font-size:var(--fs-caption)}
+.c-msg-success{color:var(--success);border:1px solid var(--success)}
+.c-msg-warning{color:var(--warning);border:1px solid var(--warning)}
+.c-msg-danger{color:var(--danger);border:1px solid var(--danger)}
+.c-msg-info{color:var(--info);border:1px solid var(--info)}
+.c-btn:hover{background:var(--state-hover)}
+.c-btn:active{background:var(--state-active);transition-duration:var(--dur-fast)}
+.c-btn[disabled],.c-btn[aria-disabled="true"]{color:var(--state-disabled);pointer-events:none}
+.c-elev-2{box-shadow:var(--elev-2)}.c-elev-3{box-shadow:var(--elev-3)}
+.c-round{border-radius:var(--rad-full)}.c-round-lg{border-radius:var(--rad-lg)}.c-round-md{border-radius:var(--rad-md)}
 /* RTL: mirror the layout, not only the text run. Logical properties keep a
    single stylesheet correct in both directions instead of duplicating rules. */
 [dir="rtl"] .c-sec-left,[dir="rtl"] .c-hero-copy{text-align:right}
@@ -679,7 +732,7 @@ h1,h2,h3,h4,h5,h6,p,li,a,span,figcaption,blockquote{overflow-wrap:anywhere;word-
 .c-skip{min-height:44px;display:inline-flex;align-items:center}
 a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 /* Skip link — the <main> landmark existed but nothing let you jump to it. */
-.c-skip{position:absolute;left:-9999px;top:0;z-index:999;padding:12px 16px;background:var(--accent);color:#fff;font-weight:700}
+.c-skip{position:absolute;left:-9999px;top:0;z-index:var(--z-modal);padding:var(--space-3) var(--space-4);background:var(--accent);color:#fff;font-weight:700}
 .c-skip:focus{left:8px;top:8px}
 img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 .c-wrap{max-width:1200px;margin-inline:auto;padding-inline:clamp(20px,4.5vw,56px)}
@@ -694,7 +747,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
    least a 44x44px target. The padding+line-height here resolved to ~42px,
    just under the bar, so every button on every generated page was a
    marginal tap target on a phone. min-height enforces it directly. */
-.c-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;gap:8px;padding:12px 24px;font-family:var(--body);font-weight:700;font-size:${t.btn};letter-spacing:.12em;text-transform:uppercase;border-radius:var(--rad);transition:transform .3s,background .3s,color .3s,border-color .3s;white-space:nowrap}
+.c-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;gap:var(--space-2);padding:var(--space-3) var(--space-5);font-family:var(--body);font-weight:700;font-size:${t.btn};letter-spacing:.12em;text-transform:uppercase;border-radius:var(--rad);transition:transform var(--dur-base) var(--ease-out),background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out);white-space:nowrap}
 .c-btn-primary{background:var(--accent);color:${d.family==='type-led'? '#fff' : (d.id==='swiss-structured'? '#fff':'#fff')};box-shadow:var(--shadow)}
 .c-btn-primary:hover{transform:translateY(-2px)}
 .c-btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:var(--rad)}
@@ -702,7 +755,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-btn-lg{padding:16px 32px}
 .c-actions{display:flex;gap:12px;margin-top:32px;flex-wrap:wrap}
 /* nav */
-.c-nav{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.c-nav{position:sticky;top:0;z-index:var(--z-sticky);background:var(--bg);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
 .c-bar{display:flex;align-items:center;justify-content:space-between;height:76px;gap:20px}
 .c-brand{font-family:var(--disp);font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
 .c-links{display:flex;gap:24px}.c-links a{font-size:.9rem;color:var(--muted);transition:color .2s}.c-links a:hover{color:var(--accent)}
@@ -722,7 +775,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 .c-hero-bg{position:absolute;inset:0;overflow:hidden}
 .c-hero-bg svg{width:100%;height:100%;object-fit:cover}
 .c-hero-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),var(--bg) 92%)}
-.c-hero-fullbleed .c-hero-inner{position:relative;z-index:2}
+.c-hero-fullbleed .c-hero-inner{position:relative;z-index:var(--z-raised)}
 .c-hero-fullbleed .c-display{color:#fff}
 .c-hero-fullbleed .c-lead{color:rgba(255,255,255,.8)}
 /* minimal luxury */
@@ -736,7 +789,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
    glow is the ONLY decorative element in the whole direction, which is what
    lets a single hot accent read as a signal rather than as noise. */
 .c-hero-aurora{position:relative;overflow:hidden;isolation:isolate}
-.c-hero-aurora .c-hero-inner{padding-block:clamp(96px,13vw,160px);position:relative;z-index:2}
+.c-hero-aurora .c-hero-inner{padding-block:clamp(96px,13vw,160px);position:relative;z-index:var(--z-raised)}
 .c-hero-aurora .c-hero-copy{max-width:min(100%,58ch)}
 .c-aurora{position:absolute;inset:-25% -10%;z-index:0;filter:blur(70px);opacity:.5;pointer-events:none}
 .c-aurora i{position:absolute;display:block;border-radius:50%}
@@ -746,7 +799,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 @keyframes c-drift1{to{transform:translate3d(6%,4%,0) scale(1.12)}}
 @keyframes c-drift2{to{transform:translate3d(-5%,7%,0) scale(1.08)}}
 @keyframes c-drift3{to{transform:translate3d(4%,-6%,0) scale(1.15)}}
-.c-hero-grid-lines{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.5;
+.c-hero-grid-lines{position:absolute;inset:0;z-index:var(--z-raised);pointer-events:none;opacity:.5;
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
   background-size:76px 76px;
   -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 30%,transparent 78%);
@@ -810,7 +863,7 @@ img,svg{max-width:100%;display:block}a{color:inherit;text-decoration:none}button
 /* card grid */
 .c-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
 .c-grid-3{grid-template-columns:repeat(3,1fr)}
-.c-card{padding:24px;background:var(--surf);border:1px solid var(--line);border-radius:var(--rad)}
+.c-card{padding:var(--space-5);background:var(--surf);border:1px solid var(--line);border-radius:var(--rad-sm);box-shadow:var(--elev-1)}
 ${p.surfaceFx === 'panel' ? `
 /* ── PANEL SURFACE (engineered) ─────────────────────────────────────────
    surfaceFx was declared on every direction but never consumed by the CSS —
@@ -896,7 +949,7 @@ ${p.surfaceFx === 'panel' ? `
 [data-transition="bridge"]::before{content:"";position:absolute;left:calc(max(20px,4.5vw) + 0px);right:calc(max(20px,4.5vw) + 0px);top:0;height:6px;background:var(--line);opacity:.5;transform:translateX(0)}
 [data-transition="fade"]{position:relative;background-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.02) 30%,var(--bg) 100%)}
 [data-transition="bleed"]{border-top:1px solid var(--line)}
-[data-transition="overlap"]{position:relative;z-index:2;margin-top:calc(clamp(-40px,-5vw,-16px));border-radius:var(--rad) var(--rad) 0 0;background:var(--bg);box-shadow:0 -32px 80px -40px rgba(0,0,0,.22)}
+[data-transition="overlap"]{position:relative;z-index:var(--z-raised);margin-top:calc(clamp(-40px,-5vw,-16px));border-radius:var(--rad) var(--rad) 0 0;background:var(--bg);box-shadow:0 -32px 80px -40px rgba(0,0,0,.22)}
 [data-transition="flat"]{}
 /* ── VISUAL EMPHASIS BUDGET: only the hero(+CTA) are focal; the rest are supporting ── */
 [data-emphasis]{--emph:1}
