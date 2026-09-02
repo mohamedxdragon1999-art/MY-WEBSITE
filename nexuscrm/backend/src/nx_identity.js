@@ -97,7 +97,45 @@ function nxScrubIdentity(text, profile) {
   const phone = String((profile && profile.phone) || '').trim();
 
   for (const [from, to] of nxIdentityMap(profile)) {
-    out = out.replace(new RegExp(__esc(from), 'gi'), to);
+    // WORD-BOUNDARY matching. Plain substring replacement corrupted legitimate
+    // copy: "Martina Franca" became "Anaa Franca", "Staffordshire terriers"
+    // became "Lisbon terriers", and "martin@othercompany.com" was rewritten.
+    // Only replace when the term is a standalone word.
+    const alnumStart = /^[A-Za-z0-9]/.test(from);
+    const alnumEnd = /[A-Za-z0-9]$/.test(from);
+    // Boundaries chosen from measured failures:
+    //  * `.` must NOT be in the trailing guard, or a sentence-ending word
+    //    ("Owner is Martin.") stops matching.
+    //  * an email is protected by what FOLLOWS it (`@`), not what precedes it,
+    //    so "martin@othercompany.com" survives while "Martin." is scrubbed.
+    // The lookbehind must not treat an ESCAPE SEQUENCE as a word character.
+    // Inside a JS string literal the reference name appears after a literal
+    // backslash-n; 'n' is alphanumeric, so the guard silently blocked the
+    // match and identity survived inside the embedded chatbot script.
+    // An ESCAPE SEQUENCE must not count as a word character. Inside a JS
+    // string literal the reference name appears after a literal backslash-n;
+    // 'n' is alphanumeric, so a plain lookbehind silently blocked the match
+    // and identity survived inside the embedded chatbot script. Allow the
+    // match when preceded by an escape, otherwise require a real boundary.
+    const pre = alnumStart ? '(?:\\\\[nrtv]|(?<![A-Za-z0-9._-]))' : '';
+    // A third-party email must survive, but the reference DOMAIN itself must
+    // still be scrubbed — so the "@"/".tld" guard applies only to short word
+    // terms (a person's name), never to domains or multi-word business names.
+    const isDomainish = /[.]/.test(from) || /\s/.test(from) || from.length > 14;
+    // Inside a URL the surrounding "." and "-" are separators, not word
+    // characters, so a strict boundary let identity survive in hrefs such as
+    // "…rcatkincontractor.co.uk/post/the-septic-tank…". Domain-ish terms and
+    // industry vocabulary are unambiguous identity: match them anywhere.
+    const urlish = isDomainish || NX_REFERENCE_IDENTITY.industry.indexOf(from) >= 0
+      || NX_REFERENCE_IDENTITY.places.indexOf(from) >= 0;
+    const pre2 = urlish ? '' : pre;
+    const post = !alnumEnd ? '' : (urlish ? '' : '(?![A-Za-z0-9-]|@)');
+    try {
+      out = out.replace(new RegExp(pre2 + '(' + __esc(from) + ')' + post, 'gi'), (m, g) => m.replace(g, to));
+    } catch (e) {
+      // Lookbehind is unsupported on some engines — fall back to a manual guard.
+      out = out.replace(new RegExp('(^|[^A-Za-z0-9._-])' + __esc(from) + post, 'gi'), (m, p1) => (p1 || '') + to);
+    }
   }
   // Phone numbers survive in normalised forms (tel: hrefs, no spaces, dashes).
   for (const ref of NX_REFERENCE_IDENTITY.phones) {

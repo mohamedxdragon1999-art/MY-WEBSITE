@@ -44,6 +44,7 @@ const SUITES = [
   'test_ui_interaction.mjs',    // Drives the SHIPPED UI with real DOM events against the REAL worker: clicks, typing, modal, direction picker, payload
   'test_module_architecture.mjs', // Strict-ESM module boundaries: named exports only, no require(), no globalThis leakage, private state stays private
   'test_browser_gate.mjs',      // Phase 1.1/1.2: real-Chromium rendering wired inline with honest fallback flags, and one severity policy that gates shipping
+  'test_cross_cycle_hardening.mjs', // Attacks cycles 1-6 from untried angles: repair idempotence/safety, scrub word boundaries, parallelism, determinism
   'test_deep.mjs',
   'test_edge_cases.mjs',
   'test_isolation.mjs',

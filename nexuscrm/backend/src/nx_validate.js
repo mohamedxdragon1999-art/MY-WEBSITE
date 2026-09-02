@@ -188,20 +188,21 @@ function nxAutoRepair(html, blocking) {
 
   // Sub-44px tap targets — inject a scoped rule rather than rewriting elements,
   // which is the smallest intervention that satisfies the constraint.
-  if (rules.has('touch-target') && !/nx-repair-touch/.test(out)) {
-    const css = '<style id="nx-repair-touch">/* auto-repair: WCAG 2.5.8 minimum target size */'
+  // All auto-repair CSS goes into ONE stylesheet. Three separate <style> blocks
+  // was idempotent but wasteful, and made the repaired document harder to read.
+  const repairCss = [];
+  if (rules.has('touch-target')) {
+    repairCss.push('/* auto-repair: WCAG 2.5.8 minimum target size */'
       + '@media (max-width:480px){a:not(p a):not(li a),button,input[type="submit"],input[type="button"]'
-      + '{min-height:44px;display:inline-flex;align-items:center}}</style>';
-    if (/<\/head>/i.test(out)) { out = out.replace(/<\/head>/i, css + '</head>'); applied.push('touch-target: enforced 44px minimum on mobile'); }
+      + '{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}}');
+    applied.push('touch-target: enforced 44px minimum on mobile');
   }
 
   // Anything wider than the viewport — contain it without altering layout intent.
   if (rules.has('overflow-x')) {
-    if (!/nx-repair-overflow/.test(out)) {
-      const css = '<style id="nx-repair-overflow">/* auto-repair: prevent horizontal scroll */'
-        + 'html,body{max-width:100%;overflow-x:hidden}img,svg,video,table{max-width:100%}</style>';
-      if (/<\/head>/i.test(out)) { out = out.replace(/<\/head>/i, css + '</head>'); applied.push('overflow-x: contained oversized content'); }
-    }
+    repairCss.push('/* auto-repair: prevent horizontal scroll */'
+      + 'html,body{max-width:100%;overflow-x:hidden}img,svg,video,table{max-width:100%}');
+    applied.push('overflow-x: contained oversized content');
     // A stylesheet cannot beat an inline style, which is where fixed oversized
     // widths usually come from. Rewrite the declaration itself: cap the width
     // and keep the intent by preserving it as a max-width.
@@ -218,10 +219,12 @@ function nxAutoRepair(html, blocking) {
 
   // A tap target that is too NARROW usually has no horizontal padding. Give
   // standalone controls a minimum inline size without disturbing prose links.
-  if (rules.has('touch-target') && !/nx-repair-target-width/.test(out)) {
-    const css = '<style id="nx-repair-target-width">/* auto-repair: minimum tap width */'
-      + '@media (max-width:480px){a:not(p a):not(li a),button{min-width:44px;justify-content:center}}</style>';
-    if (/<\/head>/i.test(out)) { out = out.replace(/<\/head>/i, css + '</head>'); applied.push('touch-target: enforced 44px minimum width'); }
+  // Inject once, and only if this document has not already been repaired —
+  // repeated repair must be a strict no-op.
+  if (repairCss.length && !/id="nx-repair"/.test(out) && /<\/head>/i.test(out)) {
+    out = out.replace(/<\/head>/i, '<style id="nx-repair">' + repairCss.join('') + '</style></head>');
+  } else if (repairCss.length && /id="nx-repair"/.test(out)) {
+    applied.length = 0;   // already repaired: report no new work
   }
 
   return { html: out, applied };
