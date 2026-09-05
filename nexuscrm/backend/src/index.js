@@ -24,7 +24,7 @@ import NX_IDENTITY from './nx_identity.js';
 // v0.0.0.0.19 — the brief → copy → tokens → sections pipeline (CJS modules,
 // bundle-safe). See nx_brief.js / nx_copywriter.js / nx_site_builder.js.
 import NX_SITE_BUILDER from './nx_site_builder.js';
-import { nxSafeWebhookUrl, nxSetLeadUrl, nxSafeSplineUrl, nxDecodeEntities, nxSanitizeUserDocument, servePublicSite, servePublicSiteForOrigin, nxPublicNotFound } from './nx_site_output.js';
+import { nxSafeWebhookUrl, nxSetLeadUrl, nxSafeSplineUrl, nxDecodeEntities, nxSanitizeUserDocument, servePublicSiteForOrigin, nxPublicNotFound } from './nx_site_output.js';
 // The runtimes this worker emits — handed to the document sanitiser so a
 // re-imported page keeps exactly our scripts and nothing else.
 // (The graph runtime library lives inside the render IIFE; its script prefix is
@@ -7437,9 +7437,9 @@ function __tpl() {
   }
   // Deliberately NOT a static import: nx_template.js lives at the workspace
   // root, not in backend/src, so importing it would break the Worker bundle.
-  // It is an optional dependency supplied via globalThis by the host. This
-  // guard is unreachable under ESM and kept only for a CJS host.
-  try { if (typeof require === 'function') { const m = require('./nx_template.js'); if (m && m.nxBuildTemplateSite) return m; } } catch (e) { logSwallow('template.lib.require', e); }
+  // It is an optional dependency supplied via globalThis by the host (baked
+  // artifacts register NX_TEMPLATE_LIB; tests wire __NX_DEPS.template). B10:
+  // the former CJS require() branch was unreachable in an ES-module worker.
   return null;
 }
 function nxTemplateProject(words) { const m = __tpl(); if (!m) throw new Error('nx_template not available'); return m.nxTemplateProject(words); }
@@ -11452,7 +11452,9 @@ async function routerInner(req, env, ctx, origin, ip, path, parts, root, query) 
   if (path.startsWith('/s/')) {
     const slug = path.slice(3).replace(/\/$/, '');
     if (!/^[A-Za-z0-9_-]{2,64}$/.test(slug)) return nxPublicNotFound();
-    if (req.method === 'GET' || req.method === 'HEAD') return servePublicSite(env, slug);
+    // B6: one code path for both public URLs — /s/:slug is the no-grant form
+    // of /api/public/site/:slug (same page, same headers, no CORS/frame grant).
+    if (req.method === 'GET' || req.method === 'HEAD') return servePublicSiteForOrigin(env, slug, '', corsHeaders);
     // Lead forms must target /api/public/webhook/:token — a POST here means the
     // page was built without a webhook. Answer JSON (the runtime parses it) with
     // an actionable message instead of an HTML 401 that the form cannot show.
