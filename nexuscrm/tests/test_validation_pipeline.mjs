@@ -166,6 +166,32 @@ console.log('\n== I. The repair loop cannot make a page worse (§5) ==');
   check('the loop terminates within its iteration budget', out2.iterations <= 4, String(out2.iterations));
 }
 
+console.log('\n== PERFORMANCE: the cascade is indexed once, not re-matched per element per property ==');
+{
+  // A 4-viewport validation of a composed page used to cost ~1 s of CPU because
+  // every element × property re-compiled and re-ran each selector. The cascade
+  // now answers `matches()` from one querySelectorAll index per selector and is
+  // shared across viewports. Pin the budget generously (CI boxes vary) — a 3x
+  // regression still trips it long before it becomes the 1 s it was.
+  const html = pages[DIRS[0]];
+  V.nxValidatePage(html); // warm
+  const t0 = process.cpuUsage();
+  const runs = 3;
+  for (let i = 0; i < runs; i++) V.nxValidatePage(html);
+  const cpu = process.cpuUsage(t0); const perRun = (cpu.user + cpu.system) / 1000 / runs;
+  check('nxValidatePage stays under 400 ms CPU per page (was ~1,000 ms)', perRun < 400, Math.round(perRun) + ' ms');
+  // Semantics: a cascade shared across viewports gives the same answers as a fresh one.
+  const { parseHTML } = require('linkedom');
+  const { document } = parseHTML(html);
+  const casc = require('../backend/src/nx_cascade.js').nxCascade(html, document);
+  const a = L.nxMeasure(html, document, { width: 375, height: 812 }).issues, b = L.nxMeasure(html, document, { width: 375, height: 812 }, casc).issues;
+  check('nxMeasure with a shared cascade reports identical issues', JSON.stringify(a) === JSON.stringify(b), a.length + ' vs ' + b.length);
+  const el = document.querySelector('h1') || document.body.firstElementChild;
+  const cascade2 = require('../backend/src/nx_cascade.js');
+  const fresh = cascade2.nxComputed(el, 'font-size', casc.rules, casc.vars); // no memo → per-element matches()
+  check('indexed and un-indexed matching agree on a real element', fresh === casc.computed(el, 'font-size'), fresh + ' vs ' + casc.computed(el, 'font-size'));
+}
+
 const total = passed + failed;
 console.log('\n────────────────────────────────────────');
 console.log((failed === 0 ? 'ALL PASSED' : 'FAILURES') + ' — ' + passed + '/' + total + ' passing');

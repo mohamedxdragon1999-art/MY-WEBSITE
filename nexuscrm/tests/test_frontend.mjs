@@ -808,6 +808,18 @@ console.log('\n== B7: FIRING INSPECTOR — why did/didn\'t it fire? ==');
   const n = window.eval('(typeof SPLINE_SCENES === "object") ? Object.keys(SPLINE_SCENES).length : -1');
   check('SPLINE_SCENES is a global with 50 scenes', n === 50, 'got ' + n);
 }
+console.log('\n== WIDGETS: create-modal + settings choice reaches the API ==');
+{
+  check('nxWidgetsChoice maps the select to the API contract', typeof window.nxWidgetsChoice === 'function' && window.nxWidgetsChoice('auto') === true && window.nxWidgetsChoice('off') === false && JSON.stringify(window.nxWidgetsChoice('estimator,funnel,filter')) === '["estimator","funnel","filter"]' && window.nxWidgetsChoice(undefined) === true);
+  let modalErr = null;
+  try { await window.openAISiteBuilder(); } catch (e) { modalErr = e.message; }
+  const sel = window.document.getElementById('ws-widgets');
+  check('create-website modal offers the widgets choice (auto default)', !modalErr && !!sel && sel.value === 'auto' && sel.querySelectorAll('option').length === 4, modalErr || 'no select');
+  const src = html;
+  check('buildSiteWithAI sends widgets; saveSiteSettings sends widgets', /deterministic, widgets: nxWidgetsChoice\(V\('ws-widgets'\)/.test(src) && /three_d: V\('ss-3d'\)\?\.value \|\| 'off', widgets: nxWidgetsChoice\(V\('ss-widgets'\)/.test(src));
+  check('settings modal pre-selects the persisted widgets preference', /id="ss-widgets"/.test(src) && /th\.widgets/.test(src));
+  try { window.closeModal && window.closeModal(); } catch (e) { /* modal already closed */ }
+}
 console.log(`RESULTS: ${passed} passed, ${failed} failed`);
 if (failures.length) { console.log('Failures:'); failures.forEach(f => console.log('  - ' + f)); }
 if (errors.length) { console.log('Runtime errors captured:'); errors.slice(0, 10).forEach(e => console.log('  - ' + e)); }

@@ -57,8 +57,11 @@ export function nxParseMoney(v) {
 export function nxWidgetPlan(plan, opts) {
   plan = plan || {}; opts = opts || {};
   const out = { kinds: [], estimator: null, funnel: null, filter: null, stickycta: null };
-  const off = new Set(arr(opts.disable).map(String));
-  const only = Array.isArray(opts.only) ? new Set(opts.only.map(String)) : null;
+  // defence in depth: callers that bypass the body validator (e.g. internal
+  // build paths) still get bounded, known kinds only
+  const known = (v) => arr(v).slice(0, 16).filter((k) => typeof k === 'string').map((k) => k.trim().toLowerCase()).filter((k) => WIDGET_KINDS.includes(k));
+  const off = new Set(known(opts.disable));
+  const only = Array.isArray(opts.only) ? new Set(known(opts.only)) : null;
   const want = (k) => !off.has(k) && (!only || only.has(k));
 
   // estimator: needs ≥2 priced tiers (or 1 tier + a per-unit) from the plan

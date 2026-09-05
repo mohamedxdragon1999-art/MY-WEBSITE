@@ -7913,6 +7913,8 @@ async function openAISiteBuilder(existing) {
       <div class="form-group"><label>Publish immediately</label><label class="toggle-switch"><input type="checkbox" id="ws-pub" checked><span class="toggle-slider"></span></label></div>
       <div class="form-group" style="margin-top:2px"><label>🧩 Build from Blueprint (no AI)</label><label class="toggle-switch"><input type="checkbox" id="ws-blueprint-no-ai"><span class="toggle-slider"></span></label>
       <div style="font-size:11px;color:var(--text3);margin-top:3px">Deterministic, industry-aware site composed from your description — works with no AI key, gets the Quality Engine pass, and can be AI-enriched later.</div></div>
+      <div class="form-group" style="margin-top:2px"><label>⚡ Interactive widgets</label><select id="ws-widgets"><option value="auto">Auto — from the facts in your description</option><option value="estimator,funnel,filter">Estimator + quick-quote funnel + filter chips (no mobile bar)</option><option value="funnel,stickycta">Quick-quote funnel + mobile action bar only</option><option value="off">Off — plain page</option></select>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">Cost estimator (from your prices), 3-step quote funnel (leads land in your inbox), filter chips over services, mobile call/WhatsApp bar — zero external scripts.</div></div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="buildSiteAgentic()">🚀 Agentic Build</button><button class="btn btn-ai" onclick="buildSiteWithAI()">🤖 Generate Website</button></div>`, 'modal-lg');
 }
@@ -7954,7 +7956,7 @@ async function buildSiteWithAI() {
       site = await api('/sites','POST',{name,description:desc,published:pub,design_id:designId,instructions,plan,webhook_url:webhookUrl,build_with_ai:true,
         font, animation_level:anim, accent, radius, custom_css:customCss, favicon, sections,
         theme_id:themeId, hero_style:heroStyle, anim_preset:animPreset, card_style:cardStyle, nav_style:navStyle, three_d:threeD,
-        scene_id:sceneId, spline_url:splineUrl, concept_id:conceptId, scene_text:sceneText, deterministic});
+        scene_id:sceneId, spline_url:splineUrl, concept_id:conceptId, scene_text:sceneText, deterministic, widgets: nxWidgetsChoice(V('ws-widgets')?.value)});
       window.__pendingPlan = null;
     } catch (e) {
       site = { id: 0, slug: 'local-' + Math.random().toString(36).slice(2,8), html: enhanceSiteHtml(nxLocalSceneSiteHtml(name, desc, sceneId, sceneText, accent), name, { description: desc }), published: false, name };
@@ -7963,13 +7965,15 @@ async function buildSiteWithAI() {
     closeModal();
     if (site.id || (site.slug && site.slug.startsWith('local-'))) {
       const __d = site.build && site.build.design;
-      const __dNote = __d && __d.theme_name ? ` · look: ${__d.theme_name}${__d.hero ? ' / ' + __d.hero + ' hero' : ''}${__d.cards ? ' / ' + __d.cards + ' cards' : ''}${site.build.icons ? ' · ' + site.build.icons + ' icons' : ''}` : '';
+      const __dNote = (__d && __d.theme_name ? ` · look: ${__d.theme_name}${__d.hero ? ' / ' + __d.hero + ' hero' : ''}${__d.cards ? ' / ' + __d.cards + ' cards' : ''}${site.build.icons ? ' · ' + site.build.icons + ' icons' : ''}` : '') + (site.build && Array.isArray(site.build.widgets) && site.build.widgets.length ? ` · widgets: ${site.build.widgets.join(', ')}` : '');
       toast(`Website "${name}" is ready! ${pub?'Published ✅':'Saved as draft'}${__dNote}`,'success',7000);
       views.websites();
       setTimeout(()=>{ if (site.id) previewSiteById(site.id, site.html); else previewSiteById(null, site.html); }, 300);
     } else { toast('Could not save the site — try again.','error'); }
   } catch(e) { toast('Website build failed: '+e.message,'error',7000); }
 }
+// Widgets select → API value: 'auto' → true (fact-driven), 'off' → false, else a list.
+function nxWidgetsChoice(v) { v = String(v || 'auto'); if (v === 'auto') return true; if (v === 'off') return false; return v.split(',').map(x => x.trim()).filter(Boolean); }
 // ── WEBSITE QUALITY ENGINE (audit + enhance) ──
 // ─────────────────────────────────────────────────────────────────────────────
 // NXCROOM WEBSITE QUALITY ENGINE
@@ -13182,6 +13186,7 @@ async function siteSettings(id) {
         </div>
         <div class="form-row">
           <div class="form-group"><label>Nav</label><select id="ss-navstyle"><option value="">Default</option>${__wsNavs.map(x=>`<option value="${escAttr(x.id)}" ${th.nav_style===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>
+          <div class="form-group"><label>Widgets</label><select id="ss-widgets">${(() => { const w = th.widgets; const cur = w === false ? 'off' : Array.isArray(w) ? w.join(',') : 'auto'; return [['auto','Auto — from the facts'],['estimator,funnel,filter','Estimator + funnel + filter'],['funnel,stickycta','Funnel + mobile bar'],['off','Off']].map(([v,l]) => `<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join(''); })()}</select></div>
           <div class="form-group"><label>3D</label><select id="ss-3d"><option value="off" ${(th.three_d||'off')==='off'?'selected':''}>Off</option><option value="light" ${th.three_d==='light'?'selected':''}>Light</option><option value="full" ${th.three_d==='full'?'selected':''}>Full</option></select></div>
         </div>
         <div class="form-row">
@@ -13222,7 +13227,7 @@ async function saveSiteSettings(id) {
     sections: [...document.querySelectorAll('.ss-sec:checked')].map(x => x.value),
     theme_id: V('ss-theme')?.value || '', hero_style: V('ss-hero')?.value || '',
     anim_preset: V('ss-animpreset')?.value || '', card_style: V('ss-cardstyle')?.value || '',
-    nav_style: V('ss-navstyle')?.value || '', three_d: V('ss-3d')?.value || 'off',
+    nav_style: V('ss-navstyle')?.value || '', three_d: V('ss-3d')?.value || 'off', widgets: nxWidgetsChoice(V('ss-widgets')?.value),
     scene_id: V('ss-scene')?.value || '', spline_url: V('ss-spline')?.value?.trim() || '',
   };
   toast('Regenerating with new settings...','info',20000);

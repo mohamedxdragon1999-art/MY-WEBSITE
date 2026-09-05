@@ -93,14 +93,50 @@ function __matches(el, selector) {
   try { return el.matches(selector); } catch (e) { return false; }
 }
 
+// Selectors the DOM cannot match (pseudo-classes/elements, at-rule preludes).
+const __UNMATCHABLE = /::|:hover|:focus|@/;
+
+// Per-cascade memo: `el.matches(selector)` is answered ONCE per element per
+// selector instead of once per element per selector per property. The layout
+// audit asks ~12 properties for every element of a 40 KB page, and each
+// `matches()` re-compiles the selector — that made a deterministic build burn
+// ~1 s of CPU in selector compilation alone. Same semantics, ~10x cheaper.
+function __matchMemo(rules, document) {
+  const skip = rules.map((r) => __UNMATCHABLE.test(r.selector));
+  // With a document: each selector is compiled and evaluated ONCE
+  // (querySelectorAll → Set of matched elements) instead of once per element.
+  if (document && typeof document.querySelectorAll === 'function') {
+    const sets = new Array(rules.length);
+    return (el, idx) => {
+      if (skip[idx]) return false;
+      let set = sets[idx];
+      if (!set) {
+        try { set = new Set(document.querySelectorAll(rules[idx].selector)); }
+        catch (e) { set = new Set(); /* invalid selector: matches nothing, like the browser */ }
+        sets[idx] = set;
+      }
+      return set.has(el);
+    };
+  }
+  const cache = new WeakMap();
+  return (el, idx) => {
+    if (skip[idx]) return false;
+    let hits = cache.get(el);
+    if (!hits) { hits = new Map(); cache.set(el, hits); }
+    let v = hits.get(idx);
+    if (v === undefined) { v = __matches(el, rules[idx].selector); hits.set(idx, v); }
+    return v;
+  };
+}
+
 // Compute the declared (cascaded) value of `prop` for an element.
-function nxComputed(el, prop, rules, vars) {
+function nxComputed(el, prop, rules, vars, memo) {
+  const match = memo || __matchMemo(rules);
   let winner = null;
-  for (const r of rules) {
-    // skip pseudo/at-rule selectors the DOM cannot match
-    if (/::|:hover|:focus|@/.test(r.selector)) continue;
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
     if (r.decls[prop] === undefined) continue;
-    if (__matches(el, r.selector)) winner = r.decls[prop];
+    if (match(el, i)) winner = r.decls[prop];
   }
   const inline = el.getAttribute && el.getAttribute('style');
   if (inline) {
@@ -116,9 +152,10 @@ function nxCascade(html, document) {
   const css = __styleText(html);
   const rules = nxParseRules(css);
   const vars = nxRootVars(rules);
+  const memo = __matchMemo(rules, document);
   return {
     rules, vars,
-    computed: (el, prop) => nxComputed(el, prop, rules, vars),
+    computed: (el, prop) => nxComputed(el, prop, rules, vars, memo),
     resolve: (v) => nxResolveValue(v, vars, 0),
     // Every custom property that is referenced but never defined.
     danglingVars() {

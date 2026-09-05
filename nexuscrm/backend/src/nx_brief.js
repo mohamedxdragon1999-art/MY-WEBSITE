@@ -517,9 +517,12 @@ function extractPrices(text) {
     const before = t.slice(Math.max(0, m.index - 12), m.index).toLowerCase();
     // the thing being priced is the noun phrase just before the price in the
     // same clause: "dental implants £1,950" / "deep clean from £120"
-    const clause = t.slice(0, m.index).split(/[.;:\n,]|\band\b|\bor\b|\(|—|–/).pop() || '';
+    // (bounded window: a label is never more than a few words, and re-splitting
+    // the whole prefix per match made price-dense text quadratic)
+    const clause = t.slice(Math.max(0, m.index - 160), m.index).split(/[.;:\n,]|\band\b|\bor\b|\(|—|–/).pop() || '';
     const label = clean(clause.replace(/\b(?:from|starting (?:at|from)|prices? (?:from|start(?:ing)? at)|only|just|as low as|costs?|is|are|at|for)\s*$/i, '')).replace(/^(?:our|the|a|an)\s+/i, '');
     const words = label.split(' ');
+    if (out.length >= 6) break;
     out.push({ amount: clean(m[1]), per: m[2] || '', from: /from|start|low as/.test(before) || /\b(?:from|starting|low as)\b/i.test(m[0]), evidence: clean(m[0]), label: words.length >= 1 && words.length <= 5 && /^[A-Za-z][\w'&-]*(?:\s[\w'&-]+)*$/.test(label) && !/^(?:call|phone|email|open|hours|visit|book|price|prices|pricing|rates|fees|cost)$/i.test(label) ? label : '' });
   }
   return out.slice(0, 6);

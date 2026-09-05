@@ -130,7 +130,7 @@ function nxValidatePage(html, opts) {
   // ── LAYOUT across every required viewport (§1, §2) ──
   const perViewport = [];
   for (const vp of viewports) {
-    const r = nxMeasure(html, doc, vp);
+    const r = nxMeasure(html, doc, vp, cascade);
     perViewport.push({ viewport: r.viewport, issues: r.issues.length });
     for (const i of r.issues) add(i);
   }

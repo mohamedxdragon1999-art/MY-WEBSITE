@@ -58,7 +58,7 @@ import { nxWidgetPlan, nxWidgetsCss, nxWidgetsJs, nxWidgetsVocab, nxInjectWidget
 // children scoped through sites) + transactional units via D1 batch.
 import { Tenant, tenantSql, parseId, parseJsonColumn } from './db/tenant.js';
 // Strict schema validation for every website-builder input.
-import { validateSiteBody, briefErrorMessage, SITE_HTML_MAX } from './validators/brief.js';
+import { validateSiteBody, briefErrorMessage, SITE_HTML_MAX, BRIEF_DESCRIPTION_MAX as NX_BRIEF_MAX } from './validators/brief.js';
 import { hashPassword, verifyPassword, timingSafeEqual, bytesToB64, b64ToBytes, encryptSecret, decryptSecret, randomToken } from './security/crypto.js';
 import { isValidEmail, isIn, pick, sanitizeCustomFields, parseCustomFields } from './validators/input.js';
 // What changed in V4.1 (all review findings addressed):
@@ -7496,7 +7496,10 @@ async function generateSiteHtml(env, ws, opts, rep) {
   const designId = isValidDesignId(opts.design_id) ? opts.design_id : 'sentinel';
   const name = String(opts.name || 'My Website').slice(0, 120);
   const plan = normalizePlan(opts.plan, name, String(opts.description || ''), opts.direction || '');
-  const desc = String(opts.description || '').slice(0, 800);
+  // The validator accepts briefs up to 4,000 chars and the brief pipeline reads
+  // all of them — an earlier 800-char cut silently dropped the contact details,
+  // prices and hours owners put at the END of a long description.
+  const desc = String(opts.description || '').slice(0, NX_BRIEF_MAX);
   // v0.0.0.0.19 — UNDERSTAND → WRITE → PLAN. The brief pipeline reads the
   // English description (industry, services, location, contact, people, tone,
   // goal…), writes fact-only copy in that voice and chooses the sitemap. It is
@@ -9959,7 +9962,7 @@ async function aiBuildSite(env, ws, body) {
   // design floor never depends on a model being available. The response contract
   // ({ name, html }) is preserved, with design metadata added.
   const name = String(body.name || '').slice(0, 120) || 'My Website';
-  const desc = String(body.description || '').slice(0, 800) || 'A modern business website';
+  const desc = String(body.description || '').slice(0, NX_BRIEF_MAX) || 'A modern business website';
   const built = await buildAgenticSite(env, ws, Object.assign({}, body, { name, description: desc }));
   return {
     name: built.name,
@@ -9975,7 +9978,7 @@ async function aiBuildSite(env, ws, body) {
 }
 async function buildAgenticSite(env, ws, body) {
   const name = String(body.name || 'My Website').slice(0, 120);
-  const desc = String(body.description || '').slice(0, 800);
+  const desc = String(body.description || '').slice(0, NX_BRIEF_MAX);
   // Deterministic Blueprint plan is always composed and merged, then the model
   // (if available & not disabled) enriches it — the build floor never depends on AI.
   const rep = {};

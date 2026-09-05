@@ -110,9 +110,11 @@ function nxTextWidth(text, fontSize, family) {
 }
 
 // Measure a document against one viewport and return high-confidence issues.
-function nxMeasure(html, document, viewport) {
+// `cascade` (optional) lets a caller measuring several viewports share one
+// parsed stylesheet + selector index instead of rebuilding it per viewport.
+function nxMeasure(html, document, viewport, cascade) {
   const vw = viewport.width, vh = viewport.height;
-  const cascade = nxCascade(html, document);
+  cascade = cascade || nxCascade(html, document);
   const issues = [];
   const root = 16;
   const ctx = { vw, vh, fontSize: root, rootFontSize: root, parentWidth: vw };

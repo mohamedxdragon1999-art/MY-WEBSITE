@@ -19,6 +19,8 @@
 // Pure ESM, named exports only, no state, no globalThis writes.
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Longest brief the pipeline reads end-to-end (validator, builder and nx_brief agree on this). */
+export const BRIEF_DESCRIPTION_MAX = 4000;
 export const SITE_HTML_MAX = 600_000;        // bytes of stored page HTML (largest generated design ≈ 240 KB)
 export const PLAN_JSON_MAX = 200_000;        // serialized content plan
 export const FONT_IDS = Object.freeze(['', 'system', 'inter', 'poppins', 'playfair', 'space', 'dm']);
@@ -174,7 +176,7 @@ export function validateSiteBody(body, mode) {
     else v.name = str(body.name, 120, 'name', errors).trim();
   }
   if (mode === 'create' && !v.name) errors.push('Name is required');
-  if (body.description !== undefined) v.description = isObj(body.description) || Array.isArray(body.description) ? (errors.push('description must be text'), '') : str(body.description, 4000, 'description', errors);
+  if (body.description !== undefined) v.description = isObj(body.description) || Array.isArray(body.description) ? (errors.push('description must be text'), '') : str(body.description, BRIEF_DESCRIPTION_MAX, 'description', errors);
   if (body.instructions !== undefined) v.instructions = isObj(body.instructions) || Array.isArray(body.instructions) ? (errors.push('instructions must be text'), '') : str(body.instructions, 2000, 'instructions', errors);
   if (body.html !== undefined) {
     if (typeof body.html !== 'string') errors.push('html must be a string');

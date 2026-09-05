@@ -213,6 +213,26 @@ console.log('\n== D. POST /sites → widgets from the brief → funnel lead in t
   const path = JSON.parse(leadUrl).replace('http://t.local/api', '');
   const lead = await call('POST', path, { event: 'site_lead', name: 'Funnel Person', email: 'funnel@example.com', phone: '0777', message: 'Quick quote request. Need: Teeth whitening. When: As soon as possible.', source_widget: 'funnel' });
   check('funnel payload accepted by the public webhook', lead.status === 200 && lead.data?.ok === true, lead.text.slice(0, 120));
+
+  // §G long briefs: the whole 4,000-char brief is read — contact details, prices
+  // and hours that owners put at the END must reach the page (an 800-char cut
+  // used to drop them silently) — and the /ai/build-site route agrees.
+  {
+    const filler = 'We are a family-run dental practice that has served the Headingley community for over twenty years, with a calm modern clinic, gentle experienced dentists and the latest digital scanning equipment. '.repeat(5);
+    const longDesc = filler + ' Services: teeth whitening from £299, Invisalign braces from £2,400, dental implants £1,950, hygienist visits £65, emergency appointments. Opening hours: Mon-Fri 8am-6pm, Sat 9am-1pm. Call 0113 274 9911 or WhatsApp +44 7700 900123. Email hello@headingleydental.co.uk. 12 Otley Road, Leeds LS6 3AA.';
+    check('long-brief fixture exceeds the old 800-char cut', longDesc.length > 1200 && longDesc.length <= 4000, String(longDesc.length));
+    const lr = await call('POST', '/sites', { name: 'Headingley Dental', description: longDesc, build_with_ai: true, deterministic: true }, tok);
+    const lh = lr.data?.html || '';
+    const missing = ['0113 274 9911', '7700 900123', 'hello@headingleydental', 'Otley Road', 'Invisalign', '£1,950', 'Sat 9am'].filter((n) => !lh.includes(n));
+    check('facts at the end of a long brief reach the page (phone, WhatsApp, email, address, service, price, hours)', lr.status === 200 && missing.length === 0, 'missing: ' + missing.join(', '));
+    check('long brief still yields the estimator (prices were read)', Array.isArray(lr.data?.build?.widgets) && lr.data.build.widgets.includes('estimator'), JSON.stringify(lr.data?.build?.widgets));
+    const br = await call('POST', '/ai/build-site', { name: 'Headingley Dental', description: longDesc, deterministic: true }, tok);
+    const bh = br.data?.html || '';
+    check('/ai/build-site reads the same full brief', br.status === 200 && bh.includes('0113 274 9911') && bh.includes('Otley Road'), br.status + ' ' + br.text.slice(0, 100));
+    // widgets option is bounded on the internal build path too (validator bypass ≠ unbounded)
+    const wr = await call('POST', '/ai/build-site', { name: 'Headingley Dental', description: longDesc, deterministic: true, widgets: new Array(5000).fill('estimator').concat([{ evil: 1 }, '<script>']) }, tok);
+    check('oversized/garbage widgets list on the build route is clamped to known kinds', wr.status === 200 && JSON.stringify(wr.data?.build?.widgets) === '["estimator"]', wr.status + ' ' + JSON.stringify(wr.data?.build?.widgets));
+  }
   const row = await DB.prepare("SELECT m.subject, m.body, c.name FROM messages m JOIN contacts c ON c.id=m.contact_id WHERE c.email='funnel@example.com' ORDER BY m.id DESC LIMIT 1").first();
   check('inbox message carries the quick-quote subject and the folded answers', row && row.subject === 'Website quick-quote request' && /Need: Teeth whitening/.test(row.body) && row.name === 'Funnel Person', JSON.stringify(row));
   const plain = await call('POST', path, { event: 'site_lead', name: 'Form Person', email: 'form@example.com', message: 'hi' });

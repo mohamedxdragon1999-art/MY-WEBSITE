@@ -4,6 +4,19 @@ Format per AI_DEVELOPMENT_CONSTITUTION.md §8: date · one-line description · f
 
 ---
 
+## 2026-09-05 — BUILDER PASS 5b (v0.0.0.0.19): widgets in the dashboard, long briefs read end-to-end, 4× cheaper validation, audit items B6/B10 closed
+
+**Dashboard:** create-website modal and site-settings modal expose the interactive-widgets choice (`ws-widgets` / `ss-widgets`: auto · estimator+funnel+filter · funnel+sticky bar · off) → `nxWidgetsChoice()` maps it to the API contract (`true | false | [ids]`); settings pre-select the persisted `site_meta.theme.widgets`; the success toast lists the widgets that were injected.
+**Long briefs (bug found by probing, not reported):** the validator accepted 4,000-char briefs but `generateSiteHtml`, `aiBuildSite` and `buildAgenticSite` each cut the description to 800 chars before understanding it — phone, WhatsApp, email, address, prices and opening hours written at the END of a long brief were silently dropped from the page (and from the estimator gate). All three now read `BRIEF_DESCRIPTION_MAX` (4,000, exported from `validators/brief.js`) so validator, builder and `nx_brief` agree.
+**Performance:** `nx_cascade.js` answers `matches()` from one `querySelectorAll` index per selector (built lazily, shared across the four viewports via `nxMeasure(html, doc, vp, cascade)`) instead of re-compiling every selector for every element × property. `nxValidatePage` ≈1,000 ms → ≈64 ms CPU per page; `POST /ai/agentic-build` 788 ms → ≈220 ms CPU (equivalence proved: 16,848 element/property answers and 5 full validation reports byte-identical to the previous implementation). `nx_brief.extractPrices` uses a bounded 160-char label window and stops at 6 prices (price-dense 4,000-char text 100 ms → 23 ms).
+**Defence in depth:** `nxWidgetPlan` clamps `only`/`disable` to ≤16 known kinds even when a caller bypasses the body validator (the `/ai/build-site` and `/ai/agentic-build` routes pass raw bodies through).
+**Audit:** B6 (`/s/:slug` now shares `servePublicSiteForOrigin`) and B10 (unreachable CJS `require()` branch in `__tpl()`) closed in `audit/AUDIT-2026-09-03.md`.
+Files: `NexusCRM_V4_Hardened.html`, `backend/src/index.js` (11,888 lines), `backend/src/{nx_cascade.js, nx_layout.js, nx_validate.js, nx_brief.js}`, `backend/src/site/widgets.js`, `backend/src/validators/brief.js`.
+Tests: `tests/test_frontend.mjs` +4 (widgets UI wired end-to-end in jsdom: modal → POST body → toast), `tests/test_site_widgets.mjs` +5 (§G long-brief facts reach the page on both routes; garbage widgets list clamped), `tests/test_validation_pipeline.mjs` +3 (CPU budget < 400 ms/page, shared-cascade equivalence).
+Risk: low — no output changes except that long briefs now (correctly) contribute more facts; validation semantics proven identical.
+
+---
+
 ## 2026-09-05 — RELIABILITY + BUILDER PASS (v0.0.0.0.19, Batch 10): model-output verdict, stream watchdogs, deadlines, interactive widgets, WCAG AA, brief intelligence
 
 **Provider reliability:** `site/model_output.js` normalises whatever a NIM model sends (fences, prose, whole documents, `<think>`, stray `<body>`), detects truncation/refusal/missing sections, appends a forgotten footer, runs ONE repair round then falls back deterministically — reported in `build.model_output`. `nxIdleReader` 40 s idle watchdog on upstream streams; `callProvider` per-provider deadline; `nxTimeoutMs`/`nxClientAiOpts` clamps; breaker ignores HTTP-200 `malformed`/`content_filter`; `nimAdaptError` reads FastAPI `detail[]`; `fetchLiveModels` in-flight dedupe + bounded caches; cron GC for `rate_limits`/processed `events`; FE two-pass reasoning extraction + `realFetch` deadlines; `server.js` zero empty catches + relay idle frame.

@@ -340,3 +340,29 @@ was not wired into a UI button this round.
   (84 checks); `test_safe_html` now feeds the sanitiser a COMPLETE page with the
   payload corpus (the verdict accepts it → the sanitiser, not the fallback, is
   what neutralises it).
+
+## Batch 10b — 2026-09-05 builder pass 5b (dashboard widgets, long briefs, validation cost)
+
+- **Dashboard exposes the widgets decision** (`ws-widgets` on create,
+  `ss-widgets` on settings → `nxWidgetsChoice()` → `widgets: true|false|[ids]`;
+  toast lists what was injected). Proved end-to-end in jsdom: open modal →
+  choose → POST body → toast (`tests/test_frontend.mjs`).
+- **Long briefs were truncated to 800 chars in three places** (`generateSiteHtml`,
+  `aiBuildSite`, `buildAgenticSite`) while the validator allowed 4,000 — the
+  facts owners put LAST (phone, email, address, prices, hours) vanished
+  silently. All three now use `BRIEF_DESCRIPTION_MAX` from
+  `validators/brief.js`; `tests/test_site_widgets.mjs` §G pins that a
+  1,287-char brief's trailing phone/WhatsApp/email/address/service/price/hours
+  all reach the page on `/sites` and `/ai/build-site`.
+- **Validation cost:** `nx_cascade.js` builds one `querySelectorAll` index per
+  selector (lazily) and shares the cascade across the four viewports
+  (`nxMeasure(html, doc, vp, cascade)`). `nxValidatePage` ≈1,000 → ≈64 ms CPU;
+  `/ai/agentic-build` 788 → ≈220 ms. Equivalence proven against the previous
+  implementation (16,848 element/property answers + 5 full reports identical);
+  `tests/test_validation_pipeline.mjs` pins a 400 ms/page budget.
+- `nx_brief.extractPrices`: bounded label window (160 chars) + early stop at 6
+  (price-dense text 100 → 23 ms); `nxWidgetPlan` clamps `only`/`disable` to
+  ≤16 known kinds regardless of caller.
+- Remaining CPU note: the agentic routes still exceed the Workers Free-plan
+  10 ms/request budget (see `audit/repro/cpu_probe.mjs`); the Paid plan
+  (30 s) or splitting validation into a queued step is the deployment answer.
