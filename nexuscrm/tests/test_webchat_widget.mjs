@@ -24,6 +24,7 @@ globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
   if (u.includes('nvidia.com') || u.includes('openai.com')) {
     if (aiBehavior === 'cap') return new Response(JSON.stringify({ error: { message: 'x' } }), { status: 429 });
+    if (aiBehavior === 'down') return new Response(JSON.stringify({ error: { message: 'invalid api key' } }), { status: 401 });
     const enc = new TextEncoder();
     const body = new ReadableStream({
       start(c) {
@@ -161,8 +162,33 @@ for (let i = 0; i < 25; i++) {
   if (fallback.includes('daily chat limit')) break;
 }
 check('cap reached → polite fallback (no AI burn)', fallback.includes('daily chat limit'), fallback.slice(-90));
+check('cap fallback is honest: says it is automated + a person will reply, labelled as auto', fallback.includes('automated assistant') && fallback.includes('a person will reply') && !!doc.querySelector('[data-nxw-auto="daily_cap"]'), fallback.slice(-120));
 DB._runRaw("DELETE FROM ai_usage_log WHERE op='test'");
 await call('PATCH', '/ai/settings', { daily_call_cap: 300 }, token);
+
+// ── B9: provider failure must NOT be passed off as an AI answer ──
+console.log('\n== B9 HONEST AUTO-REPLY WHEN THE ASSISTANT IS DOWN ==');
+aiBehavior = 'down';
+const beforeB9 = (await call('GET', '/webchat', null, token)).data.conversations.length;
+doc.getElementById('nxw-in').value = 'Can I book for Tuesday?';
+doc.getElementById('nxw-send').click();
+let downTxt = '';
+for (let i = 0; i < 25; i++) { await sleep(200); downTxt = doc.getElementById('nxw-msgs').textContent || ''; if (downTxt.includes('not available right now')) break; }
+check('visitor is TOLD the assistant is unavailable and a person will reply', downTxt.includes('not available right now') && downTxt.includes('a person will reply'), downTxt.slice(-120));
+check('the auto bubble is labelled (data-nxw-auto) — not styled as an assistant answer', !!doc.querySelector('[data-nxw-auto="ai_unavailable"]'));
+const afterB9 = (await call('GET', '/webchat', null, token)).data.conversations;
+const autoRow = afterB9.find(m => m.direction === 'outbound' && m.body.startsWith('AUTO:'));
+check('the auto-reply is saved to the inbox as NON-AI outbound (ai_generated=0)', !!autoRow && autoRow.ai_generated === 0, JSON.stringify(autoRow || null).slice(0, 120));
+check('the visitor message + auto-reply both landed (thread complete)', afterB9.length === beforeB9 + 2, `${beforeB9} → ${afterB9.length}`);
+check('inbox row keeps the visitor subject (per-visitor memory continues)', !!autoRow && /^__v_/.test(autoRow.subject || ''));
+aiBehavior = 'ok';
+// Recovery: the next message is answered by the real assistant again and the
+// earlier auto-reply is replayed to the model as an assistant turn (by direction, not text prefix).
+doc.getElementById('nxw-in').value = 'Are you back?';
+doc.getElementById('nxw-send').click();
+let backTxt = '';
+for (let i = 0; i < 25; i++) { await sleep(200); backTxt = doc.getElementById('nxw-msgs').textContent || ''; if (/How can I help\?[^]*$/.test(backTxt) && backTxt.lastIndexOf('How can I help?') > backTxt.lastIndexOf('Are you back?')) break; }
+check('after recovery the assistant answers again (no sticky fallback)', backTxt.lastIndexOf('How can I help?') > backTxt.lastIndexOf('Are you back?'), backTxt.slice(-100));
 
 // ── Token regeneration (the other bug we fixed) ──
 console.log('\n== TOKEN REGENERATION ==');

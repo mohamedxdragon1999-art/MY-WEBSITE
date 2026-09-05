@@ -133,6 +133,36 @@ domain (e.g. `api.yourbusiness.com`), add a route in the Cloudflare
 dashboard under Workers → your worker → Triggers → Custom Domains. Then
 use that domain (with `/api`) as the Backend URL in step 6 instead.
 
+## 9. Before real visitors: lock the public-site origin policy
+Generated websites are served two ways:
+
+| Route | Who it is for | Framing / CORS |
+|---|---|---|
+| `/s/:slug` | visitors (the real site) | always `X-Frame-Options: SAMEORIGIN`, ignores `Origin` |
+| `/api/public/site/:slug` | the dashboard's "copy link" / embeds | granted to allowed origins only |
+
+Without configuration the worker runs in **permissive dev mode**: any real
+`http(s)` origin that asks gets `Access-Control-Allow-Origin` + a matching
+`frame-ancestors`, so the app works from any preview host (`null`, `*` and
+junk origins are never granted). For production pin it to the hosts that
+actually embed or fetch sites:
+
+```toml
+# backend/wrangler.toml
+[vars]
+ALLOWED_ORIGINS = "https://crm.yourbusiness.com, https://*.pages.dev"
+```
+
+Rules: comma/space separated; exact origins (scheme + host + port must
+match) or wildcard subdomains (`https://*.pages.dev` — the bare apex is NOT
+included); a prefix like `https://crm.yourbusiness.com.evil.example` is
+refused. Origins not on the list still receive the page (HTTP 200) — just
+without the CORS grant and with `frame-ancestors 'self'`. The dashboard's
+own preview uses `srcdoc` iframes and never depends on this grant.
+
+Proof: `node tests/test_tenant_isolation.mjs` (suite H) and
+`node audit/repro/site_probe.mjs` exercise exactly this contract.
+
 ---
 
 ## What V4.1 fixes / adds (vs the previous version)

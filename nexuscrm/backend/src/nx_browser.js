@@ -29,6 +29,15 @@ const NX_VIEWPORTS = [
 ];
 
 let __probe = null;   // cached availability probe
+// Best-effort browser calls (version string, font settle, screenshot, close)
+// are allowed to fail without failing the measurement — but never silently:
+// each one is recorded on the result as a note and echoed to the console.
+function __note(sink, what, e) {
+  const msg = what + ': ' + String(e && e.message || e).split('\n')[0].slice(0, 160);
+  if (sink && Array.isArray(sink.notes)) sink.notes.push(msg);
+  if (typeof console !== 'undefined' && console.warn) console.warn('[nx_browser] ' + msg);
+  return msg;
+}
 
 /** Resolve Playwright + a launchable Chromium, or explain precisely why not. */
 async function nxBrowserProbe() {
@@ -48,7 +57,8 @@ async function nxBrowserProbe() {
     // Launching is the only honest test: the package can exist while the
     // browser binary does not.
     const b = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage'] });
-    out.version = await b.version().catch(() => '');
+    out.notes = [];
+    out.version = await b.version().catch((e) => { __note(out, 'version() failed', e); return ''; });
     await b.close();
     out.available = true;
   } catch (e) {
@@ -162,6 +172,7 @@ async function nxBrowserMeasure(html, opts) {
   const chromium = pw.chromium || pw.default.chromium;
   const viewports = opts.viewports || NX_VIEWPORTS;
   const violations = [], perViewport = [];
+  const result = { notes: [] };  // best-effort failures are recorded here (see __note)
   let browser = null;
   try {
     browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage'] });
@@ -175,10 +186,10 @@ async function nxBrowserMeasure(html, opts) {
       await page.setContent(html, { waitUntil: 'load' });
       // Fonts change metrics; measuring before they settle produces phantom
       // overflow. Bounded so a missing font cannot hang the gate.
-      await page.evaluate(() => (document.fonts && document.fonts.ready) || Promise.resolve()).catch(() => {});
+      await page.evaluate(() => (document.fonts && document.fonts.ready) || Promise.resolve()).catch((e) => __note(result, 'fonts.ready wait failed (measuring anyway)', e));
       await page.waitForTimeout(opts.settleMs || 120);
       const m = await page.evaluate(__pageProbe);
-      const shot = opts.screenshot ? await page.screenshot({ fullPage: true }).catch(() => null) : null;
+      const shot = opts.screenshot ? await page.screenshot({ fullPage: true }).catch((e) => { __note(result, 'screenshot failed', e); return null; }) : null;
 
       const at = `${vp.width}x${vp.height}`;
       const add = (severity, rule, sel, measured, message) =>
@@ -198,11 +209,11 @@ async function nxBrowserMeasure(html, opts) {
       await ctx.close();
     }
   } catch (e) {
-    return { available: false, reason: 'render failed: ' + String(e && e.message || e).slice(0, 160), viewports: [], violations: [] };
+    return { available: false, reason: 'render failed: ' + String(e && e.message || e).slice(0, 160), viewports: [], violations: [], notes: result.notes };
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    if (browser) await browser.close().catch((e) => __note(result, 'browser.close() failed', e));
   }
-  return { available: true, engine: probe.engine, version: probe.version, viewports: perViewport, violations };
+  return { available: true, engine: probe.engine, version: probe.version, viewports: perViewport, violations, notes: result.notes };
 }
 
 module.exports = { nxBrowserMeasure, nxBrowserProbe, nxBrowserReset, NX_VIEWPORTS };

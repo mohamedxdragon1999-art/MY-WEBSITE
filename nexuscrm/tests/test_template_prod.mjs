@@ -84,7 +84,15 @@ let html;
   }
   check('phone flows into runtime config', html.includes('01707 220 114'));
   check('email flows into runtime config', html.includes('hello@aureliahydro.co.uk'));
-  check('21-blade sections present', /#services/.test(html) && /#why/.test(html) && /#about/.test(html) && /#gallery/.test(html) && /#projects/.test(html) && /#reviews/.test(html) && /#faq/.test(html) && /#contact/.test(html));
+  check('21-blade sections present', ['services', 'why', 'about', 'gallery', 'projects', 'reviews', 'faq', 'contact'].every((id) => new RegExp('<section[^>]*\\bid="' + id + '"').test(html)));
+  // v0.0.0.0.19 — honest rendering: a section the brief has no words for is
+  // hidden (this plan has no reviews/projects/photos) and nothing links to it.
+  check('sections without words are hidden, not padded', /<section[^>]*id="reviews"[^>]*\bhidden/.test(html) && /<section[^>]*id="projects"[^>]*\bhidden/.test(html) && /<section[^>]*id="gallery"[^>]*\bhidden/.test(html));
+  check('sections with words are visible', ['services', 'why', 'about', 'process', 'faq', 'contact'].every((id) => new RegExp('<section[^>]*\\bid="' + id + '"(?![^>]*\\bhidden)').test(html)));
+  check('no navigation link points at a hidden section', !/href="#(?:reviews|projects|gallery)"/.test(html.replace(/<script>[\s\S]*?<\/script>/g, '')));
+  check('services are the caller\'s (no reference copy)', html.includes('Water Treatment') && html.includes('Soakaway Design') && !/Drain Jetting &amp; CCTV|Septic Tanks &amp; Soakaways/.test(html));
+  check('tel: and mailto: are the caller\'s, present in the served markup', /href="tel:01707220114"/.test(html) && /href="mailto:hello@aureliahydro\.co\.uk"/.test(html));
+  check('every image placeholder is resolved (owner photo or on-brand art)', !/\{\{(?:HERO|WHY|TEAM|SVC\d|G\d|P\d|R\d|LOGO|BANNER)\}\}/.test(html) && !/src=""/.test(html));
   check('template palette bg', html.includes('--bg:#060912'));
   check('template accent FF5F00', html.includes('--accent:#FF5F00'));
   check('doctype + lang', /<!DOCTYPE html>/.test(html) && /<html lang="en">/.test(html));

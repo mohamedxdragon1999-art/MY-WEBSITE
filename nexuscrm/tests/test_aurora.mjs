@@ -186,7 +186,7 @@ check('Ctrl+Shift+L toggles theme', document.documentElement.getAttribute('data-
 window.AURORA.set({ theme: 'dark' });
 
 console.log('\n== A9: VERSION ==');
-check('sidebar shows v0.0.1.9 — Graph-First Project Graph (the real runtime)', (g('sidebar')?.textContent || document.body.textContent).includes('v0.0.1.9'));
+check('sidebar shows v0.0.0.0.19 — Understand → Write → Design', (g('sidebar')?.textContent || document.body.textContent).includes('v0.0.0.0.19'));
 
 console.log('\n== A10: ZERO RUNTIME ERRORS ==');
 check('no uncaught window errors during the whole flow', errors.length === 0, errors.slice(0, 3).join(' | '));

@@ -203,6 +203,18 @@ Other files:
   `/api/health` (with cached `hasInternet()` probe).
 - `backend/src/index.js` (+ `schema.sql`, `wrangler.toml`,
   `auto-deploy.js`) — the real Cloudflare Worker backend.
+  Since 2026-09-05 the Worker is an orchestrator over 9 pure named-ESM
+  modules (pinned by `tests/test_module_architecture.mjs`, which also caps
+  `index.js` at < 11,918 lines — extract before adding bulk):
+  `middleware/http.js`, `security/crypto.js`, `security/ssrf.js`,
+  `validators/input.js`, `validators/brief.js` (strict site/brief schema —
+  any NEW field a `/sites/:id/*` sub-route reads MUST be whitelisted here),
+  `observability/log.js` (`nxLog`/`logSwallow`/`redact` — no silent catches,
+  lint G in `test_tenant_isolation`), `db/tenant.js` (workspace-scoped
+  query helpers + transactional batches), `providers/nim.js` +
+  `providers/errors.js` (NVIDIA NIM adapter — see `NVIDIA_NIM.md`).
+  `buildMessages` MERGES the workspace personality prompt with each task's
+  system protocol — never re-introduce replacement.
 - `patches/` — the patch scripts/sources that PRODUCED the HTML changes
   (`aurora.css`, `aurora.js`, `build-spline-scenes.mjs`, older .py
   patches). `build-spline-scenes.mjs` is idempotent (verified

@@ -36,7 +36,7 @@ const NX_REFERENCE_IDENTITY = {
     // URL-encoded forms: these appear inside Google Maps links where spaces are
     // '+' or '%20', so the plain-text patterns above never match them.
     'Spa+House+Copmere+End', 'Spa+House', 'Copmere+End', 'Copmere',
-    'Spa%20House', 'Copmere%20End', 'Spa House'],
+    'Spa%20House', 'Copmere%20End', 'Spa House', 'ST21+6HH', 'ST21%206HH', 'Haughton'],
   // Industry vocabulary. Present so a generated site for another trade cannot
   // inherit drainage copy; only used when the caller has supplied replacements.
   industry: ['septic tank', 'septic tanks', 'septic', 'soakaway', 'soakaways',
@@ -59,10 +59,24 @@ function nxIdentityMap(profile) {
   const coverage = String(p.coverage || '').trim();
 
   const pairs = [];
-  const push = (from, to) => { if (from) pairs.push([String(from), String(to == null ? '' : to)]); };
+  // Replacement values land inside an ALREADY-RENDERED document: HTML text,
+  // attribute values and the runtime script's string literals of every quote
+  // type (including backtick templates). They must therefore be inert in all
+  // of those contexts. Names, phones and places never legitimately contain
+  // markup, quotes or template syntax, so those characters are neutralised.
+  const inert = (v) => String(v == null ? '' : v)
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/</g, '\u2039').replace(/>/g, '\u203a')
+    .replace(/"/g, '\u201d').replace(/'/g, '\u2019').replace(/`/g, '\u2019')
+    .replace(/\\/g, '\u29f5').replace(/[{}]/g, '').replace(/\$/g, '\uff04')
+    .replace(/&(?=#?[a-z0-9]+;)/gi, '&amp;')
+    .trim().slice(0, 200);
+  const push = (from, to) => { if (from) pairs.push([String(from), inert(to)]); };
 
   for (const e of NX_REFERENCE_IDENTITY.emails) push(e, email || 'hello@example.com');
-  for (const d of NX_REFERENCE_IDENTITY.domains) push(d, email ? (email.split('@')[1] || 'example.com') : 'example.com');
+  // The domain lands in href/src attributes — only a well-formed hostname may go there.
+  const __domain = email && /^[\w.+-]+@([\w-]+(?:\.[\w-]+)+)$/.test(email) ? email.split('@')[1] : 'example.com';
+  for (const d of NX_REFERENCE_IDENTITY.domains) push(d, __domain);
   for (const b of NX_REFERENCE_IDENTITY.business) push(b, name || 'This Studio');
   for (const o of NX_REFERENCE_IDENTITY.owner) push(o, owner || 'the owner');
   for (const ph of NX_REFERENCE_IDENTITY.phones) push(ph, phone || '');

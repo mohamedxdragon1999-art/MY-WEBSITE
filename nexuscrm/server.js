@@ -30,11 +30,19 @@ const CF_ALLOWED_PREFIXES = [
 let deployChild = null; // the running auto-deploy process, if any
 
 function readJSONSafe(p, fallback) {
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return fallback; }
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+  catch (e) { if (!(e && e.code === 'ENOENT')) console.error('[server] readJSONSafe ' + path.basename(p) + ': ' + String((e && e.message) || e).slice(0, 160)); return fallback; }
 }
 
+// Every swallowed error leaves a one-line, key-free trail (Master AI Operating
+// Law: no silent catch). Quiet by default for the expected steady states.
+function noteSwallow(scope, e, quiet) {
+  if (quiet) return;
+  const msg = e && e.message ? String(e.message) : String(e || 'unknown');
+  console.error('[server] ' + scope + ': ' + msg.replace(/(nvapi-|sk-|Bearer\s+)[A-Za-z0-9_-]+/g, '$1***').slice(0, 200));
+}
 function sendJSON(res, code, obj) {
-  try { res.setHeader('Access-Control-Allow-Origin', '*'); } catch {}
+  try { res.setHeader('Access-Control-Allow-Origin', '*'); } catch (e) { noteSwallow('sendJSON.header', e, res.headersSent); }
   res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(obj));
 }
@@ -144,8 +152,8 @@ async function relayAI(req, res, target) {
         // drop the socket. Normal big uploads drain to 'end' below and get
         // a clean 413 without a connection reset.
         capTimer = setTimeout(() => {
-          if (!res.headersSent) { try { sendJSON(res, 413, { error: 'Request too large for the AI relay (limit 512 KB) — shorten the prompt.' }); } catch {} }
-          setTimeout(() => { try { req.destroy(); } catch {} }, 100);
+          if (!res.headersSent) { try { sendJSON(res, 413, { error: 'Request too large for the AI relay (limit 512 KB) — shorten the prompt.' }); } catch (e) { noteSwallow('relay.413', e); } }
+          setTimeout(() => { try { req.destroy(); } catch (e) { noteSwallow('relay.destroy', e, true); } }, 100);
         }, 5000);
       }
       return; // discard everything past the cap — memory stays bounded
@@ -164,7 +172,7 @@ async function relayAI(req, res, target) {
   });
   if (tooBig) {
     if (capTimer) clearTimeout(capTimer);
-    if (!res.headersSent) { try { sendJSON(res, 413, { error: 'Request too large for the AI relay (limit 512 KB) — shorten the prompt.' }); } catch {} }
+    if (!res.headersSent) { try { sendJSON(res, 413, { error: 'Request too large for the AI relay (limit 512 KB) — shorten the prompt.' }); } catch (e) { noteSwallow('relay.413', e); } }
     return;
   }
   const body = chunks.length ? Buffer.concat(chunks) : null;
@@ -192,16 +200,30 @@ async function relayAI(req, res, target) {
     const isStream = (r.headers.get('content-type') || '').includes('text/event-stream');
     if (isStream) {
       res.writeHead(r.status, respHeaders);
-      // Manual pipe with abort-on-close so a cancelled request doesn't leak.
+      // Manual pipe with abort-on-close so a cancelled request doesn't leak,
+      // and an idle watchdog: a provider that stops sending mid-answer (NIM
+      // under load) must not hold this socket open forever. 60 s of silence
+      // between chunks ends the relayed stream with an SSE error frame the
+      // app understands, instead of a connection that never closes.
       const reader = r.body.getReader();
-      req.on('close', () => { try { reader.cancel(); } catch {} });
+      let closed = false;
+      req.on('close', () => { closed = true; try { reader.cancel(); } catch (e) { noteSwallow('relay.cancel', e, true); } });
+      const IDLE_MS = 60000;
       try {
         for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
+          let idleTimer;
+          const idle = new Promise((_, rej) => { idleTimer = setTimeout(() => rej(Object.assign(new Error('idle'), { name: 'StreamIdleError' })), IDLE_MS); });
+          const step = await Promise.race([reader.read(), idle]).finally(() => clearTimeout(idleTimer));
+          if (step.done) break;
+          res.write(step.value);
         }
-      } catch {}
+      } catch (e) {
+        if (!closed) {
+          noteSwallow('relay.stream', e, e && e.name === 'AbortError');
+          try { res.write('data: ' + JSON.stringify({ error: { message: e && e.name === 'StreamIdleError' ? 'The AI provider stopped sending mid-answer (60 s of silence) — the reply may be incomplete. Try again or pick another model.' : 'Stream interrupted: ' + String((e && e.message) || 'relay error').slice(0, 120) } }) + '\n\ndata: [DONE]\n\n'); } catch (e2) { noteSwallow('relay.stream_error_frame', e2, true); }
+          try { reader.cancel(); } catch (e3) { noteSwallow('relay.cancel', e3, true); }
+        }
+      }
       res.end();
       return;
     }
@@ -323,7 +345,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     let target = null;
-    try { target = new URL(rawTarget); } catch {}
+    try { target = new URL(rawTarget); } catch (e) { target = null; /* relayAI answers 403 'Missing ?url=' for an unparsable target */ }
     relayAI(req, res, target);
     return;
   }
@@ -338,7 +360,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const m = JSON.parse(fs.readFileSync(path.join(__dirname, 'backend', '.deployed.json'), 'utf8'));
       if (m && typeof m === 'object' && m.api_url) out = { url: m.api_url, deployed_at: m.deployed_at || null };
-    } catch { /* not deployed yet — {url:null} is the honest answer */ }
+    } catch (e) { noteSwallow('deployed-backend.read', e, e && e.code === 'ENOENT'); /* not deployed yet — {url:null} is the honest answer */ }
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(out));
     return;
@@ -457,13 +479,13 @@ server.listen(PORT, HOST, () => {
     if (process.platform === 'win32') exec('start "" ' + url);
     else if (process.platform === 'darwin') exec('open ' + url);
     else exec('xdg-open ' + url + ' || sensible-browser ' + url + ' || true');
-  } catch { /* browser open failed — user can open manually */ }
+  } catch (e) { noteSwallow('open-browser', e); /* user can open manually */ }
 });
 
 // ── Cycle 50: malformed client input (bad HTTP) must never crash the
 // process — respond 400 and keep serving everyone else. ──
 server.on('clientError', (err, socket) => {
-  try { if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'); } catch {}
+  try { if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'); } catch (e) { noteSwallow('clientError.reply', e, true); }
 });
 process.on('uncaughtException', (e) => {
   console.error('[server] survived unexpected error:', e && e.message ? e.message : e);
@@ -479,7 +501,7 @@ server.on('error', (e) => {
       if (process.platform === 'win32') exec('start "" ' + url);
       else if (process.platform === 'darwin') exec('open ' + url);
       else exec('xdg-open ' + url);
-    } catch {}
+    } catch (e) { noteSwallow('open-browser', e); }
     process.exit(0);
   }
   console.error('Server error:', e.message);

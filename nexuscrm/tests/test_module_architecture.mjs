@@ -24,7 +24,7 @@ function check(name, cond, extra = '') {
   else { failed++; failures.push(name + (extra ? ' — ' + extra : '')); console.log('  ❌ ' + name + (extra ? ' — ' + extra : '')); }
 }
 const read = (p) => readFileSync(join(SRC, p), 'utf8');
-const MODULES = ['middleware/http.js', 'security/crypto.js', 'validators/input.js'];
+const MODULES = ['middleware/http.js', 'security/crypto.js', 'validators/input.js', 'security/ssrf.js', 'observability/log.js', 'db/tenant.js', 'validators/brief.js', 'providers/nim.js', 'providers/errors.js', 'site/catalog.js', 'site/icons.js', 'site/design_brain.js', 'site/model_output.js', 'site/widgets.js'];
 
 console.log('\n== A. Extracted modules exist and are strict ESM ==');
 {

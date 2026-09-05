@@ -23,12 +23,15 @@ const SUITES = [
   'test_render_quality.mjs',    // Cycle 2: rendered craft invariants — type hierarchy, emphasis budget, rhythm, WCAG contrast, mobile re-composition
   'test_graph_hardening.mjs',   // Adversarial: IR mutation purity/atomicity, prototype-key impersonation, integrity validator, render + canvas entry points
   'test_api_security.mjs',      // Adversarial: cross-tenant IDOR, forged tokens, SQLi, prototype pollution, oversized payloads, stored XSS
+  'test_tenant_isolation.mjs',  // Multi-tenant assertion suite: static SQL tenancy lint, concurrent tenants, IDOR sweep, state restoration, atomic failure recovery, N7/N8, silent-catch lint
   'test_qa_integrity.mjs',      // Adversarial: Design-QA must rank real design above bad design and resist marker-stuffing
   'test_scene_gallery.mjs',     // 3D gallery: every advertised scene has metadata and COMPILING code
   'test_build_site_unified.mjs',// /ai/build-site must build through the composition engine, not the legacy template
+  'test_ai_catalog.mjs',        // AI design brain: icon library, catalog, art director, prompt stack, builder settings API
   'test_builder_ui_wiring.mjs', // Builder UI must actually send `direction` and display the design rationale
   'test_ast_validation.mjs',    // Blocking AST structural gate, deterministic auto-repair, per-node validation, LLM self-correction prompts
   'test_template_identity.mjs', // Reference template must never leak its original client's identity; no shipped unlock secrets; one escaping guarantee
+  'test_template_assistant.mjs', // v0.0.0.0.19: the generated site's built-in assistant — honest defaults (no model download), answers from the site's own facts, never guesses
   'test_computed_visual.mjs',   // Resolves the real CSS cascade: computed colours/fonts, dangling custom properties, per-direction visual identity
   'test_runtime_integrity.mjs', // EXECUTES the generated page: runtime errors, fail-open reveal, keyboard focus, skip link, OG metadata, duplicate copy
   'test_validation_pipeline.mjs',// Layout geometry at 4 viewports, design-token discipline, copy quality, severity-tagged violations, non-regressing repair loop
@@ -56,6 +59,9 @@ const SUITES = [
   'test_concurrency.mjs',
   'test_ai_robustness.mjs',
   'test_ai_providers.mjs',   // NIM simulator: provider layer, breaker, catalog, caps
+  'test_nim_models.mjs',     // ANY NIM model works: id hygiene, honest catalog, reasoning split (JSON+SSE), 400→adaptation memory, probe budget, /ai/models/check verdicts
+  'test_model_output.mjs',   // Batch 10: model-output verdict/repair, idle-stream watchdog, FastAPI detail[] adaptation, breaker on 200-empty, total deadline, models stampede guard, cron GC, FE reasoning path + API budgets
+  'test_site_widgets.mjs',   // builder part 5: fact-driven widgets (estimator/funnel/filter/sticky), sanitiser pass-through, DOM behaviour, funnel → inbox, WCAG AA for all palettes + themes, skip link/focus ring, proof honesty
   'test_ai_hardening.mjs',   // hardening cycles: SSRF guards, key shapes, caps, burst limiter
   'test_local_ai_proxy.mjs', // real server.js relay: allowlist, streaming, caps, key hygiene
   'test_spline_scenes.mjs',  // 50-scene library: structure, text contract, wiring, idempotency
@@ -88,6 +94,7 @@ const SUITES = [
   'test_visual_evidence.mjs',// v0.0.1.10: VISUAL EVIDENCE QA — computed geometry + per-node a11y/contrast + heading hierarchy, with evidence-backed problems; responsive + reduced-motion now authored in the graph
   'test_import_bridge.mjs',  // v0.0.1.10: HTML → GRAPH MIGRATION BRIDGE — bring a legacy/build_with_ai HTML site into the graph world, persist the graph, re-render from it, graph-first restore
   'test_evidence_browser.mjs', // v0.0.1.10: REAL BROWSER VISUAL EVIDENCE — headless-Chromium render → full-page screenshot + computed geometry + a11y + console/page/network errors per breakpoint → evidence-backed QA. Skips honestly when no browser.
+  'test_safe_html.mjs',      // v0.0.0.0.19: SAFE OUTPUT CONTRACT — allowlist sanitiser on AI/user/plan/runtime literals, CSP on public serve; proof by jsdom EXECUTION (canary) across every design/direction
   'test_e2e.mjs',            // v0.0.1.9: END-TO-END acceptance — prompt → brief → explore → graph → constraints → motion → interactions → assets → compile → canvas → drag → responsive → intent→patch → runtime → QA → evidence critic → accept/retain best-known → save → publish
 ];
 
@@ -128,7 +135,7 @@ for (const suite of SUITES) {
     encoding: 'utf8', timeout: 10 * 60 * 1000, maxBuffer: 64 * 1024 * 1024,
   });
   const out = proc.stdout || '';
-  const m = out.match(/(?:RESULTS?|DEEP RESULTS|EDGE RESULTS|DEPLOY RESULTS|AI ROBUSTNESS RESULTS|CONCURRENCY RESULTS|ISOLATION RESULTS|FUZZ RESULTS):\s*(.+)$/m);
+  const m = out.match(/(?:RESULTS?|DEEP RESULTS|EDGE RESULTS|DEPLOY RESULTS|AI ROBUSTNESS RESULTS|CONCURRENCY RESULTS|ISOLATION RESULTS|FUZZ RESULTS|NIM RESULTS):\s*(.+)$/m);
   const cov = out.match(/^ROUTE_COVERAGE_JSON: (.+)$/m);
   const exitOk = proc.status === 0;
   results.push({

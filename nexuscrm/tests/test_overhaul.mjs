@@ -56,6 +56,50 @@ console.log('\n═══ (A) DATA-SAFETY LAYER — constants & guards present in
   check('stream stall watchdog present (30s race)', /30000/.test(html) && /streamProviderDirect/.test(html) && /reader\.cancel/.test(html));
 }
 
+console.log('\n═══ (A2) F17 — browser SSE reader must not stall on frames that carry no delta ═══');
+// Audit 2026-09-03 F17: a pull-based ReadableStream is only re-pulled after
+// pull() enqueued something. The old reader forwarded only content deltas, so a
+// role-only first chunk (NIM default), a reasoning chunk, a bare finish_reason or
+// a lone `[DONE]` left the chat bubble spinning forever. Drive the REAL shipped
+// reader with the 9 SSE shapes real providers send and require text + done.
+{
+  const extract = (name) => { const i = html.indexOf(`async function ${name}(`); const j = html.indexOf('\n}\n', i); return html.slice(i, j + 2); };
+  const src = extract('streamProviderDirect');
+  const g = { LOCAL_AI_RELAY: false, buildProviderRequest: () => ({ url: 'x', key: 'k', model: 'm', viaProxy: false }), friendlyFetchError: (e) => e,
+    friendlyHttpError: async (r) => new Error('http ' + r.status), nxOfflineCheck: () => {}, nimMeta: () => ({ reasoning: false }) };
+  const mk = new Function(...Object.keys(g), 'fetch', src.replace('async function streamProviderDirect', 'return async function streamProviderDirect'));
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const role = 'data: {"choices":[{"delta":{"role":"assistant","content":""}}]}\n\n', c1 = 'data: {"choices":[{"delta":{"content":"Hi "}}]}\n\n',
+    c2 = 'data: {"choices":[{"delta":{"content":"there"}}]}\n\n', fin = 'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+    usage = 'data: {"choices":[],"usage":{"total_tokens":9}}\n\n', DONE = 'data: [DONE]\n\n', think = 'data: {"choices":[{"delta":{"reasoning_content":"hmm"}}]}\n\n',
+    empty = 'data: {"choices":[{"delta":{"content":""}}]}\n\n';
+  const shapes = {
+    'content, content, [DONE] separate': [c1, c2, DONE],
+    'OpenAI: role | c1 | c2 | finish | [DONE]': [role, c1, c2, fin, DONE],
+    'OpenAI stream_options: + usage frame': [role, c1, c2, fin, usage, DONE],
+    'NIM: role | c1 | empty | c2 | finish+usage+[DONE] one packet': [role, c1, empty, c2, fin + DONE],
+    'keep-alive comment between tokens': [c1, ': ping\n\n', c2, fin + DONE],
+    'no [DONE] marker, EOF (vLLM/Ollama)': [c1, c2, fin],
+    'everything in ONE packet': [role + c1 + c2 + fin + DONE],
+    'reasoning chunk first (DeepSeek-R1 / Nemotron thinking)': [think, c1, c2, DONE],
+    'inline <think> split across chunks': ['data: {"choices":[{"delta":{"content":"<thi"}}]}\n\n', 'data: {"choices":[{"delta":{"content":"nk>plan</think>Hi "}}]}\n\n', c2, DONE],
+  };
+  for (const [label, chunks] of Object.entries(shapes)) {
+    const fetch = async () => { let i = 0; const body = new ReadableStream({ async pull(c) { await new Promise(r => setTimeout(r, 3)); if (i < chunks.length) c.enqueue(enc.encode(chunks[i++])); else c.close(); } }); return { ok: true, status: 200, body }; };
+    const streamProviderDirect = mk(...Object.values(g), fetch);
+    const ws = { aiSettings: { provider: 'nvidia', nvidia_key: 'k' }, aiUsage: {} };
+    const res = await streamProviderDirect(ws, [{ role: 'user', content: 'hi' }], '');
+    const reader = res.body.getReader(); let full = '', gotDone = false, stalled = false, thinking = '';
+    while (true) {
+      const r = await Promise.race([reader.read(), new Promise(r2 => setTimeout(() => r2({ __t: true }), 1500))]);
+      if (r.__t) { stalled = true; break; } if (r.done) break;
+      for (const line of dec.decode(r.value).split('\n')) { if (!line.startsWith('data: ')) continue; const d = JSON.parse(line.slice(6)); if (d.delta) full += d.delta; if (d.thinking) thinking += d.thinking; if (d.done) gotDone = true; }
+    }
+    check('F17 no stall — ' + label, !stalled && gotDone && full === 'Hi there', `stalled=${stalled} done=${gotDone} text=${JSON.stringify(full)}`);
+    if (label.startsWith('reasoning') || label.startsWith('inline')) check('F17 thinking relayed separately — ' + label, thinking.length > 0 && !full.includes('think'), `thinking=${JSON.stringify(thinking)}`);
+  }
+}
+
 console.log('\n═══ (B) DATA-SAFETY — behavioral heal/migrate on a v1 DB ═══');
 {
   const legacy = {

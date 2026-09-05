@@ -47,6 +47,18 @@ class Stmt {
       return { meta: { changes: info.changes, last_row_id: info.lastInsertRowid } };
     } catch (e) { throw new Error(`D1 run() failed: ${e.message} | SQL: ${this.sql}`); }
   }
+  // Synchronous execution used by batch(): D1 returns a full D1Result per
+  // statement (rows for RETURNING statements, meta for everything).
+  _sync() {
+    try {
+      if (/\bRETURNING\b/i.test(this.sql)) {
+        const rows = db.prepare(this.sql).all(...this.params);
+        return { results: rows, success: true, meta: { changes: rows.length, last_row_id: null } };
+      }
+      const info = db.prepare(this.sql).run(...this.params);
+      return { results: [], success: true, meta: { changes: info.changes, last_row_id: info.lastInsertRowid } };
+    } catch (e) { throw new Error(`D1 batch() failed: ${e.message} | SQL: ${this.sql}`); }
+  }
 }
 
 // ── sql.js statements (same interface, WASM engine) ─────────
@@ -79,13 +91,37 @@ class SqlJsStmt {
       return { meta: { changes: sqldb.getRowsModified(), last_row_id: null } };
     } catch (e) { throw new Error(`D1 run() failed: ${e.message} | SQL: ${this.sql}`); }
   }
+  _sync() {
+    try {
+      if (/\bRETURNING\b/i.test(this.sql)) {
+        const stmt = sqldb.prepare(this.sql);
+        const rows = [];
+        try { if (this.params.length) stmt.bind(this.params); while (stmt.step()) rows.push(stmt.getAsObject()); } finally { stmt.free(); }
+        return { results: rows, success: true, meta: { changes: rows.length, last_row_id: null } };
+      }
+      sqldb.run(this.sql, this.params.length ? this.params : undefined);
+      return { results: [], success: true, meta: { changes: sqldb.getRowsModified(), last_row_id: null } };
+    } catch (e) { throw new Error(`D1 batch() failed: ${e.message} | SQL: ${this.sql}`); }
+  }
 }
 
 const DB = {
   prepare(sql) { return USE_NODE_SQLITE ? new Stmt(sql) : new SqlJsStmt(sql); },
+  // D1 semantics: a batch is ONE transaction — every statement commits or none
+  // does. Executed synchronously (no await between BEGIN and COMMIT) so two
+  // concurrent requests in the same process can never interleave statements
+  // inside each other's transaction.
   async batch(stmts) {
+    const exec = (sql) => (USE_NODE_SQLITE ? db.exec(sql) : sqldb.run(sql));
     const out = [];
-    for (const s of stmts) out.push(await s.run());
+    exec('BEGIN');
+    try {
+      for (const s of stmts) out.push(s._sync());
+      exec('COMMIT');
+    } catch (e) {
+      try { exec('ROLLBACK'); } catch (e2) { /* nothing to roll back — BEGIN itself failed */ }
+      throw e;
+    }
     return out;
   },
   // test-only helpers — API-compatible with the sql.js shape:

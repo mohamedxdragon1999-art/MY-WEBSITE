@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS workspaces (
   ai_daily_digest_enabled INTEGER DEFAULT 0,
   ai_daily_digest_hour_utc INTEGER DEFAULT 13,
   ai_brand_voice TEXT DEFAULT '',               -- V5 cycle 3
+  ai_builder_instructions TEXT DEFAULT '',      -- v0.0.0.0.19 AI builder: standing instructions for every site build (≤4000)
+  ai_design_prefs TEXT DEFAULT '',              -- v0.0.0.0.19 AI builder: validated design preferences JSON (theme/hero/card/nav/mode/sections…)
   ai_memory_summary TEXT DEFAULT '',            -- long-term AI memory (runtime-written)
   agent_facts TEXT DEFAULT '[]',                -- V6: facts the agent was told to remember
   resend_api_key TEXT DEFAULT '',               -- encrypted at rest

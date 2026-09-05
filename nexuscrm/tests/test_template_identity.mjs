@@ -90,6 +90,47 @@ console.log('\n== E. One escaping guarantee across both generators ==');
   check('ampersands are escaped', html.includes('&amp;'));
 }
 
+console.log('\n== F. LIVE ROUTE: POST /sites design_id:"template" ships no reference identity ==');
+{
+  // The production Worker inlines its own copy of the template renderer. Until
+  // v0.0.0.0.19 that copy never ran the scrub (audit F16/T1): every template
+  // site built through the API carried the reference client's phone, email,
+  // owner and postal address. This exercises the real route on the D1 mock.
+  const { init, DB } = require('./d1mock.js');
+  const { readFileSync } = await import('node:fs');
+  await init(readFileSync(new URL('../backend/schema.sql', import.meta.url), 'utf8'));
+  const worker = (await import('../backend/src/index.js')).default;
+  const env = { DB, API_IP_RATE_MAX: 1e9, API_TOKEN_RATE_MAX: 1e9 };
+  const ctx = { waitUntil() {} };
+  const call = async (m, p, b, t) => {
+    const h = { 'Content-Type': 'application/json' }; if (t) h.Authorization = 'Bearer ' + t;
+    const r = await worker.fetch(new Request('http://t.local/api' + p, { method: m, headers: h, body: b ? JSON.stringify(b) : undefined }), env, ctx);
+    return { status: r.status, data: await r.json().catch(() => null) };
+  };
+  const tok = (await call('POST', '/auth/register', { name: 'T', email: 'tpl-identity@example.com', password: 'password123' })).data.token;
+  const BARE = ['R C Atkin', 'Atkin', 'Martin', '07721', '511814', 'Eccleshall', 'Staffordshire', 'Copmere', 'Spa House', 'ST21', 'rcatkin', 'Shropshire', 'Derbyshire'];
+  const cases = [
+    ['with contact', { contact: { phone: '+20 100 000 0000', email: 'hi@nile.example', address: '12 Corniche, Banha' } }],
+    ['empty plan', {}],
+    ['no plan', null],
+  ];
+  for (const [label, plan] of cases) {
+    const r = await call('POST', '/sites', { name: 'Nile Plumbing', description: 'Plumber in Banha', build_with_ai: true, deterministic: true, design_id: 'template', plan }, tok);
+    const html = String((r.data && r.data.html) || '');
+    check(`[${label}] route builds a template site`, r.status === 200 && html.length > 50000, 'status=' + r.status + ' len=' + html.length);
+    const leaks = id.nxIdentityLeaks(html, { identityOnly: true });
+    check(`[${label}] zero reference-identity leaks (name/owner/phone/email/domain)`, leaks.length === 0, leaks.join(', '));
+    const bare = BARE.filter((m) => new RegExp(m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(html.replace(/atkin_(?:cfg|leads|ai[a-z_]*)/g, '')));
+    check(`[${label}] none of the bare identity markers survive in the document`, bare.length === 0, bare.join(', '));
+    check(`[${label}] the caller's business name is what ships`, html.includes('Nile Plumbing') && /<title>Nile Plumbing<\/title>/.test(html));
+    check(`[${label}] the runtime config never names the reference business`, !/businessName":"R C Atkin|ownerName":"Martin/.test(html));
+  }
+  const r2 = await call('POST', '/sites', { name: 'Nile Plumbing', build_with_ai: true, deterministic: true, design_id: 'template', plan: cases[0][1] }, tok);
+  const h2 = String((r2.data && r2.data.html) || '');
+  check('the caller\'s own phone/email flow into the page', h2.includes('+20 100 000 0000') && h2.includes('hi@nile.example'));
+  check('the tel: link is the caller\'s number, not the reference client\'s', /tel:\+?201000000000/.test(h2) && !/tel:\+?447721511814/.test(h2));
+}
+
 const total = passed + failed;
 console.log('\n────────────────────────────────────────');
 console.log((failed === 0 ? 'ALL PASSED' : 'FAILURES') + ' — ' + passed + '/' + total + ' passing');

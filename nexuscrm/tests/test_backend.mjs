@@ -583,8 +583,9 @@ console.log('\n== SALES FORECAST (30/60/90) ==');
     throw new Error('unexpected ' + u);
   };
   // seed deals: one 90% close in 10 days (30d bucket), one 50% in 45 days (60d), one 20% no date (90d)
-  await call('POST', '/deals', { title: 'Fast Deal', value: 10000, probability: 90, close_date: '2026-09-01' }, token);
-  await call('POST', '/deals', { title: 'Mid Deal', value: 8000, probability: 50, close_date: '2026-10-05' }, token);
+  const inDays = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+  await call('POST', '/deals', { title: 'Fast Deal', value: 10000, probability: 90, close_date: inDays(10) }, token);
+  await call('POST', '/deals', { title: 'Mid Deal', value: 8000, probability: 50, close_date: inDays(45) }, token);
   await call('POST', '/deals', { title: 'Slow Deal', value: 20000, probability: 20 }, token);
   const f = await call('GET', '/ai/forecast', null, token);
   check('forecast returns 3 buckets', f.status === 200 && f.data && f.data.buckets && f.data.buckets.length === 3, JSON.stringify(f.data).slice(0,100));
@@ -1013,7 +1014,10 @@ console.log('\n== V6.2: SSRF + SEO + JS UPGRADES + DEFAULTS ==');
   check('scan handles content-poor sites', sc2.status === 200 && sc2.data.plan && sc2.data.plan.site_name === 'Tiny Shop');
   const site3 = await call('POST', '/sites', { name: 'Tiny Shop', build_with_ai: true, plan: sc2.data.plan }, token);
   const html3 = String(site3.data.html || '');
-  check('defaults injected into build (working hours fallback)', html3.includes('Mon - Fri 9:00 - 17:00') || html3.includes('9:00'), html3.slice(0, 200));
+  // The model's plan omitted the hours, but the scanned page states them —
+  // scan must merge its own extracted facts into the plan (no invented default).
+  check('scan plan carries the page\'s real working hours', Array.isArray(sc2.data.plan.working_hours) && sc2.data.plan.working_hours.some((h) => /tue/i.test(h) && /10/.test(h)), JSON.stringify(sc2.data.plan.working_hours));
+  check('real scanned hours reach the build (no fabricated Mon-Fri default)', (html3.includes('10am') || /Tuesday/i.test(html3)) && !html3.includes('Mon - Fri 9:00 - 17:00'), html3.slice(0, 200));
   globalThis.fetch = FAKE_FETCH;
   aiBehavior = 'ok';
 }

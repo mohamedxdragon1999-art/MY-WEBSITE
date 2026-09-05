@@ -17,3 +17,16 @@ database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 # free tier (100k requests/day).
 [triggers]
 crons = ["*/5 * * * *"]
+
+# ── Public-site embedding / CORS policy (optional) ───────────────────
+# `/api/public/site/:slug` (the shareable link + the dashboard's "copy link")
+# grants Access-Control-Allow-Origin + `frame-ancestors 'self' <origin>` ONLY
+# to origins listed here. Comma/space separated; exact origins or wildcard
+# subdomains (`https://*.pages.dev`). Unset = permissive dev mode (any real
+# http(s) origin is granted — never `null`, `*` or junk). `/s/:slug` always
+# serves SAMEORIGIN and ignores this list. Set it before going to production:
+# [vars]
+# ALLOWED_ORIGINS = "https://crm.yourbusiness.com, https://*.pages.dev"
+#
+# Secrets (never in this file): `wrangler secret put ENCRYPTION_KEY`
+# (AES-256-GCM at rest for provider keys) and `wrangler secret put JWT_SECRET`.

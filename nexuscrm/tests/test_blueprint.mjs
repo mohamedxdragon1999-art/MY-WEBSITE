@@ -72,10 +72,13 @@ console.log('\n== A2: CONTENT PLAN ==');
   const plan = t.buildContentPlan('Joe Plumbing', '24/7 emergency plumbing in Cairo. Drain cleaning, water heater installation, leak repair. Call +20 100 123 4567 or email joe@example.com', {});
   check('plan has hero', plan.hero && plan.hero.title && plan.hero.sub);
   check('industry presets services (3-6)', Array.isArray(plan.services) && plan.services.length >= 3 && plan.services.length <= 6, plan.services.length);
-  check('plan has stats', Array.isArray(plan.stats) && plan.stats.length >= 3);
+  // v0.0.0.0.19: proof is never invented — a brief with no numbers yields NO stats
+  check('plan invents no stats when the brief has none', plan.stats === null || (Array.isArray(plan.stats) && plan.stats.length === 0), JSON.stringify(plan.stats));
   check('plan extracts phone', (plan.contact.phone || '').replace(/\D/g, '').length >= 7, plan.contact.phone);
   check('plan extracts email', /@/.test(plan.contact.email), plan.contact.email);
-  check('plan has reviews + faq', Array.isArray(plan.reviews) && plan.reviews.length >= 1 && plan.faq.length >= 3);
+  check('plan invents no reviews, but writes real FAQs', (plan.reviews === null || plan.reviews.length === 0) && plan.faq.length >= 3, JSON.stringify(plan.reviews) + ' faq=' + plan.faq.length);
+  check('brief services become the service cards', plan.services.map(s => s.title.toLowerCase()).join('|').includes('drain cleaning') && plan.services.some(s => /water heater/i.test(s.title)), plan.services.map(s => s.title).join(', '));
+  check('plan carries the structured brief + sitemap', plan._brief && plan._brief.industry.id === 'plumbing' && Array.isArray(plan._sitemap.sections) && plan._sitemap.sections.includes('areas'), plan._industry);
   // merge from a normalized scanner plan
   const merged = t.buildContentPlan('X', 'desc', { plan: { services: [{ icon: '🛠️', title: 'A', desc: 'B' }], reviews: [{ name: 'Y', text: 'Z', stars: 5 }], why_us: ['Licensed'], process: [{ title: 'P', desc: 'Q' }] } });
   check('merges scanner services (.desc field)', merged.services[0].title === 'A' && merged.services[0].text === 'B');
@@ -87,7 +90,8 @@ console.log('\n== A3: SECTION RENDERING (design classes + XSS) ==');
 {
   const evil = t.buildContentPlan('<script>alert(1)</script>', 'x');
   const body = t.renderSectionsHtml(evil, {});
-  check('renders nav/hero/stats/services/faq/reviews/footer', ['nx-nav','nx-hero','nx-stat','nx-card','nx-faq-item','nx-review','nx-footer'].every(c => body.includes(c)));
+  check('renders nav/hero/services/faq/footer (no invented stats/reviews)', ['nx-nav','nx-hero','nx-card','nx-faq-item','nx-footer'].every(c => body.includes(c)) && !body.includes('nx-stat') && !body.includes('nx-review'));
+  check('ships real on-brand artwork instead of broken placeholders', /<svg[^>]*role="img"/.test(body) && !/\{\{[A-Z0-9]+\}\}/.test(body));
   check('uses [data-reveal] animation hooks', body.includes('data-reveal'));
   check('softens injected script (escaped, inert)', !/<script>alert\(1\)/.test(body) && body.includes('&lt;script&gt;'));
   // richer plan → more sections
