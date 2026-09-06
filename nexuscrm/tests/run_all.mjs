@@ -96,6 +96,7 @@ const SUITES = [
   'test_evidence_browser.mjs', // v0.0.1.10: REAL BROWSER VISUAL EVIDENCE — headless-Chromium render → full-page screenshot + computed geometry + a11y + console/page/network errors per breakpoint → evidence-backed QA. Skips honestly when no browser.
   'test_safe_html.mjs',      // v0.0.0.0.19: SAFE OUTPUT CONTRACT — allowlist sanitiser on AI/user/plan/runtime literals, CSP on public serve; proof by jsdom EXECUTION (canary) across every design/direction
   'test_e2e.mjs',            // v0.0.1.9: END-TO-END acceptance — prompt → brief → explore → graph → constraints → motion → interactions → assets → compile → canvas → drag → responsive → intent→patch → runtime → QA → evidence critic → accept/retain best-known → save → publish
+  'test_workerd_runtime.mjs', // REAL RUNTIME: wrangler bundle (size limits, no Node built-ins) + boot in workerd/miniflare with real D1 + full journey + byte-identical output vs Node
 ];
 
 // ── Route inventory: what does the worker ACTUALLY serve? ─────
@@ -135,7 +136,7 @@ for (const suite of SUITES) {
     encoding: 'utf8', timeout: 10 * 60 * 1000, maxBuffer: 64 * 1024 * 1024,
   });
   const out = proc.stdout || '';
-  const m = out.match(/(?:RESULTS?|DEEP RESULTS|EDGE RESULTS|DEPLOY RESULTS|AI ROBUSTNESS RESULTS|CONCURRENCY RESULTS|ISOLATION RESULTS|FUZZ RESULTS|NIM RESULTS):\s*(.+)$/m);
+  const m = out.match(/(?:RESULTS?|DEEP RESULTS|EDGE RESULTS|DEPLOY RESULTS|AI ROBUSTNESS RESULTS|CONCURRENCY RESULTS|ISOLATION RESULTS|WORKERD RESULTS|FUZZ RESULTS|NIM RESULTS):\s*(.+)$/m);
   const cov = out.match(/^ROUTE_COVERAGE_JSON: (.+)$/m);
   const exitOk = proc.status === 0;
   results.push({

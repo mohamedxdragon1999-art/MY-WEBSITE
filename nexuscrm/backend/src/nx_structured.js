@@ -9,7 +9,15 @@
 // by a palette swap and by CSS class definitions that always appear).
 
 // Dual module (CJS for backend require + ESM named-import interop).
-const { JSDOM } = (typeof module !== 'undefined' && module.exports && require('jsdom')) || {};
+//
+// DOM engine: linkedom (pure JS, bundles into the Cloudflare Worker). This
+// module used to require jsdom, which depends on Node built-ins (fs, vm, zlib,
+// stream…) — `wrangler deploy` failed with 16 unresolved imports and the Worker
+// could not boot in workerd at all. Every query below is a plain CSS selector
+// + attribute read, which linkedom answers identically (proved by
+// tests/test_workerd_runtime.mjs and the structural equivalence check).
+const { parseHTML } = require('linkedom');
+const __dom = (html) => { const { document } = parseHTML(String(html || '')); return { window: { document } }; };
 
 // Parse the direction system's custom properties + type scale out of the <style>.
 function parseCSSVars(html) {
@@ -104,7 +112,10 @@ function domShape(body) {
     if (d > 6) return;
     node.childNodes.forEach(ch => {
       if (ch.nodeType === 1) {
-        const cls = (ch.getAttribute('class') || '').split(' ').filter(c => /^(c-|^$)/.test(c)).slice(0, 3).join('.');
+        // split on ANY whitespace and drop empties so a trailing space in a
+        // class attribute never becomes a phantom "." in the shape (engine-
+        // independent: jsdom keeps raw attribute whitespace, linkedom trims)
+        const cls = (ch.getAttribute('class') || '').split(/\s+/).filter(c => /^c-/.test(c)).slice(0, 3).join('.');
         parts.push(ch.tagName.toLowerCase() + (cls ? '.' + cls : ''));
         walk(ch, d + 1);
       }
@@ -116,7 +127,7 @@ function domShape(body) {
 
 // Full structural signature — the source of truth for distinctness.
 function nxStructuralSignature(html) {
-  const dom = new JSDOM(html);
+  const dom = __dom(html);
   const body = dom.window.document.body;
   const css = parseCSSVars(html);
   return {
@@ -161,7 +172,7 @@ function nxSignatureDistance(a, b) {
 // Feature-flag check: a "color-only clone" should be far LESS distinct than a real
 // direction change. Expose the palette-only signature of a given signature.
 function nxPaletteOnly(fullHtml) {
-  const dom = new JSDOM(fullHtml);
+  const dom = __dom(fullHtml);
   const body = dom.window.document.body;
   const css = parseCSSVars(fullHtml);
   // A clone that differs ONLY in palette: preserve structure, swap colors.
@@ -179,7 +190,7 @@ function nxPaletteOnly(fullHtml) {
 //  - componentDiversity: distinct top-level component families.
 //  - monotony: composite 0..1 (high = monotonous / repetitive).
 function nxRepetitionModel(html) {
-  const dom = new JSDOM(html);
+  const dom = __dom(html);
   const doc = dom.window.document;
   const sections = [...doc.querySelectorAll('body > .c-page > *:not(.c-main), body > .c-page > .c-main > *')];
   const comp = {};
@@ -209,7 +220,7 @@ function contrastRatio(a, b) { const L1 = Math.max(lum(a), lum(b)), L2 = Math.mi
 
 // Full rendered-design report for the visual quality loop (measured on output).
 function nxRenderedDesignReport(html) {
-  const dom = new JSDOM(html);
+  const dom = __dom(html);
   const doc = dom.window.document;
   const css = parseCSSVars(html);
   const rep = nxRepetitionModel(html);

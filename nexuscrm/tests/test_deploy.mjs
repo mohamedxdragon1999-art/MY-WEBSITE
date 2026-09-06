@@ -90,7 +90,10 @@ console.log('\n== DEPLOY HEALTH CHECK ==');
 }
 
 const REAL_TOML = readFileSync(join(__dirname, '..', 'backend', 'wrangler.toml'), 'utf8');
-const baseFiles = () => ({ [ad.TOML_PATH]: REAL_TOML });
+// A machine where `npm install` already ran: the Worker's runtime packages
+// (read from package.json "dependencies") are present under node_modules.
+const installedDeps = () => Object.fromEntries(ad.runtimeDeps().map((n) => [join(ad.ROOT_DIR, 'node_modules', n, 'package.json'), '{"name":"' + n + '"}']));
+const baseFiles = () => ({ [ad.TOML_PATH]: REAL_TOML, [ad.PKG_PATH]: readFileSync(ad.PKG_PATH, 'utf8'), ...installedDeps() });
 
 console.log('\n== DEPLOY FAST PATH: already deployed ⇒ ZERO wrangler calls ==');
 {
@@ -144,6 +147,53 @@ console.log('\n== DEPLOY FULL FLOW: first deploy (login + d1 create + schema + s
   const marker = ad.readMarker(fs);
   check('deployment marker written with url + api_url', !!marker && marker.url === 'https://nexuscrm-backend.demo-subdomain.workers.dev' && marker.api_url === 'https://nexuscrm-backend.demo-subdomain.workers.dev/api', JSON.stringify(marker));
   check('key file persisted so future redeploys reuse the SAME key', /^[a-f0-9]{64}$/.test(fs.readFileSync(ad.KEYFILE_PATH, 'utf8').trim()));
+}
+
+console.log('\n== DEPLOY FRESH MACHINE: runtime packages missing ⇒ npm install (runtime only) BEFORE any cloud step ==');
+{
+  const calls = [];
+  const fs = memFs({ [ad.TOML_PATH]: REAL_TOML, [ad.PKG_PATH]: readFileSync(ad.PKG_PATH, 'utf8') }); // no node_modules at all
+  check('runtimeDeps() is read from package.json dependencies (css-tree, linkedom, parse5)', ad.runtimeDeps(fs).sort().join(',') === 'css-tree,linkedom,parse5', ad.runtimeDeps(fs).join(','));
+  check('missingRuntimeDeps() reports all three on a fresh machine', ad.missingRuntimeDeps(fs).length === 3, ad.missingRuntimeDeps(fs).join(','));
+  const script = [
+    { match: ['whoami'], code: 0, out: 'logged in' },
+    { match: ['d1', 'execute'], code: 0, out: 'ok' },
+    { match: ['secret', 'put'], code: 0, out: 'ok' },
+    { match: ['deploy'], code: 0, out: WRANGLER_DEPLOY_OUT },
+  ];
+  fs.writeFileSync(ad.TOML_PATH, ad.tomlSetDatabaseId(REAL_TOML, 'existing-db-id'));
+  const run = async (cmd, args, opts = {}) => {
+    calls.push(cmd + ' ' + args.join(' ') + (opts.cwd ? ' @' + opts.cwd : ''));
+    if (cmd === 'npm' && args[0] === 'install') {
+      // simulate npm populating node_modules
+      for (const n of ad.runtimeDeps(fs)) fs.writeFileSync(join(ad.ROOT_DIR, 'node_modules', n, 'package.json'), '{}');
+      return { code: 0, stdout: 'added 8 packages', stderr: '', text: 'added 8 packages' };
+    }
+    return fakeRunner(script, [])(cmd, args, opts);
+  };
+  const result = await ad.ensureDeployed({ run, fs, assumeYes: true, pollDelayMs: 0, fetchImpl: async () => ({ ok: true, json: async () => ({ ok: true, service: 'nexuscrm-backend' }) }), log: () => {} });
+  check('status=deployed on a fresh machine', result.status === 'deployed', result.status);
+  const installIdx = calls.findIndex((c) => /^npm install /.test(c));
+  const whoamiIdx = calls.findIndex((c) => c.includes('whoami'));
+  check('npm install ran BEFORE the first cloud step (fail fast, locally)', installIdx !== -1 && whoamiIdx !== -1 && installIdx < whoamiIdx, calls.slice(0, 3).join(' | '));
+  check('npm install is runtime-only (--omit=dev: no jsdom/playwright/miniflare/browsers on an end-user machine)', calls[installIdx] && calls[installIdx].includes('--omit=dev') && calls[installIdx].includes('--no-audit'), calls[installIdx]);
+  check('npm install runs in the nexuscrm root (where package.json + node_modules live), not backend/', calls[installIdx] && calls[installIdx].endsWith('@' + ad.ROOT_DIR), calls[installIdx]);
+  check('after install nothing is missing', ad.missingRuntimeDeps(fs).length === 0);
+
+  // npm offline / failing → honest error at step "deps", zero cloud calls
+  const calls2 = [];
+  const fs2 = memFs({ [ad.TOML_PATH]: ad.tomlSetDatabaseId(REAL_TOML, 'existing-db-id'), [ad.PKG_PATH]: readFileSync(ad.PKG_PATH, 'utf8') });
+  const run2 = async (cmd, args, opts = {}) => { calls2.push(cmd + ' ' + args.join(' ')); if (cmd === 'npm' && args[0] === 'install') return { code: 1, stdout: '', stderr: 'ENOTFOUND registry.npmjs.org', text: 'ENOTFOUND registry.npmjs.org' }; return fakeRunner(script, [])(cmd, args, opts); };
+  const r2 = await ad.ensureDeployed({ run: run2, fs: fs2, assumeYes: true, pollDelayMs: 0, fetchImpl: async () => { throw new Error('offline'); }, log: () => {} });
+  check('npm install failure ⇒ status=error at step "deps" (never a cryptic wrangler bundling error later)', r2.status === 'error' && r2.step === 'deps', JSON.stringify(r2));
+  check('no wrangler command was attempted after the dependency failure', !calls2.some((c) => c.includes('wrangler')), calls2.join(' | '));
+
+  // Installed machine → no npm install at all (the common path stays fast)
+  const calls3 = [];
+  const fs3 = memFs(baseFiles());
+  fs3.writeFileSync(ad.TOML_PATH, ad.tomlSetDatabaseId(REAL_TOML, 'existing-db-id'));
+  await ad.ensureDeployed({ run: fakeRunner([{ match: ['whoami'], code: 0, out: 'ok' }, { match: ['d1', 'execute'], code: 0, out: 'ok' }, { match: ['secret', 'put'], code: 0, out: 'ok' }, { match: ['deploy'], code: 0, out: WRANGLER_DEPLOY_OUT }], calls3), fs: fs3, assumeYes: true, pollDelayMs: 0, fetchImpl: async () => ({ ok: true, json: async () => ({ ok: true, service: 'nexuscrm-backend' }) }), log: () => {} });
+  check('when packages are already installed, npm install is skipped', !calls3.some((c) => /^install /.test(c)), calls3.join(' | '));
 }
 
 console.log('\n== DEPLOY RE-DEPLOY: unhealthy marker ⇒ reuses D1 + key, never duplicates ==');

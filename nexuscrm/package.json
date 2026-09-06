@@ -1,21 +1,30 @@
 {
   "name": "nexuscrm",
   "version": "1.0.0",
-  "description": "All 33 findings from the code review are fixed, every placeholder feature is now real, the AI layer is substantially upgraded, and everything is verified by automated tests.",
-  "main": "cors-proxy-worker.js",
+  "description": "NexusCRM \u2014 CRM + AI website builder. Backend = Cloudflare Worker (backend/src/index.js, bundled by wrangler); dashboard = NexusCRM_V4_Hardened.html; local relay = server.js.",
+  "main": "server.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "node tests/run_all.mjs"
+    "test": "node tests/run_all.mjs",
+    "test:workerd": "node tests/test_workerd_runtime.mjs",
+    "build:worker": "cd backend && wrangler deploy --dry-run --outdir ../.arena/dist",
+    "deploy:worker": "cd backend && wrangler deploy"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "css-tree": "^3.2.1",
+    "linkedom": "^0.18.5",
+    "parse5": "^8.0.1"
+  },
+  "devDependencies": {
     "jsdom": "^29.1.1",
+    "miniflare": "^3.20250718.3",
     "playwright": "^1.62.1",
     "sql.js": "^1.14.2",
-    "linkedom": "^0.18.5"
+    "wrangler": "^3.114.17"
   }
 }

@@ -41,6 +41,8 @@ const readline = require('readline');
 const { spawn } = require('child_process');
 
 const BACKEND_DIR = __dirname;
+const ROOT_DIR = path.join(BACKEND_DIR, '..');          // nexuscrm/ — holds package.json + node_modules
+const PKG_PATH = path.join(ROOT_DIR, 'package.json');
 const TOML_PATH = path.join(BACKEND_DIR, 'wrangler.toml');
 const SCHEMA_PATH = path.join(BACKEND_DIR, 'schema.sql');
 const MARKER_PATH = path.join(BACKEND_DIR, '.deployed.json');
@@ -96,6 +98,30 @@ function parseWorkersUrl(text) {
 function parseDatabaseId(text) {
   const m = String(text || '').match(/database_id\s*=\s*"([a-zA-Z0-9_-]+)"/);
   return m ? m[1] : null;
+}
+
+// The Worker's runtime npm dependencies (pure-JS HTML/CSS engines bundled by
+// wrangler). They come from package.json "dependencies" — never hardcode a
+// second list that can drift. Falls back to the known set if package.json is
+// unreadable so the check still protects a partial download.
+const FALLBACK_RUNTIME_DEPS = ['css-tree', 'linkedom', 'parse5'];
+function runtimeDeps(fsMod = fs) {
+  try {
+    const pkg = JSON.parse(fsMod.readFileSync(PKG_PATH, 'utf8'));
+    const names = Object.keys(pkg.dependencies || {});
+    return names.length ? names : FALLBACK_RUNTIME_DEPS;
+  } catch (e) { /* unreadable/absent package.json → protect with the known set */
+    return FALLBACK_RUNTIME_DEPS;
+  }
+}
+// Which runtime deps are NOT installed under nexuscrm/node_modules. wrangler
+// bundles them into the Worker at deploy time — a missing one turns into
+// `Could not resolve "parse5"` and a failed deploy on a fresh machine.
+function missingRuntimeDeps(fsMod = fs) {
+  return runtimeDeps(fsMod).filter((name) => {
+    try { fsMod.readFileSync(path.join(ROOT_DIR, 'node_modules', name, 'package.json'), 'utf8'); return false; }
+    catch (e) { return true; }
+  });
 }
 
 function tomlSetDatabaseId(tomlText, id) {
@@ -197,7 +223,25 @@ async function ensureDeployed(deps = {}) {
     if (!ok) { log('Skipped — the app will start in local-only mode.'); status({ status: 'skipped', step: 'done', detail: 'Skipped by the operator.' }); return { status: 'skipped' }; }
   }
 
-  // 3) Cloudflare login (only if not already logged in).
+  // 3) Runtime dependencies — wrangler bundles the Worker's pure-JS HTML/CSS
+  //    engines from nexuscrm/node_modules. On a fresh machine they are not
+  //    there yet; install ONLY the runtime set (no dev/test tooling, no
+  //    browsers) before touching the cloud, so a missing package fails fast
+  //    and locally instead of as a cryptic bundling error at the last step.
+  const missing = missingRuntimeDeps(fsMod);
+  if (missing.length) {
+    status({ status: 'running', step: 'deps', detail: `Installing the backend's runtime packages (${missing.join(', ')})…` });
+    log(`→ Installing the backend's runtime packages (${missing.join(', ')}) — one-time, ~10s…`);
+    const inst = await run('npm', ['install', '--omit=dev', '--no-audit', '--no-fund', '--no-progress'], { cwd: ROOT_DIR });
+    if (inst.code !== 0) return fail('deps', '❌ npm install failed (is the machine online?): ' + inst.text.slice(0, 300));
+    const still = missingRuntimeDeps(fsMod);
+    if (still.length) return fail('deps', `❌ npm install finished but ${still.join(', ')} still missing — run "npm install --omit=dev" inside the nexuscrm folder and retry.`);
+    log('✓ Runtime packages installed');
+  } else {
+    log('✓ Runtime packages present');
+  }
+
+  // 4) Cloudflare login (only if not already logged in).
   status({ status: 'running', step: 'login', detail: 'Checking Cloudflare login (a browser window may open — click Allow)…' });
   log('→ Checking Cloudflare login…');
   const who = await wrangler(['whoami']);
@@ -207,7 +251,7 @@ async function ensureDeployed(deps = {}) {
     if (login.code !== 0) return fail('login', '❌ Cloudflare login did not complete. Run this script again to retry.');
   }
 
-  // 4) D1 database — REUSE if it exists, create only if it doesn't.
+  // 5) D1 database — REUSE if it exists, create only if it doesn't.
   status({ status: 'running', step: 'd1', detail: 'Finding or creating your database (D1)…' });
   let toml = fsMod.readFileSync(TOML_PATH, 'utf8');
   let dbId = parseDatabaseId(toml);
@@ -234,27 +278,27 @@ async function ensureDeployed(deps = {}) {
     log('✓ D1 database already configured in wrangler.toml');
   }
 
-  // 5) Apply the (idempotent) schema — safe to re-run any number of times.
+  // 6) Apply the (idempotent) schema — safe to re-run any number of times.
   status({ status: 'running', step: 'schema', detail: 'Applying the database schema (safe to repeat)…' });
   log('→ Applying the database schema (safe to repeat)…');
   const schema = await wrangler(['d1', 'execute', DB_NAME, '--remote', '--file', 'schema.sql', '-y']);
   if (schema.code !== 0) return fail('schema', '❌ Schema apply failed: ' + schema.text.slice(0, 300));
 
-  // 6) ENCRYPTION_KEY secret — generated once, REUSED forever.
+  // 7) ENCRYPTION_KEY secret — generated once, REUSED forever.
   const key = readOrCreateKeyFile(fsMod);
   status({ status: 'running', step: 'secret', detail: 'Setting the encryption key secret…' });
   log('→ Setting the ENCRYPTION_KEY secret (generated once, stored locally so redeploys never break saved AI keys)…');
   const secret = await wrangler(['secret', 'put', 'ENCRYPTION_KEY'], { input: key + '\n' });
   if (secret.code !== 0) return fail('secret', '❌ Could not set ENCRYPTION_KEY: ' + secret.text.slice(0, 300));
 
-  // 7) Deploy the Worker.
+  // 8) Deploy the Worker (wrangler bundles src/ + the runtime packages).
   status({ status: 'running', step: 'deploy', detail: 'Uploading the backend Worker (first run downloads wrangler, ~30-60s)…' });
   log('→ Deploying the backend Worker (first run downloads wrangler, ~30-60s)…');
   const dep = await wrangler(['deploy']);
   const base = parseWorkersUrl(dep.text);
   if (dep.code !== 0 || !base) return fail('deploy', '❌ Deploy failed: ' + dep.text.slice(0, 300));
 
-  // 8) Verify it is genuinely live before declaring success.
+  // 9) Verify it is genuinely live before declaring success.
   status({ status: 'running', step: 'verify', detail: `Verifying ${base}/health …` });
   log(`→ Verifying ${base}/health …`);
   let healthy = false;
@@ -306,5 +350,6 @@ if (require.main === module) main();
 module.exports = {
   ensureDeployed, parseWorkersUrl, parseDatabaseId, tomlSetDatabaseId,
   readMarker, writeMarker, generateKey, readOrCreateKeyFile, fetchHealthy,
-  writeStatus, STATUS_PATH, MARKER_PATH, KEYFILE_PATH, TOML_PATH, PLACEHOLDER_ID, DB_NAME,
+  writeStatus, runtimeDeps, missingRuntimeDeps,
+  STATUS_PATH, MARKER_PATH, KEYFILE_PATH, TOML_PATH, PKG_PATH, ROOT_DIR, PLACEHOLDER_ID, DB_NAME,
 };

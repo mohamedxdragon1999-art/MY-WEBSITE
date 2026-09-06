@@ -40,12 +40,24 @@ function __note(sink, what, e) {
 }
 
 /** Resolve Playwright + a launchable Chromium, or explain precisely why not. */
+// A browser can only exist where Node can spawn one. Inside a Cloudflare
+// Worker (workerd: no `process.versions.node`, no child processes) the probe
+// answers "unavailable" immediately — it must never attempt the import there.
+// The import specifier is computed (`__dyn`) so bundlers (esbuild via
+// wrangler, which rejects dynamic specifiers) treat it as opaque runtime data
+// instead of a module to resolve.
+const __inNode = () => typeof process !== 'undefined' && !!(process.versions && process.versions.node) && typeof process.cwd === 'function';
+// Indirect dynamic import: built from a string at runtime so neither esbuild
+// (wrangler) nor miniflare's module scanner sees an `import()` to resolve.
+// Only ever executed under Node (guarded by __inNode above).
+const __dyn = (m) => (new Function('m', 'return import(m)'))(String(m));
 async function nxBrowserProbe() {
   if (__probe) return __probe;
   const out = { available: false, engine: null, reason: '', version: '' };
+  if (!__inNode()) { out.reason = 'no browser in this runtime (edge worker) — approximate geometry only'; __probe = out; return out; }
   let pw = null;
   for (const mod of ['playwright', 'playwright-chromium', 'playwright-core']) {
-    try { pw = await import(mod); out.engine = mod; break; } catch (e) { /* try next */ }
+    try { pw = await __dyn(mod); out.engine = mod; break; } catch (e) { /* try next */ }
   }
   if (!pw) {
     out.reason = 'playwright is not installed (npm i -D playwright)';
@@ -168,7 +180,7 @@ async function nxBrowserMeasure(html, opts) {
   const probe = await nxBrowserProbe();
   if (!probe.available) return { available: false, reason: probe.reason, viewports: [], violations: [] };
 
-  const pw = await import(probe.engine);
+  const pw = await __dyn(probe.engine);
   const chromium = pw.chromium || pw.default.chromium;
   const viewports = opts.viewports || NX_VIEWPORTS;
   const violations = [], perViewport = [];

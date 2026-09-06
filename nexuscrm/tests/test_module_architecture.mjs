@@ -120,6 +120,50 @@ console.log('\n== E. The monolith is measurably smaller ==');
   console.log(`     index.js ${lines} lines · extracted modules ${extracted} lines across ${MODULES.length} files`);
 }
 
+console.log('\n== F. Runtime portability: backend/src must be deployable to Cloudflare Workers ==');
+{
+  // Everything under backend/src is bundled by wrangler and executed by workerd:
+  // no filesystem, no `process`, no child processes, no Node built-ins. A single
+  // `require('jsdom')` once made the whole Worker undeployable (16 unresolved
+  // Node built-ins). Allowed npm runtime deps are pure-JS and declared in
+  // package.json "dependencies"; everything else is dev-only.
+  const RUNTIME_DEPS = new Set(Object.keys(JSON.parse(readFileSync(join(SRC, '..', '..', 'package.json'), 'utf8')).dependencies || {}));
+  const NODE_BUILTINS = /^(node:|fs|path|os|crypto|vm|zlib|stream|url|util|child_process|net|tls|http|https|worker_threads|assert|events|buffer|module|readline|perf_hooks|inspector)(\/|$)/;
+  const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((d) => d.isDirectory() ? walk(join(dir, d.name)) : (/\.js$/.test(d.name) ? [join(dir, d.name)] : []));
+  const files = walk(SRC);
+  const offenders = [], undeclared = [];
+  for (const f of files) {
+    const src = readFileSync(f, 'utf8');
+    const rel = f.slice(SRC.length + 1);
+    // Only statement-level imports / requires count (string literals inside
+    // embedded browser scripts — e.g. the esm.run web-llm URL in the page
+    // runtime — are page code, not Worker code).
+    for (const m of src.matchAll(/^\s*(?:const|let|var)?\s*[{\w\s,:$}]*=?\s*(?:require\(|import\s+[^'"]*from\s+|import\s+)\s*['"]([^'"\n]+)['"]/gm)) {
+      const spec = m[1];
+      if (spec.startsWith('.') || spec.startsWith('/') || /^https?:/.test(spec)) continue;
+      if (NODE_BUILTINS.test(spec)) offenders.push(`${rel} → ${spec}`);
+      else if (!RUNTIME_DEPS.has(spec.split('/')[0].startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0])) undeclared.push(`${rel} → ${spec}`);
+    }
+    if (/require\(['"]jsdom['"]\)|from ['"]jsdom['"]/.test(src)) offenders.push(`${rel} → jsdom (Node-only DOM)`);
+    if (/require\(['"]playwright/.test(src) || /import\(\s*['"]playwright/.test(src)) offenders.push(`${rel} → playwright (Node-only)`);
+    // `import(expr)` with a non-literal specifier breaks workerd's module scanner
+    // (dynamic module specifiers are unsupported) — must be routed through an
+    // opaque indirection when it is genuinely Node-only (see nx_browser.js).
+    for (const m of src.matchAll(/\bimport\(\s*([A-Za-z_$][\w$.]*)\s*\)/g)) {
+      // the string-built indirection in nx_browser.js is opaque to bundlers by design
+      const line = src.slice(0, m.index).split('\n').length;
+      const ctx = src.split('\n')[line - 1];
+      if (/new Function\(/.test(ctx)) continue;
+      offenders.push(`${rel} → dynamic import(${m[1]})`);
+    }
+  }
+  check(`no backend/src file imports a Node built-in or a Node-only package (${files.length} files scanned)`, offenders.length === 0, offenders.slice(0, 6).join(' | '));
+  check('every npm import in backend/src is a declared runtime dependency (bundled by wrangler)', undeclared.length === 0, undeclared.slice(0, 6).join(' | '));
+  check('runtime dependencies are the pure-JS set only (css-tree, linkedom, parse5)', [...RUNTIME_DEPS].sort().join(',') === 'css-tree,linkedom,parse5', [...RUNTIME_DEPS].join(','));
+  const bad = ['process.env', 'process.cwd(', 'readFileSync', '__dirname', 'Buffer.from('].flatMap((tok) => files.filter((f) => readFileSync(f, 'utf8').includes(tok)).map((f) => f.slice(SRC.length + 1) + ' uses ' + tok));
+  check('no Node globals in Worker code (process.env, __dirname, Buffer, fs) except behind the nx_browser Node guard', bad.every((b) => b.startsWith('nx_browser.js')), bad.filter((b) => !b.startsWith('nx_browser.js')).slice(0, 6).join(' | '));
+}
+
 process.on('exit', () => { try { console.log('ROUTE_COVERAGE_JSON: ' + JSON.stringify([...(globalThis.__NX_ROUTE_LOG || [])])); } catch {} });
 const total = passed + failed;
 console.log('\n────────────────────────────────────────');
