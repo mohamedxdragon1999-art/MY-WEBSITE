@@ -30,6 +30,16 @@ globalThis.fetch = async (url, opts = {}) => {
     if (aiBehavior === 'fail401') {
       return new Response(JSON.stringify({ error: { message: 'invalid key' } }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
+    if (aiBehavior === 'stream-endless') {
+      // A model that keeps talking (20 ms per token, 200 tokens). Records
+      // whether the WORKER cancelled the upstream when the browser went away.
+      const enc = new TextEncoder(); let n = 0;
+      const body = new ReadableStream({
+        async pull(c) { n++; if (n > 200) { c.enqueue(enc.encode('data: [DONE]\n\n')); c.close(); return; } await new Promise((r) => setTimeout(r, 20)); c.enqueue(enc.encode('data: {"choices":[{"delta":{"content":"word "}}]}\n\n')); },
+        cancel() { globalThis.__upstreamCancelled = true; },
+      });
+      return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }
     if (aiBehavior === 'stream') {
       const enc = new TextEncoder();
       const body = new ReadableStream({
@@ -316,6 +326,22 @@ console.log('\n== AI LAYER (keys, cap, tokens, fallback) ==');
   aiBehavior = 'fail401';
   const chatErr = await readSSE('POST', '/ai/chat/stream', { messages: [{ role: 'user', content: 'hello' }] }, token);
   check('chat stream failure → SSE error event', chatErr.text.includes('"error"') && chatErr.text.includes('"done"'), chatErr.text.slice(0, 120));
+
+  // A browser that disconnects mid-answer must release the upstream NIM
+  // request (worker time + provider tokens) and keep the partial answer in
+  // memory — not hold the connection until the model finishes for nobody.
+  aiBehavior = 'stream-endless'; globalThis.__upstreamCancelled = false;
+  {
+    const req = new Request(BASE + '/api/ai/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://app.local', Authorization: 'Bearer ' + token }, body: JSON.stringify({ messages: [{ role: 'user', content: 'tell me a long story' }] }) });
+    const res = await worker.fetch(req, env, ctx);
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let got = '';
+    for (let i = 0; i < 4; i++) { const r = await Promise.race([reader.read(), new Promise((r2) => setTimeout(() => r2({ done: true }), 3000))]); if (r.done) break; got += dec.decode(r.value, { stream: true }); }
+    await reader.cancel('tab closed');
+    await new Promise((r) => setTimeout(r, 250));
+    check('chat stream: client disconnect cancels the upstream provider stream', globalThis.__upstreamCancelled === true, 'upstream still running; client saw ' + got.length + ' bytes');
+    const mem = await env.DB.prepare("SELECT content FROM chat_memory WHERE role='assistant' ORDER BY id DESC LIMIT 1").first();
+    check('chat stream: the partial answer is still saved to memory on disconnect', !!mem && /word/.test(mem.content || ''), JSON.stringify(mem));
+  }
 
   // Cap is clamped to a 10 minimum server-side. Inject 11 usage rows for
   // this workspace, set cap 10, and the next call must be blocked with 429.

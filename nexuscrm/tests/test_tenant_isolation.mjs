@@ -364,5 +364,19 @@ console.log('\n== H. Public site: CORS + frame-ancestors are a GRANT, never a re
   check('/s/:slug ignores Origin entirely (SAMEORIGIN, no CORS)', s.status === 200 && s.headers.get('X-Frame-Options') === 'SAMEORIGIN' && !s.headers.get('Access-Control-Allow-Origin'));
 }
 
+console.log('\n== I. Check-then-insert races resolve to 409, never 500, never duplicates ==');
+{
+  const email = `race-${Date.now()}@x.com`;
+  const regs = await Promise.all(new Array(10).fill(0).map(() => call('POST', '/auth/register', { name: 'Race', email, password: 'password123' })));
+  const codes = regs.map((r) => r.status);
+  check('10 simultaneous registrations for one email → exactly one 200', codes.filter((c) => c === 200).length === 1, codes.join(','));
+  check('every loser gets 409 (conflict), no 500', codes.every((c) => c === 200 || c === 409), codes.join(','));
+  const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM users WHERE email=?').bind(email).first();
+  check('exactly one account row exists', n.n === 1, String(n.n));
+  const wsN = await env.DB.prepare('SELECT COUNT(*) AS n FROM workspaces WHERE name=?').bind("Race's Workspace").first();
+  check('losers rolled their workspace row back', wsN.n === 1, String(wsN.n));
+  check('the 409 message names the conflict without SQL detail', regs.filter((r) => r.status === 409).every((r) => /already exists/i.test(r.data?.error || '') && !/UNIQUE|sqlite|constraint/i.test(r.data?.error || '')), JSON.stringify(regs.find((r) => r.status === 409)?.data));
+}
+
 console.log(`\nISOLATION RESULTS: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -248,6 +248,10 @@ async function authRegister(env, body, origin, ip) {
     ).bind(ws.id, name, email, hash, salt).first();
   } catch (e) {
     if (ws?.id) await env.DB.prepare('DELETE FROM workspaces WHERE id = ?').bind(ws.id).run();
+    // Two registrations for the same email in the same instant: the
+    // check above passed for both, the UNIQUE(email) index decided. The loser
+    // gets the same honest 409 as a sequential duplicate — not a 500.
+    if (/UNIQUE|unique constraint|constraint failed/i.test(String(e && e.message || ''))) return err('An account with that email already exists', 409, origin);
     throw e;
   }
 
@@ -2632,7 +2636,15 @@ async function handleChatStream(env, req, auth, body, origin) {
       }, 15000);
       this.__ka = ka;
     },
-    cancel() { if (this.__ka) clearInterval(this.__ka); },
+    cancel(reason) {
+      if (this.__ka) clearInterval(this.__ka);
+      // The browser went away (tab closed, navigation, abort): release the
+      // upstream NIM connection NOW rather than holding it (and the worker)
+      // until the model finishes a reply nobody will read, and keep whatever
+      // was already answered in memory so the conversation stays coherent.
+      reader.cancel(reason).catch((e) => logSwallow('chat.upstream_cancel', e, { ws, provider: streamRes.provider }));
+      if (fullText.trim()) logged('chat.memory.append_assistant', appendChatMemory(env, ws, 'assistant', fullText), { ws });
+    },
     // A pull-based stream re-invokes pull() only after something was
     // enqueued — so pull() MUST forward at least one event per invocation or
     // the connection stalls until the next keep-alive ping (15 s). Frames
@@ -11376,20 +11388,28 @@ async function routerInner(req, env, ctx, origin, ip, path, parts, root, query) 
       ).bind(w.id, 'webhook', JSON.stringify({ webhook_event: event, ...payload }).slice(0, 4000)).first();
       // Site lead forms: auto-create a contact so leads land in the CRM.
       if (event === 'site_lead' || b.event === 'site_lead') {
-        const name = String(b.name || '').slice(0, 120);
-        const email = String(b.email || '').toLowerCase().slice(0, 254);
-        const phone = String(b.phone || '').slice(0, 40);
+        // Lead fields are visitor-typed text: only strings/numbers count (an
+        // object becomes "" — never "[object Object]" in the contact list),
+        // control characters are dropped, and an email that is not an email
+        // is kept in the message body for the owner but never stored as the
+        // contact's address (it would poison dedupe + outbound mail).
+        const txt = (v, max) => (typeof v === 'string' || typeof v === 'number') ? String(v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max) : '';
+        const name = txt(b.name, 120);
+        const emailRaw = txt(b.email, 254).toLowerCase();
+        const email = isValidEmail(emailRaw) ? emailRaw : '';
+        const phone = txt(b.phone, 40).replace(/[^\d+()\-.\s]/g, '');
         if (name || email) {
           let contact = null;
-          if (email && isValidEmail(email)) contact = await env.DB.prepare('SELECT id FROM contacts WHERE workspace_id=? AND LOWER(email)=LOWER(?)').bind(w.id, email).first();
+          if (email) contact = await env.DB.prepare('SELECT id FROM contacts WHERE workspace_id=? AND LOWER(email)=LOWER(?)').bind(w.id, email).first();
           if (!contact) {
             const c = await env.DB.prepare('INSERT INTO contacts (workspace_id,name,email,phone,source,notes) VALUES (?,?,?,?,?,\'Website lead form\') RETURNING id')
               .bind(w.id, name || (email ? email.split('@')[0] : 'Website Lead'), email, phone, 'website').first();
             contact = c;
           }
           const subj = b.source_widget === 'funnel' ? 'Website quick-quote request' : b.source_widget === 'estimator' ? 'Website estimate request' : 'Website form message';
+          const note = (emailRaw && !email) ? `\n\n(Visitor typed an unusable email address: ${emailRaw.slice(0, 80)})` : '';
           await env.DB.prepare("INSERT INTO messages (workspace_id,contact_id,channel,subject,body,direction) VALUES (?,?,?,?,?,'inbound')")
-            .bind(w.id, contact.id, 'webchat', subj, String(b.message || '').slice(0, 1000)).run();
+            .bind(w.id, contact.id, 'webchat', subj, (txt(b.message, 1000) + note).slice(0, 1100)).run();
           await logEvent(env, ctx, w.id, 'new_contact', contact.id, { name: contact.name, source: 'website' });
         }
       }
@@ -11789,8 +11809,14 @@ export default {
       // the client — internal messages (D1 errors, stack paths, provider
       // details) are an information disclosure vector at multi-tenant scale.
       const ref = Math.random().toString(36).slice(2, 10);
-      logFailure('router.unhandled', e, { ref, method: req.method, path: (() => { try { return new URL(req.url).pathname; } catch (u) { return ''; } })() });
-      return json({ error: `Internal error (ref ${ref}) — please try again.` }, 500, req.headers.get('Origin') || '*');
+      const path = (() => { try { return new URL(req.url).pathname; } catch (u) { return ''; } })();
+      logFailure('router.unhandled', e, { ref, method: req.method, path });
+      const origin = req.headers.get('Origin') || '*';
+      // A UNIQUE index deciding a check-then-insert race (two identical
+      // creates in the same instant) is a conflict, not a crash: 409 with a
+      // retryable message, still without the SQL detail.
+      if (/UNIQUE|unique constraint|constraint failed/i.test(String(e && e.message || ''))) return json({ error: 'That record already exists (a concurrent request created it first) — refresh and try again.' }, 409, origin);
+      return json({ error: `Internal error (ref ${ref}) — please try again.` }, 500, origin);
     }
   },
   async scheduled(event, env, ctx) {
