@@ -38,6 +38,23 @@ function __text(n) {
   if (n.nodeName === '#text') return n.value || '';
   return (n.childNodes || []).map(__text).join('');
 }
+// Accessible name of a link/button per the accname algorithm's practical
+// subset: text content, aria-label, aria-labelledby, title, or the alt of an
+// image inside it. A logo link `<a><img alt="Acme logo"></a>` is perfectly
+// accessible — it used to be reported as a link with no accessible text.
+function __accessibleName(n, attrs) {
+  if (__text(n).trim()) return true;
+  if ((attrs['aria-label'] || '').trim() || (attrs['aria-labelledby'] || '').trim() || (attrs.title || '').trim()) return true;
+  let found = false;
+  __walk(n, (c) => {
+    if (found || !c.tagName) return;
+    const a = Object.fromEntries((c.attrs || []).map(x => [x.name, x.value]));
+    if ((c.tagName === 'img' || c.tagName === 'svg') && ((a.alt || '').trim() || (a['aria-label'] || '').trim())) found = true;
+    if (c.tagName === 'svg') { __walk(c, (t) => { if (t.tagName === 'title' && __text(t).trim()) found = true; }); }
+    if (c.tagName !== n.tagName && ((a['aria-label'] || '').trim())) found = true;
+  });
+  return found;
+}
 function __walk(node, fn, depth = 0, parent = null) {
   if (!node) return;
   fn(node, depth, parent);
@@ -184,7 +201,14 @@ function nxAstDeepAudit(html, opts) {
     if (n.tagName === 'img') { counts.img++; if (!attrs.alt && attrs.alt !== '') counts.imgNoAlt++; }
     if (/^h[1-6]$/.test(n.tagName)) { counts.headings++; headingLevels.push(+n.tagName[1]); }
     if (['main', 'nav', 'header', 'footer', 'aside'].includes(n.tagName)) counts.landmarks++;
-    if (n.tagName === 'a') { counts.links++; if (!__text(n).trim() && !attrs['aria-label']) counts.linksNoText++; }
+    // A link the template has SWITCHED OFF (`hidden`, or `aria-hidden` inside a
+    // decorative wrapper) is not in the accessibility tree: an unknown phone
+    // number renders `<a hidden>` rather than a dead tel: link, and that empty
+    // shell must not be reported as an unnamed link nobody can reach anyway.
+    // A link with no href is also not a link (no tab stop, no role=link).
+    if (n.tagName === 'a' && !('hidden' in attrs) && attrs['aria-hidden'] !== 'true' && (attrs.href != null || attrs.role === 'link' || attrs.tabindex != null)) {
+      counts.links++; if (!__accessibleName(n, attrs)) counts.linksNoText++;
+    }
   });
   for (const [id, n] of ids) if (n > 1) issues.push(`duplicate id "${id}" used ${n} times`);
   if (counts.imgNoAlt) issues.push(`${counts.imgNoAlt} image(s) missing alt text`);

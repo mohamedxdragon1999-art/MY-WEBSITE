@@ -36,6 +36,7 @@ const SUITES = [
   'test_runtime_integrity.mjs', // EXECUTES the generated page: runtime errors, fail-open reveal, keyboard focus, skip link, OG metadata, duplicate copy
   'test_validation_pipeline.mjs',// Layout geometry at 4 viewports, design-token discipline, copy quality, severity-tagged violations, non-regressing repair loop
   'test_validation_gate.mjs',   // Validation must GATE and auto-repair every generation, refuse regressions, declare survivors, and log history across generations
+  'test_gate_fidelity.mjs',     // The gate judges what a browser renders (@media-aware cascade, hidden subtrees, accessible names) and every catalog design ships CLEAN through the live routes
   'test_edge_fixtures.mjs',     // Edge-case fixture discipline: empty/enormous/RTL/CJK/hostile input, known-bad must fail, known-good must not false-flag
   'test_image_pipeline.mjs',    // Images must render as real <img> (not raw data: text), honour caller URLs, reject unsafe schemes, declare dimensions + loading, and carry correct alt
   'test_component_contract.mjs',// Section shell contract: id/reveal/rhythm/emphasis + a heading in the document outline for EVERY section, enforced on the rendered page

@@ -43,6 +43,10 @@ console.log('\n== C. The chosen direction reaches the backend ==');
 {
   // Without this line the picker is decorative and the engine always auto-picks.
   check('the build payload sends `direction`', /direction:\s*V\('ws-direction'\)/.test(APP));
+  // BOTH builder routes must carry it: the agentic build did, the create-website
+  // modal's POST /sites did not — so the picker changed nothing for the main flow.
+  const sitesPost = APP.match(/api\('\/sites','POST',\{name,description:desc[\s\S]*?\}\);/);
+  check('the create-website POST /sites payload sends `direction` too', !!sitesPost && /direction:\s*V\('ws-direction'\)/.test(sitesPost[0]), sitesPost ? sitesPost[0].slice(-120) : 'no POST /sites call found');
   check('the picker has a change handler', /id="ws-direction"[^>]*onchange="directionPick\(\)"/.test(APP));
   check('directionPick is defined', /function directionPick\(\)/.test(APP));
 }

@@ -149,7 +149,12 @@ function nxTokensCss(tokens, scope) {
   // keyboard users always get a visible focus ring and a skip link — even
   // when the owner pinned their own theme/accent (palette scope off); the
   // palette block below refines the colour to the AA-checked accent.
-  parts.push(`:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}.btn:focus-visible{outline-offset:4px}.nx-skip{position:absolute;left:12px;top:-60px;z-index:200;padding:10px 16px;border-radius:10px;background:var(--accent);color:var(--on-accent,#fff);font-weight:700;text-decoration:none;transition:top .15s}.nx-skip:focus{top:12px;outline-offset:2px}`);
+  parts.push(`:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}.btn:focus-visible{outline-offset:4px}.nx-skip{position:absolute;left:12px;top:-60px;z-index:200;padding:12px 16px;min-height:44px;display:inline-flex;align-items:center;border-radius:10px;background:var(--accent);color:var(--on-accent,#fff);font-weight:700;text-decoration:none;transition:top .15s}.nx-skip:focus{top:12px;outline-offset:2px}
+/* Mobile tap targets (WCAG 2.5.8): the nav toggle, the drawer links and the
+   footer/contact tel + mailto links measured 22–41px. Standalone controls get a
+   44px minimum; links inside prose keep their inline flow. */
+.nx-menu-btn{min-width:44px;min-height:44px;display:none;align-items:center;justify-content:center}
+@media (max-width:820px){.nx-menu-btn{display:inline-flex}.nx-nav-links a{display:inline-flex;align-items:center;min-height:44px}.nx-cinfo a,.nx-footer a,.nx-note a{display:inline-flex;align-items:center;min-height:44px}}`);
   if (scope.palette) {
     parts.push(`:root{--bg:${p.bg};--bg2:${p.bg2};--card:${p.card};--line:${p.line};--text:${p.text};--muted:${p.muted};--accent:${p.accent};--accent2:${p.accent2};--teal:${p.third};--amber:${p.accent2};--grad:${tokens.grad};--radius:${tokens.radius};--on-accent:${tokens.btnText};color-scheme:${p.mode}}`);
     parts.push(`body::before{background:radial-gradient(60vw 60vw at 8% -5%,${p.accent}14,transparent 60%),radial-gradient(55vw 55vw at 105% 108%,${p.third}14,transparent 60%)}`);

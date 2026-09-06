@@ -28,34 +28,225 @@ function __styleText(html) {
 }
 
 // Collect declarations per selector, in source order (later wins, as in CSS).
+// Split a shorthand value on top-level whitespace (a `calc(1px + 2px)` or
+// `var(--a, 4px)` component stays whole).
+function __splitTop(v) {
+  const out = []; let cur = '', depth = 0;
+  for (const ch of String(v)) {
+    if (ch === '(') depth++; else if (ch === ')') depth--;
+    if (/\s/.test(ch) && !depth) { if (cur) out.push(cur); cur = ''; } else cur += ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+// Box shorthands → longhands. The layout estimator reads `padding-top` etc.;
+// without this every `.btn{padding:13px 26px}` measured as padding 0 and each
+// button on every generic page was flagged as a sub-44px tap target (a false
+// blocker that triggered the repair loop on 100% of builds). `!important` and
+// global keywords are left to the longhand as written.
+const __BOX_SHORTHANDS = {
+  padding: ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'],
+  margin: ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'],
+  inset: ['top', 'right', 'bottom', 'left'],
+  'border-width': ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'],
+};
+const __AXIS_SHORTHANDS = {
+  'padding-block': ['padding-top', 'padding-bottom'], 'padding-inline': ['padding-left', 'padding-right'],
+  'margin-block': ['margin-top', 'margin-bottom'], 'margin-inline': ['margin-left', 'margin-right'],
+  'inset-block': ['top', 'bottom'], 'inset-inline': ['left', 'right'],
+};
+function __expandShorthand(prop, value, decls) {
+  const parts = __splitTop(value);
+  if (!parts.length || parts.length > 4) return;
+  if (__BOX_SHORTHANDS[prop]) {
+    const [t, r = t, b = t, l = r] = parts;
+    const names = __BOX_SHORTHANDS[prop];
+    [t, r, b, l].forEach((v, i) => { decls[names[i]] = v; });
+  } else if (__AXIS_SHORTHANDS[prop] && parts.length <= 2) {
+    const [a, b = a] = parts;
+    const names = __AXIS_SHORTHANDS[prop];
+    decls[names[0]] = a; decls[names[1]] = b;
+  }
+}
+
+// ── MEDIA QUERIES ARE EVALUATED, NOT IGNORED ──────────────────────────────
+// Until now every rule inside an @media block was applied UNCONDITIONALLY at
+// every viewport (the at-rule wrapper was simply dropped). Two real failure
+// modes followed: a desktop-only `@media (min-width:1200px){.hero{width:1100px}}`
+// was reported as horizontal overflow on a 375px phone, and a mobile-only
+// `@media (max-width:520px){.nav a{min-height:44px}}` counted as satisfied on
+// desktop while a `display:none` meant for phones hid the element everywhere.
+// Each rule now carries the condition it was declared under and the cascade
+// evaluates it against the viewport being measured.
+//
+// Supported: width/height min/max and level-4 range syntax, orientation,
+// aspect-ratio, screen/all/print, `not`/`only`, comma lists, em/rem units
+// (always 16px in a media query), hover/pointer (coarse ≤480px), user
+// preference features at their DEFAULT value (no-preference / light / no
+// forced colours). Unknown features do not match — the same answer a browser
+// gives for a feature it does not implement.
+const __DEFAULT_VIEWPORT = { width: 1440, height: 900 };
+const __mediaMemo = new Map();
+function __mqLength(n, unit) { const v = parseFloat(n); return unit === 'px' ? v : v * 16; }
+function __mqTerm(term) {
+  const t = term.trim();
+  if (t === 'screen' || t === 'all') return () => true;
+  if (t === 'print' || t === 'speech' || t === 'tty' || t === 'braille') return () => false;
+  const m = /^\(([\s\S]*)\)$/.exec(t);
+  if (!m) return () => false;
+  const inner = m[1].trim().replace(/\s+/g, ' ');
+  let r;
+  if ((r = /^([\d.]+)(px|em|rem) ?(<=|<) ?(width|height) ?(<=|<) ?([\d.]+)(px|em|rem)$/.exec(inner))) {
+    const lo = __mqLength(r[1], r[2]), hi = __mqLength(r[6], r[7]), dim = r[4], loInc = r[3] === '<=', hiInc = r[5] === '<=';
+    return (vw, vh) => { const v = dim === 'width' ? vw : vh; return (loInc ? v >= lo : v > lo) && (hiInc ? v <= hi : v < hi); };
+  }
+  if ((r = /^(width|height) ?(<=|<|>=|>|=) ?([\d.]+)(px|em|rem)$/.exec(inner))) {
+    const lim = __mqLength(r[3], r[4]), dim = r[1], op = r[2];
+    return (vw, vh) => { const v = dim === 'width' ? vw : vh; return op === '<=' ? v <= lim : op === '<' ? v < lim : op === '>=' ? v >= lim : op === '>' ? v > lim : v === lim; };
+  }
+  if ((r = /^(min|max)-(width|height) ?: ?([\d.]+)(px|em|rem)$/.exec(inner))) {
+    const lim = __mqLength(r[3], r[4]), dim = r[2], isMin = r[1] === 'min';
+    return (vw, vh) => { const v = dim === 'width' ? vw : vh; return isMin ? v >= lim : v <= lim; };
+  }
+  if ((r = /^(min-|max-)?aspect-ratio ?: ?([\d.]+) ?\/ ?([\d.]+)$/.exec(inner))) {
+    const ratio = parseFloat(r[2]) / parseFloat(r[3]);
+    return (vw, vh) => { const a = vw / vh; return r[1] === 'min-' ? a >= ratio : r[1] === 'max-' ? a <= ratio : Math.abs(a - ratio) < 1e-6; };
+  }
+  if ((r = /^orientation ?: ?(portrait|landscape)$/.exec(inner))) return (vw, vh) => (vh >= vw) === (r[1] === 'portrait');
+  if (/^prefers-reduced-motion ?: ?no-preference$/.test(inner)) return () => true;
+  if (/^prefers-reduced-(motion|transparency|data)/.test(inner)) return () => false;
+  if (/^prefers-color-scheme ?: ?light$/.test(inner)) return () => true;
+  if (/^prefers-color-scheme/.test(inner)) return () => false;
+  if (/^prefers-contrast ?: ?no-preference$/.test(inner)) return () => true;
+  if (/^prefers-contrast/.test(inner)) return () => false;
+  if (/^forced-colors ?: ?none$/.test(inner)) return () => true;
+  if (/^forced-colors/.test(inner)) return () => false;
+  if ((r = /^(any-)?hover ?: ?(hover|none)$/.exec(inner))) return (vw) => (vw > 480) === (r[2] === 'hover');
+  if ((r = /^(any-)?pointer ?: ?(fine|coarse|none)$/.exec(inner))) return (vw) => r[2] === 'none' ? false : (vw > 480) === (r[2] === 'fine');
+  if (/^display-mode ?: ?browser$/.test(inner)) return () => true;
+  if (/^(color|scripting ?: ?enabled|color-gamut ?: ?srgb|update ?: ?fast)$/.test(inner)) return () => true;
+  return () => false;
+}
+function __mqQuery(query) {
+  let q = query.trim();
+  let negate = false;
+  if (/^not\s/.test(q)) { negate = true; q = q.slice(4); }
+  q = q.replace(/^only\s+/, '');
+  if (!q) return () => false;
+  const tests = q.split(/\s+and\s+/i).map(__mqTerm);
+  return (vw, vh) => { const ok = tests.every((t) => t(vw, vh)); return negate ? !ok : ok; };
+}
+function __mediaMatcher(prelude) {
+  const key = String(prelude || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!key) return null;
+  let fn = __mediaMemo.get(key);
+  if (fn) return fn;
+  // split on top-level commas only (a comma inside `(400px <= width)` cannot occur, but stay safe)
+  const parts = []; let depth = 0, cur = '';
+  for (const ch of key) {
+    if (ch === '(') depth++; else if (ch === ')') depth--;
+    if (ch === ',' && !depth) { parts.push(cur); cur = ''; } else cur += ch;
+  }
+  parts.push(cur);
+  const queries = parts.map(__mqQuery);
+  fn = (vw, vh) => queries.some((qf) => qf(vw, vh));
+  __mediaMemo.set(key, fn);
+  return fn;
+}
+// Combine the at-rule stack a rule sits under into one predicate (or null when
+// unconditional). `@supports` is assumed satisfied (the audit targets evergreen
+// browsers) unless it is a `not` query; `@container` cannot be evaluated
+// without layout and is treated as not matching; `@layer`/`@scope` are
+// transparent (ordering between layers is beyond this resolver).
+function __conditionFor(stack) {
+  const preds = [];
+  for (const at of stack) {
+    const name = String(at.name || '').toLowerCase();
+    const prelude = at.prelude ? csstree.generate(at.prelude) : '';
+    if (name === 'media') { const fn = __mediaMatcher(prelude); if (fn) preds.push(fn); }
+    else if (name === 'supports') { if (/^\s*not\b/i.test(prelude)) preds.push(() => false); }
+    else if (name === 'container') preds.push(() => false);
+    // @layer, @scope, @starting-style and vendor wrappers: transparent
+  }
+  if (!preds.length) return null;
+  if (preds.length === 1) return preds[0];
+  return (vw, vh) => preds.every((p) => p(vw, vh));
+}
+// At-rules whose block holds declarations or keyframe selectors, never style rules.
+const __NON_RULE_ATRULES = /^(font-face|page|counter-style|property|font-feature-values|font-palette-values|view-transition|-webkit-keyframes|-moz-keyframes|keyframes|document|-moz-document|namespace|import|charset)$/;
+
 function nxParseRules(css) {
   const rules = [];
   let ast; try { ast = csstree.parse(css, { parseValue: false, parseRulePrelude: false }); }
   catch (e) { return rules; }
+  const stack = [];
   csstree.walk(ast, {
-    visit: 'Rule',
     enter(node) {
+      if (node.type === 'Atrule') {
+        if (__NON_RULE_ATRULES.test(String(node.name || '').toLowerCase())) return this.skip;
+        stack.push(node);
+        return undefined;
+      }
+      if (node.type !== 'Rule') return undefined;
       const prelude = node.prelude && node.prelude.value ? String(node.prelude.value).trim() : '';
-      if (!prelude) return;
+      if (!prelude) return this.skip;
       const decls = {};
       csstree.walk(node.block, {
         visit: 'Declaration',
-        enter(d) { decls[d.property.toLowerCase()] = csstree.generate(d.value).trim(); },
+        enter(d) {
+          const prop = d.property.toLowerCase();
+          const val = csstree.generate(d.value).trim();
+          decls[prop] = val;
+          // Source order wins exactly as in a browser: a later `padding-top`
+          // overrides the expansion, and a later `padding` overrides an
+          // earlier longhand — both fall out of writing in declaration order.
+          if (__BOX_SHORTHANDS[prop] || __AXIS_SHORTHANDS[prop]) __expandShorthand(prop, val, decls);
+        },
       });
+      const media = stack.length ? __conditionFor(stack) : null;
+      const mediaText = stack.length ? stack.map((a) => '@' + a.name + ' ' + (a.prelude ? csstree.generate(a.prelude) : '')).join(' ').trim() : '';
       for (const sel of prelude.split(',')) {
         const s = sel.trim();
-        if (s) rules.push({ selector: s, decls });
+        if (s) rules.push({ selector: s, decls, media, mediaText });
       }
+      return this.skip; // declarations already collected; nested rules are not style rules
+    },
+    leave(node) {
+      if (node.type === 'Atrule' && stack.length && stack[stack.length - 1] === node) stack.pop();
     },
   });
   return rules;
 }
 
+// Does this rule apply at the given viewport? Unconditional rules always do.
+function nxRuleApplies(rule, viewport) {
+  if (!rule.media) return true;
+  const vp = viewport || __DEFAULT_VIEWPORT;
+  return !!rule.media(vp.width, vp.height);
+}
+// Per-viewport activity table, computed once per (cascade, viewport).
+function __activeTable(rules, viewport, tables) {
+  const vp = viewport || __DEFAULT_VIEWPORT;
+  const key = vp.width + 'x' + vp.height;
+  let t = tables.get(key);
+  if (!t) {
+    t = new Uint8Array(rules.length);
+    for (let i = 0; i < rules.length; i++) t[i] = nxRuleApplies(rules[i], vp) ? 1 : 0;
+    tables.set(key, t);
+  }
+  return t;
+}
+
 // Build the custom-property table from :root (and html/body fallbacks).
-function nxRootVars(rules) {
+// Tokens redefined only under a condition that does not hold at the default
+// desktop viewport (a dark-scheme override, a print sheet, a phone-only
+// override) do not replace the base value: the contrast audit must judge the
+// palette that actually renders by default.
+function nxRootVars(rules, viewport) {
   const vars = {};
   for (const r of rules) {
     if (!/^(:root|html|body)$/.test(r.selector)) continue;
+    if (!nxRuleApplies(r, viewport)) continue;
     for (const k of Object.keys(r.decls)) if (k.startsWith('--')) vars[k] = r.decls[k];
   }
   return vars;
@@ -94,7 +285,7 @@ function __matches(el, selector) {
 }
 
 // Selectors the DOM cannot match (pseudo-classes/elements, at-rule preludes).
-const __UNMATCHABLE = /::|:hover|:focus|@/;
+const __UNMATCHABLE = /::|:hover|:focus|:active|:visited|:focus-within|:focus-visible|:target|:checked|:disabled|:placeholder-shown|:invalid|:valid|@/;
 
 // Per-cascade memo: `el.matches(selector)` is answered ONCE per element per
 // selector instead of once per element per selector per property. The layout
@@ -130,12 +321,13 @@ function __matchMemo(rules, document) {
 }
 
 // Compute the declared (cascaded) value of `prop` for an element.
-function nxComputed(el, prop, rules, vars, memo) {
+function nxComputed(el, prop, rules, vars, memo, viewport) {
   const match = memo || __matchMemo(rules);
   let winner = null;
   for (let i = 0; i < rules.length; i++) {
     const r = rules[i];
     if (r.decls[prop] === undefined) continue;
+    if (r.media && !nxRuleApplies(r, viewport)) continue;
     if (match(el, i)) winner = r.decls[prop];
   }
   const inline = el.getAttribute && el.getAttribute('style');
@@ -268,13 +460,14 @@ function __ruleIndex(rules, document) {
 // pinned by test_validation_pipeline — with results memoised per (element,
 // property): the cascade is viewport-independent, so the four viewport passes
 // of a layout audit reuse each other's answers.
-function __computedIndexed(el, prop, rules, vars, byEl, cache) {
+function __computedIndexed(el, prop, rules, vars, byEl, cache, active) {
   let props = cache.get(el);
   if (!props) { props = new Map(); cache.set(el, props); }
   if (props.has(prop)) return props.get(prop);
   let winner = null;
   const list = byEl.get(el);
   if (list) for (let k = 0; k < list.length; k++) {
+    if (active && !active[list[k]]) continue;
     const d = rules[list[k]].decls[prop];
     if (d !== undefined) winner = d;
   }
@@ -289,26 +482,39 @@ function __computedIndexed(el, prop, rules, vars, byEl, cache) {
 }
 
 // One-shot: parse a document and return a resolver bound to it.
+// `computed(el, prop, viewport)`: without a viewport the answer is the DEFAULT
+// desktop (1440x900) cascade — the value a design-token audit should judge.
+// With one, conditional rules are switched on/off for that viewport, so the
+// layout estimator sees what a phone (or a wide monitor) really renders.
 function nxCascade(html, document) {
   const css = __styleText(html);
   const rules = nxParseRules(css);
   const vars = nxRootVars(rules);
+  const conditional = rules.some((r) => !!r.media);
   const indexed = !!(document && typeof document.querySelectorAll === 'function');
   const byEl = indexed ? __ruleIndex(rules, document) : null;
-  const cache = indexed ? new WeakMap() : null;
+  const caches = indexed ? new Map() : null;   // viewport key → WeakMap(el → Map(prop → value))
+  const tables = new Map();
   const memo = indexed ? null : __matchMemo(rules, document);
+  const vpKey = (vp) => (conditional && vp) ? (vp.width + 'x' + vp.height) : 'default';
+  const cacheFor = (vp) => { const k = vpKey(vp); let c = caches.get(k); if (!c) caches.set(k, c = new WeakMap()); return c; };
   return {
     rules, vars,
+    conditional,
     computed: indexed
-      ? (el, prop) => __computedIndexed(el, prop, rules, vars, byEl, cache)
-      : (el, prop) => nxComputed(el, prop, rules, vars, memo),
+      ? (el, prop, vp) => __computedIndexed(el, prop, rules, vars, byEl, cacheFor(vp), conditional ? __activeTable(rules, vp, tables) : null)
+      : (el, prop, vp) => nxComputed(el, prop, rules, vars, memo, vp),
+    applies: (rule, vp) => nxRuleApplies(rule, vp),
     resolve: (v) => nxResolveValue(v, vars, 0),
-    // Every custom property that is referenced but never defined.
+    // Every custom property that is referenced WITHOUT a fallback and never
+    // defined. `var(--gx, 50%)` is a deliberate, valid pattern (the runtime sets
+    // --gx from the pointer); it used to be reported as a broken token on every
+    // page that used it.
     danglingVars() {
       const used = new Set();
       for (const r of rules) for (const k of Object.keys(r.decls)) {
-        const re = /var\(\s*(--[a-zA-Z0-9-_]+)/g; let m;
-        while ((m = re.exec(r.decls[k]))) used.add(m[1]);
+        const re = /var\(\s*(--[a-zA-Z0-9-_]+)\s*([,)])/g; let m;
+        while ((m = re.exec(r.decls[k]))) if (m[2] === ')') used.add(m[1]);
       }
       return [...used].filter(n => !Object.prototype.hasOwnProperty.call(vars, n));
     },
@@ -324,4 +530,4 @@ function nxCascade(html, document) {
   };
 }
 
-module.exports = { nxCascade, nxParseRules, nxRootVars, nxResolveValue, nxComputed, __elementIndex };
+module.exports = { nxCascade, nxParseRules, nxRootVars, nxResolveValue, nxComputed, nxRuleApplies, __elementIndex };

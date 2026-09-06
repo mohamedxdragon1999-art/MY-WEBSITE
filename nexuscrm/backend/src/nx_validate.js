@@ -72,7 +72,7 @@ const NX_BLOCKING_RULES = new Set([
 ]);
 const NX_WARNING_RULES = new Set([
   'cliche', 'slot-overflow', 'repetition', 'readability', 'line-length',
-  'rhythm', 'judge-score', 'genericness',
+  'rhythm', 'judge-score', 'genericness', 'section-decor',
 ]);
 /** Classify a rule. Unknown rules default to WARNING so a new check can never
  *  block shipping until it is deliberately promoted. */
@@ -139,10 +139,15 @@ function nxValidatePage(html, opts) {
   // Hand-authored shells drifted: some sections shipped with no heading, so
   // they were absent from the document outline. Enforce the contract on the
   // rendered page, not just at construction time.
+  // Only a heading-less section is BROKEN (invisible in the outline). The
+  // decorative parts of the contract (reveal/rhythm/emphasis markers) are a
+  // quality signal: the policy table classifies by rule, so they carry their
+  // own rule id instead of borrowing the blocking one — every generic-template
+  // page used to fail the gate on nine "no data-rhythm" blockers.
   try {
     for (const i of nxAuditSections(doc)) {
-      add({ severity: i.rule === 'no-heading' ? 'blocking' : 'warning', category: 'structure',
-        rule: 'section-contract', selector: i.id, measured: i.rule, message: i.message });
+      add({ category: 'structure', rule: i.rule === 'no-heading' ? 'section-contract' : 'section-decor',
+        selector: i.id, measured: i.rule, message: i.message });
     }
   } catch (e) { /* never break a build on an audit */ }
 

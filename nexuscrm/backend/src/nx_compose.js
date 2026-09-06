@@ -543,8 +543,18 @@ function __reviews(c, p) {
 function __cta(c, p) {
   return `<section class="c-cta" id="cta" data-r><div class="c-wrap c-cta-inner"><span class="c-kicker c-kicker-center">Let's talk</span><h2 class="c-cta-title">${__e(p.direction === 'bold-experimental' ? 'Make it happen' : 'Start the conversation')}</h2><div class="c-actions"><a class="c-btn c-btn-primary c-btn-lg" href="${c.email ? `mailto:${__e(c.email)}` : '#contact'}">${__e(c.ctas.primary)}</a></div></div></section>`;
 }
+// The contact section used to be two optional links: a brief with no email or
+// phone produced a "Start a conversation" heading with NOTHING under it, and
+// even with them there was no way for a visitor to leave a message — the
+// lead → CRM pipeline this product exists for was unreachable from every
+// composed direction. Every page now ships a real, labelled, keyboard-
+// operable form. The runtime posts it to the workspace lead endpoint
+// (`.nx-form` + `NX_LEAD_URL`, the same contract as every other template),
+// and with no endpoint it tells the visitor how else to get in touch.
 function __contact(c, p) {
-  return `<section class="c-contact" id="contact" data-r><div class="c-wrap c-contact-inner"><span class="c-kicker">Get in touch</span><h2 class="c-sec-title">${__e(p.direction === 'bold-experimental' ? 'Talk to us' : 'Start a conversation')}</h2><p class="c-lead">${__e(c.ctas.primary)} — tell us what you're making.</p><div class="c-contact-row">${c.email ? `<a href="mailto:${__e(c.email)}" class="c-btn c-btn-ghost">${__e(c.email)}</a>` : ''}${c.phone ? `<a href="tel:${__e(c.phone)}" class="c-btn c-btn-ghost">${__e(c.phone)}</a>` : ''}</div></div></section>`;
+  const bold = p.direction === 'bold-experimental';
+  const ctaLabel = /^(send|get|book|request|start|talk|ask|call)\b/i.test(c.ctas.primary) ? c.ctas.primary : 'Send message';
+  return `<section class="c-contact" id="contact" data-r><div class="c-wrap c-contact-grid"><div class="c-contact-inner"><span class="c-kicker">Get in touch</span><h2 class="c-sec-title">${__e(bold ? 'Talk to us' : 'Start a conversation')}</h2><p class="c-lead">${__e(c.ctas.primary)} — tell us what you're making.</p><div class="c-contact-row">${c.email ? `<a href="mailto:${__e(c.email)}" class="c-btn c-btn-ghost">${__e(c.email)}</a>` : ''}${c.phone ? `<a href="tel:${__e(c.phone)}" class="c-btn c-btn-ghost">${__e(c.phone)}</a>` : ''}</div></div><form class="nx-form c-form" novalidate aria-label="Contact form"><div class="c-field"><label for="c-f-name">Your name</label><input id="c-f-name" name="name" type="text" autocomplete="name" required maxlength="120"></div><div class="c-field"><label for="c-f-email">Email</label><input id="c-f-email" name="email" type="email" autocomplete="email" required maxlength="254" inputmode="email"></div><div class="c-field"><label for="c-f-phone">Phone <span class="c-optional">(optional)</span></label><input id="c-f-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" inputmode="tel"></div><div class="c-field"><label for="c-f-msg">What can we help with?</label><textarea id="c-f-msg" name="message" rows="4" required maxlength="1000"></textarea></div><p class="c-form-error" role="alert" hidden></p><button class="c-btn c-btn-primary" type="submit">${__e(ctaLabel)}</button><p class="ok c-form-ok" role="status" hidden>Thanks — your message is in. We reply within one working day.</p></form></div></section>`;
 }
 
 function __footer(c, p) {
@@ -927,6 +937,20 @@ ${p.surfaceFx === 'panel' ? `
 .c-contact-inner{max-width:720px}
 .c-contact-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
 @media (max-width:600px){.c-contact-row{flex-direction:column}}
+.c-contact-grid{display:grid;grid-template-columns:1fr;gap:var(--space-7);align-items:start}
+@media (min-width:900px){.c-contact-grid{grid-template-columns:minmax(0,1fr) minmax(320px,480px)}}
+.c-form{display:grid;gap:var(--space-4);padding:var(--space-6);background:var(--surf);border:1px solid var(--line);border-radius:var(--rad-md);box-shadow:var(--elev-1)}
+.c-field{display:grid;gap:var(--space-2)}
+.c-field label{font-family:var(--body);font-size:${t.caption};letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.c-optional{text-transform:none;letter-spacing:0;font-weight:400}
+.c-form input,.c-form textarea{width:100%;min-height:48px;padding:var(--space-3) var(--space-4);font:inherit;font-size:max(16px,${t.body});color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--rad-sm);transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.c-form textarea{min-height:120px;resize:vertical}
+.c-form input:focus-visible,.c-form textarea:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in oklab,var(--accent) 30%,transparent)}
+.c-form input[aria-invalid="true"],.c-form textarea[aria-invalid="true"]{border-color:var(--danger)}
+.c-form-error{color:var(--danger);font-size:${t.caption};margin:0}
+.c-form-ok{color:var(--success);font-weight:700;margin:0}
+.c-form .c-btn{width:100%}
+.c-form .c-btn[disabled]{opacity:.6;cursor:progress}
 /* footer */
 .c-footer{padding-block:40px;border-top:1px solid var(--line);background:var(--bg2)}
 .c-footer-row{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
@@ -1005,6 +1029,29 @@ function __js(p) {
     var n=parseFloat((el.getAttribute('data-count')||'0').replace(/,/g,''))||0;var cur=0;var step=Math.max(1,Math.ceil(n/30));
     var t=setInterval(function(){cur+=step;if(cur>=n){cur=n;clearInterval(t);}el.textContent=(cur>=1000?cur.toLocaleString():cur);},${countMs});
   });
+  /* contact form -> workspace inbox (site_lead contract). NX_LEAD_URL is patched in by the worker. */
+  var NX_LEAD_URL='__WEBHOOK_URL__';window.NX_LEAD_URL=NX_LEAD_URL;
+  var f=document.querySelector('.nx-form');
+  if(f){
+    var err=f.querySelector('.c-form-error'),ok=f.querySelector('.c-form-ok'),btn=f.querySelector('button[type=submit]');
+    var fail=function(msg,field){if(err){err.textContent=msg;err.hidden=false;}if(field){field.setAttribute('aria-invalid','true');try{field.focus();}catch(e){/* focus can throw on detached nodes */}}if(btn)btn.disabled=false;};
+    f.addEventListener('input',function(e){if(e.target&&e.target.removeAttribute)e.target.removeAttribute('aria-invalid');if(err)err.hidden=true;});
+    f.addEventListener('submit',function(e){
+      e.preventDefault();if(err)err.hidden=true;
+      var get=function(n){var el=f.querySelector('[name='+n+']');return el?el.value.trim():'';};
+      var name=get('name'),email=get('email'),msg=get('message');
+      if(!name)return fail('Please add your name.',f.querySelector('[name=name]'));
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return fail('That email address does not look right.',f.querySelector('[name=email]'));
+      if(!msg)return fail('Tell us a little about what you need.',f.querySelector('[name=message]'));
+      if(!NX_LEAD_URL){var tel=document.querySelector('a[href^="tel:"]'),mail=document.querySelector('a[href^="mailto:"]');return fail('This form is not connected yet. '+(tel?'Please call '+tel.textContent.trim()+'.':mail?'Please email '+mail.textContent.trim()+'.':'Please contact us directly.'));}
+      if(btn)btn.disabled=true;
+      var data={event:'site_lead',name:name,email:email,phone:get('phone'),message:msg,source_widget:'contact'};
+      fetch(NX_LEAD_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+        .then(function(r){return r.json();})
+        .then(function(j){if(j&&j.ok){[].slice.call(f.querySelectorAll('.c-field,button[type=submit]')).forEach(function(n){n.hidden=true;});if(ok){ok.hidden=false;}}else{fail((j&&j.error)||'Could not send - please try again.');}})
+        .catch(function(){fail('Could not reach the server - please try again in a moment.');});
+    });
+  }
 })();`;
 }
 

@@ -62,9 +62,17 @@ const id = saved.data && saved.data.id;
 const back = await api('GET', `/sites/${id}`);
 check('the saved site can be read back', back.status === 200, String(back.status));
 // Storage must not mutate the artefact — a silent truncation here would be
-// invisible until a user looked at their live page.
-check('stored html is byte-identical to what was built', back.data && back.data.html === html,
-  back.data ? `${(back.data.html || '').length} vs ${html.length} bytes` : 'no data');
+// invisible until a user looked at their live page. The ONE documented change
+// is the lead wiring (N8): the page's `var NX_LEAD_URL='__WEBHOOK_URL__'`
+// literal is pointed at the workspace inbox, so a saved site's form never
+// "goes nowhere". Everything else must be byte-identical.
+const { nxSetLeadUrl } = require(join(ROOT, 'backend', 'src', 'nx_site_output.js'));
+const expectStored = (h, leadUrl) => (leadUrl ? nxSetLeadUrl(h, leadUrl) : h);
+const leadUrl = saved.data && saved.data.lead_url;
+check('saving returns the workspace lead endpoint the form was wired to', typeof leadUrl === 'string' && /\/api\/public\/webhook\/[A-Za-z0-9_-]{16,}$/.test(leadUrl), String(leadUrl));
+check('stored html is byte-identical to what was built (apart from the documented lead wiring)', back.data && back.data.html === expectStored(html, leadUrl),
+  back.data ? `${(back.data.html || '').length} vs ${expectStored(html, leadUrl).length} bytes` : 'no data');
+check('the stored page\'s form posts to that exact endpoint', back.data && back.data.html.includes('var NX_LEAD_URL=' + JSON.stringify(leadUrl) + ';'));
 
 console.log('\n== 3. A draft is private ==');
 const slug = back.data && back.data.slug;
@@ -82,7 +90,7 @@ const live = await visit('/s/' + slug);
 // This is the check that was missing: 65 green suites, and publishing served 401.
 check('a visitor with no account can load the published page', live.status === 200, `HTTP ${live.status}`);
 check('the page is served as HTML', /text\/html/i.test(live.headers.get('content-type') || ''), live.headers.get('content-type') || '');
-check('the visitor receives the site that was built', live.body === html, `${live.body.length} vs ${html.length} bytes`);
+check('the visitor receives the site that was built (with its form wired to the inbox)', live.body === expectStored(html, leadUrl), `${live.body.length} vs ${expectStored(html, leadUrl).length} bytes`);
 check('the response sets nosniff', (live.headers.get('x-content-type-options') || '') === 'nosniff');
 
 console.log('\n== 5. The served page is actually usable ==');
@@ -126,7 +134,7 @@ console.log('\n== 8. Editing works and persists ==');
   const up = await api('PATCH', `/sites/${id}`, { html: edited });
   check('a hand edit is accepted', up.status === 200, String(up.status));
   const after = await api('GET', `/sites/${id}`);
-  check('the edit persists exactly', after.data && after.data.html === edited);
+  check('the edit persists exactly (lead wiring preserved)', after.data && after.data.html === expectStored(edited, leadUrl), after.data ? `${after.data.html.length} vs ${expectStored(edited, leadUrl).length} bytes` : 'no data');
   const v = await visit('/s/' + slug);
   check('the edit is visible to visitors', v.body.includes('Hand-edited.'));
 }

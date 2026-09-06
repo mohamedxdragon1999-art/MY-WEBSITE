@@ -119,20 +119,36 @@ function nxMeasure(html, document, viewport, cascade) {
   const root = 16;
   const ctx = { vw, vh, fontSize: root, rootFontSize: root, parentWidth: vw };
   const px = (v, c) => nxResolveLength(v, c || ctx);
+  // Every value is read AT THIS VIEWPORT: rules under a non-matching @media
+  // block are switched off, so a phone-only `display:none` or a desktop-only
+  // fixed width is judged where it really applies.
+  const vp = { width: vw, height: vh };
+  const cs = (e, p) => cascade.computed(e, p, vp);
+  // Subtrees that do not render at this viewport (display:none on the element
+  // or any ancestor, or the `hidden` attribute) have no box: nothing in them can
+  // overflow or be too small to tap. The browser probe would never see them
+  // either, so measuring them produced false blockers on collapsed mobile
+  // menus and decorative desktop-only layers.
+  const hidden = new WeakSet();
 
   const all = [...document.querySelectorAll('body *')];
   for (const el of all) {
     const tag = el.tagName.toLowerCase();
-    if (tag === 'script' || tag === 'style' || tag === 'br') continue;
+    if (tag === 'script' || tag === 'style' || tag === 'br' || tag === 'template' || tag === 'noscript') continue;
+    const parent = el.parentNode;
+    if ((parent && hidden.has(parent)) || (el.hasAttribute && el.hasAttribute('hidden')) || cs(el, 'display') === 'none') {
+      hidden.add(el);
+      continue;
+    }
     const sel = __ident(el);
 
     // Font size in context (used for text estimates).
-    const fsRaw = cascade.computed(el, 'font-size');
+    const fsRaw = cs(el, 'font-size');
     const fs = px(fsRaw) || root;
-    const fam = cascade.computed(el, 'font-family') || '';
+    const fam = cs(el, 'font-family') || '';
 
     // ── Fixed widths that cannot fit the viewport ──
-    const wRaw = cascade.computed(el, 'width');
+    const wRaw = cs(el, 'width');
     const w = px(wRaw);
     if (w != null && w > vw + 1 && !/%|auto/.test(String(wRaw))) {
       issues.push({ severity: 'blocking', category: 'layout', rule: 'overflow-x',
@@ -140,7 +156,7 @@ function nxMeasure(html, document, viewport, cascade) {
         message: `${sel} is wider than the viewport and will cause horizontal scrolling.` });
     }
     // min-width is the classic un-shrinkable overflow source.
-    const mwRaw = cascade.computed(el, 'min-width');
+    const mwRaw = cs(el, 'min-width');
     const mw = px(mwRaw);
     if (mw != null && mw > vw + 1) {
       issues.push({ severity: 'blocking', category: 'layout', rule: 'overflow-x',
@@ -151,10 +167,10 @@ function nxMeasure(html, document, viewport, cascade) {
     // ── Touch targets (mobile only) ──
     const interactive = /^(a|button|input|select|textarea)$/.test(tag);
     if (interactive && vw <= 480) {
-      const padY = (px(cascade.computed(el, 'padding-top')) || 0) + (px(cascade.computed(el, 'padding-bottom')) || 0);
-      const padX = (px(cascade.computed(el, 'padding-left')) || 0) + (px(cascade.computed(el, 'padding-right')) || 0);
-      const lh = px(cascade.computed(el, 'line-height')) || Math.round(fs * 1.4);
-      const hExplicit = px(cascade.computed(el, 'height')) || px(cascade.computed(el, 'min-height'));
+      const padY = (px(cs(el, 'padding-top')) || 0) + (px(cs(el, 'padding-bottom')) || 0);
+      const padX = (px(cs(el, 'padding-left')) || 0) + (px(cs(el, 'padding-right')) || 0);
+      const lh = px(cs(el, 'line-height')) || Math.round(fs * 1.4);
+      const hExplicit = px(cs(el, 'height')) || px(cs(el, 'min-height'));
       const h = hExplicit != null ? hExplicit : (lh + padY);
       const label = (el.textContent || '').trim();
       const wEst = nxTextWidth(label, fs, fam) + padX;
@@ -175,8 +191,12 @@ function nxMeasure(html, document, viewport, cascade) {
       }
       // Honour an explicit min-width/width: if the author (or a repair pass) has
       // guaranteed the inline size, the text-advance estimate is irrelevant.
-      const minW = px(cascade.computed(el, 'min-width')) || px(cascade.computed(el, 'width')) || 0;
-      if (!inlineInProse && label && wEst > 0 && Math.max(wEst, minW) < 44 && label.length <= 3) {
+      const minW = px(cs(el, 'min-width')) || px(cs(el, 'width')) || 0;
+      // A block-level control (display:block/flex/grid, or width:100%) spans
+      // its container; its inline size is never the text advance.
+      const dispRaw = String(cs(el, 'display') || '');
+      const blockLevel = /^(block|flex|grid|table|list-item|flow-root)$/.test(dispRaw) || /^100%$/.test(String(cs(el, 'width') || ''));
+      if (!inlineInProse && !blockLevel && label && wEst > 0 && Math.max(wEst, minW) < 44 && label.length <= 3) {
         issues.push({ severity: 'blocking', category: 'layout', rule: 'touch-target',
           selector: sel, viewport: `${vw}x${vh}`, measured: `≈${Math.round(wEst)}px wide (min 44px)`,
           message: `${sel} is too narrow to tap reliably on mobile.` });
@@ -187,7 +207,7 @@ function nxMeasure(html, document, viewport, cascade) {
     if (/^(p|li|blockquote)$/.test(tag)) {
       const text = (el.textContent || '').trim();
       if (text.length > 90) {
-        const maxwRaw = cascade.computed(el, 'max-width');
+        const maxwRaw = cs(el, 'max-width');
         const container = px(maxwRaw) != null ? px(maxwRaw) : Math.min(vw - 48, 1200);
         const chars = container / (fs * ADVANCE.default);
         if (chars > 95) {
@@ -199,9 +219,9 @@ function nxMeasure(html, document, viewport, cascade) {
     }
 
     // ── Zero-size boxes that should show content ──
-    const hRaw = cascade.computed(el, 'height');
+    const hRaw = cs(el, 'height');
     const hVal = px(hRaw);
-    if (hVal === 0 && (el.textContent || '').trim() && !/hidden/.test(String(cascade.computed(el, 'overflow') || ''))) {
+    if (hVal === 0 && (el.textContent || '').trim() && !/hidden/.test(String(cs(el, 'overflow') || ''))) {
       issues.push({ severity: 'blocking', category: 'layout', rule: 'zero-size',
         selector: sel, viewport: `${vw}x${vh}`, measured: 'height:0 with text content',
         message: `${sel} has content but is collapsed to zero height.` });
