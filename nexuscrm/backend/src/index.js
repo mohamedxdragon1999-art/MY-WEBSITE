@@ -5732,27 +5732,10 @@ function nxBuildTemplateSite(words) {
 // every word on the page is derived from the plan — so the design is identical and
 // only the copy changes. This is the "builder": plan in, complete site out.
 //
-// plan = {
-//   name,             // business name
-//   logo,             // optional {"abbr"} for the {{{LOGO}}} slot
-//   eyebrow,          // top tagline (topbar slot 0)
-//   blurb,            // short descriptor used in hero/footer
-//   owner,            // owner first name
-//   years, counties, compliance,   // stat numbers (as strings)
-//   phone, email, base, coverage,  // contact + footer
-//   nav: [...], ctas: [...],
-//   hero: { badge, line1, line2, line3, lead, miniStats },
-//   services: [ {tag,title,steps,text} x3 ],
-//   why: [ {title, text} x4 ],
-//   about: { tagline, quote, quoteBy, story, feats: [{title,text} x4] },
-//   process: [ {title,text} x4 ],
-//   gallery: { eyebrow, title, sub },
-//   projects: [ {date,class,title,text,tag,cat} x3 ],
-//   reviews: [ {text,initials,author,via} x2, score, sub ],
-//   lead: { eyebrow, title, sub, cta, note },
-//   faq: [],   // NOTE faq body is JS-driven from FAQS array (tpl_inline) — override via FAQS
-//   contactCtas, servicesOptions: [...], availability, pricingNote,
-// }
+// plan = { name, logo{abbr}, eyebrow, blurb, owner, years/counties/compliance (stat strings), phone/email/base/coverage,
+//   nav[], ctas[], hero{badge,line1..3,lead,miniStats}, services[{tag,title,steps,text}×3], why[{title,text}×4],
+//   about{tagline,quote,quoteBy,story,feats[×4]}, process[×4], gallery{eyebrow,title,sub}, projects[{date,class,title,text,tag,cat}×3],
+//   reviews[{text,initials,author,via}×2 + score,sub], lead{eyebrow,title,sub,cta,note}, faq[] (JS-driven from FAQS), contactCtas, servicesOptions[], availability, pricingNote }
 // ─────────────────────────────────────────────────────────────────────────────
 function nxPlanToWords(plan) {
   plan = plan || {};
@@ -5941,7 +5924,6 @@ function nxBuildTemplateSiteFromPlan(plan) {
 
 
 const NX_TEMPLATE_API = { NX_TEMPLATE_BLADES, NX_TEMPLATE_CSS: NX_CSS, NX_TEMPLATE_HEAD: NX_HEAD, NX_TEMPLATE_DATA, NX_TEMPLATE_SCRIPT: NX_SCRIPT, NX_TEMPLATE_ORDER, nxRenderBlade, nxTemplateProject, nxRenderTemplateNode, nxRenderTemplateDocument, nxBuildTemplateSite, nxPlanToWords, nxBuildTemplateSiteFromPlan };
-if (typeof module !== 'undefined' && module.exports) module.exports = NX_TEMPLATE_API;
 if (typeof globalThis !== 'undefined') globalThis.NX_TEMPLATE_LIB = NX_TEMPLATE_API;
 
 })();
@@ -7260,7 +7242,8 @@ function nxCanvas(project, opts) {
     resize(id, w, h) { return this._apply('resize', { id, width: w, height: h }); },
     setProperty(id, field, value) { return this._apply('setProperty', { id, field, value }); },
     setConstraint(id, constraint) { return this._apply('setConstraint', { id, constraint }); },
-    setBreakpoint(id, bp, value) { return this._apply('setBreakpoint', { id, breakpoint: bp, value }); },
+    // Per-NODE responsive override. Used to share the viewport setter's name above, so it silently replaced it and canvas.setBreakpoint('mobile') was a no-op.
+    setNodeBreakpoint(id, bp, value) { return this._apply('setBreakpoint', { id, breakpoint: bp, value }); },
     duplicate(id) { return this._apply('duplicate', { id }); },
     _delete(id) { return this._apply('delete', { id }); },
     group(ids) { return this._apply('group', { ids }); },
@@ -7484,7 +7467,6 @@ const API = {
   // backward-compat alias: render a single (sub)tree node
   nxNodeHtml: (project, nodeOrId, tokens) => nxRenderNode(project, typeof nodeOrId === 'string' ? nodeOrId : nodeOrId.id, 'desktop'),
 };
-if (typeof module !== 'undefined' && module.exports) module.exports = API;
 if (typeof window !== 'undefined') { for (const k of Object.keys(API)) window[k] = API[k]; }
 
   ;globalThis.__NX_RENDER_API = API;
@@ -9487,11 +9469,12 @@ function debugSiteHtml(html) {
   // ── structure ──
   const openClose = {};
   const re = /<(section|div|nav|header|footer|main|form|ul|ol|li|figure|h[1-6]|button|select|textarea|aside|article|blockquote|script|style)\b[^>]*>[\s\S]*?<\/\1>/gi;
-  // tag balance via explicit open/close
+  // tag balance via explicit open/close — comments + <script>/<style> BODIES removed first (a CSS comment saying "<main>" opened a phantom tag and failed every composed page)
   const tags = [];
   const tagRe = /<(\/?)(section|div|nav|header|footer|main|form|ul|ol|li|figure|h[1-6]|button|label|select|textarea|aside|article|blockquote|script|style)\b[^>]*>/gi;
+  const scan = s.replace(/<!--[\s\S]*?-->/g, '').replace(/(<script\b[^>]*>)[\s\S]*?(<\/script>)/gi, '$1$2').replace(/(<style\b[^>]*>)[\s\S]*?(<\/style>)/gi, '$1$2');
   let mm;
-  while ((mm = tagRe.exec(s))) {
+  while ((mm = tagRe.exec(scan))) {
     const name = mm[2].toLowerCase();
     if (mm[1] === '/') { if (tags.length && tags[tags.length - 1] === name) tags.pop(); else errors.push('Unbalanced </' + name + '> (unexpected closer).'); }
     else if (!['img', 'br', 'input', 'hr', 'meta', 'link', 'source'].includes(name)) tags.push(name);
@@ -9626,8 +9609,8 @@ function testSiteHtml(html) {
 function autoFixSite(html) {
   const d = debugSiteHtml(html);
   let s = html || '';
-  // 1) eager-load the very first image (hero) so it isn't lazily fetched
-  s = s.replace(/<img([^>]*?)\s*loading="lazy"/i, '<img$1');
+  // 1) eager-load the very first image (hero): set an EXPLICIT strategy — deleting the attribute failed the "explicit loading" check and lowered the score this fix was meant to raise
+  s = s.replace(/<img([^>]*?)\s*loading="lazy"/i, '<img$1 loading="eager"');
   // 2) drop nav links whose section id is missing (broken anchors)
   const idSet = new Set([...(String(s).match(/\bid\s*=\s*["']([^"']+)["']/gi) || [])].map(x => x.replace(/^id\s*=\s*["']|["']$/gi, '')));
   // Both branches used to return `mm`, so this replace did nothing at all. A
@@ -9728,8 +9711,13 @@ async function runAgenticLoop(build, ctx) {
     // apply the deterministic fix pass, then verify again
     const next = autoFixSite(html);
     if (next === html) break; // nothing to fix
-    html = next; fixed = true;
-    test = testSiteHtml(html);
+    const after = testSiteHtml(next);
+    // A "fix" that lowers the score is rejected, never shipped (the loop used to keep it: measured 92 → 88 on every composed direction).
+    if (after.score < test.score) {
+      trace.push({ iter: i, score: after.score, status: after.status, issues: after.issues.length, rejected: true });
+      break;
+    }
+    html = next; fixed = true; test = after;
     trace.push({ iter: i, score: test.score, status: test.status, issues: test.issues.length });
   }
   return { html, test, fixed, iterations: trace.length, trace,
@@ -10343,8 +10331,10 @@ async function handleSites(env, req, auth, parts, rawBody, origin) {
     if (!site) return err('Site not found', 404, origin);
     const test = testSiteHtml(site.html);
     const audit = auditSiteHtml(site.html);
-    const optimizedHtml = autoFixSite(enhanceSiteHtml(site.html, site.name, {}));
-    const retest = testSiteHtml(optimizedHtml);
+    // Never offer an "optimised" page that scores lower than the original (same guard as the build loop).
+    let optimizedHtml = autoFixSite(enhanceSiteHtml(site.html, site.name, {}));
+    let retest = testSiteHtml(optimizedHtml);
+    if (retest.score < test.score) { optimizedHtml = site.html; retest = test; }
     return json({ name: site.name, published: !!site.published, test, audit, optimizedHtml, retest }, 200, origin);
   }
   // GET /sites/:id — fetch a single site record. This was missing entirely: the

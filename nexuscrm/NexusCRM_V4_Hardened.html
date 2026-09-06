@@ -12280,7 +12280,8 @@ function nxCanvas(project, opts) {
     resize(id, w, h) { return this._apply('resize', { id, width: w, height: h }); },
     setProperty(id, field, value) { return this._apply('setProperty', { id, field, value }); },
     setConstraint(id, constraint) { return this._apply('setConstraint', { id, constraint }); },
-    setBreakpoint(id, bp, value) { return this._apply('setBreakpoint', { id, breakpoint: bp, value }); },
+    // Per-NODE responsive override. Used to share the viewport setter's name above, so it silently replaced it and canvas.setBreakpoint('mobile') was a no-op.
+    setNodeBreakpoint(id, bp, value) { return this._apply('setBreakpoint', { id, breakpoint: bp, value }); },
     duplicate(id) { return this._apply('duplicate', { id }); },
     _delete(id) { return this._apply('delete', { id }); },
     group(ids) { return this._apply('group', { ids }); },

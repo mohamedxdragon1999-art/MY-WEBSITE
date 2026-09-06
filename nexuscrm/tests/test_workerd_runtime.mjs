@@ -65,6 +65,13 @@ const unresolved = [...buildOut.matchAll(/Could not resolve "([^"]+)"/g)].map((m
 check('wrangler deploy --dry-run succeeds (exit 0)', build.status === 0, 'exit ' + build.status + ' ' + buildOut.split('\n').filter((l) => /ERROR|error/.test(l)).slice(0, 3).join(' | ').slice(0, 300));
 check('no unresolved imports (Node built-ins / npm packages that cannot run in workerd)', unresolved.length === 0, [...new Set(unresolved)].join(', '));
 check('no "nodejs_compat" warnings (the Worker does not depend on Node APIs)', !/nodejs_compat/.test(buildOut), 'bundle references Node built-ins');
+// esbuild's own diagnostics are real bugs, not noise: a duplicate object key
+// means the later definition silently replaces the earlier one (that is how
+// canvas.setBreakpoint('mobile') became a no-op), and CommonJS `module`
+// references in an ES module are dead code at best.
+const plainOut = buildOut.replace(/\x1b\[[0-9;]*m/g, ''); // strip ANSI colour first — the tag is split by escape codes otherwise
+const esbuildWarnings = [...plainOut.matchAll(/\[WARNING\]\s*([^\n]*)(?:\n\s*\n?\s*(src\/[^\n]*))?/g)].map((m) => (m[1] || '') + (m[2] ? ' @ ' + m[2].trim() : '')).filter((w) => !/out-of-date|update to the latest/i.test(w));
+check('zero esbuild warnings in the production bundle (duplicate keys, CJS-in-ESM…)', esbuildWarnings.length === 0, esbuildWarnings.slice(0, 3).join(' | ').slice(0, 300));
 const bundlePath = join(outDir, 'index.js');
 check('bundle written', existsSync(bundlePath));
 if (!existsSync(bundlePath) || build.status !== 0) done();
@@ -165,7 +172,7 @@ const noTok = await call('GET', '/api/sites', undefined, null, { Origin: 'https:
 check('authenticated API without a token → 401 (nothing ambient grants access)', noTok.status === 401, String(noTok.status));
 
 const leadUrl = String(site.data.lead_url || '').replace(/^https?:\/\/[^/]+/, '');
-check('build returns the lead_url for the page runtime', /^\/api\/public\/webhook\/[A-Za-z0-9]+$/.test(leadUrl), leadUrl);
+check('build returns the lead_url for the page runtime (URL-safe token)', /^\/api\/public\/webhook\/[A-Za-z0-9_-]{16,}$/.test(leadUrl), leadUrl);
 const lead = await call('POST', leadUrl, { event: 'site_lead', name: 'Visitor One', email: 'visitor@example.com', phone: '0777 000 000', message: 'Need whitening', source_widget: 'funnel' }, null, { Origin: 'https://apexdental.example' });
 check('public lead webhook → 200 {ok:true} (workerd, no auth)', lead.status === 200 && lead.data && lead.data.ok === true, lead.text.slice(0, 120));
 const contacts = await call('GET', '/api/contacts', undefined, tok);

@@ -180,6 +180,60 @@ console.log('\n== PERFORMANCE: the cascade is indexed once, not re-matched per e
   for (let i = 0; i < runs; i++) V.nxValidatePage(html);
   const cpu = process.cpuUsage(t0); const perRun = (cpu.user + cpu.system) / 1000 / runs;
   check('nxValidatePage stays under 400 ms CPU per page (was ~1,000 ms)', perRun < 400, Math.round(perRun) + ' ms');
+  // Workers free plan budgets 10 ms CPU per request with burst tolerance; the
+  // whole deterministic build must stay far from three-digit CPU. After the
+  // inverted selector index + parse memo a page validates in ≈25–45 ms of Node
+  // CPU; pin 3× headroom so a regression back to the 140 ms version trips.
+  check('nxValidatePage stays under 150 ms CPU per page (inverted selector index + parse memo)', perRun < 150, Math.round(perRun) + ' ms');
+}
+
+console.log('\n== PERFORMANCE: the fast selector index answers exactly what the engine answers ==');
+{
+  // The cascade short-cuts plain compound/descendant/child selectors through a
+  // class/tag/id index. Anything it answers must be identical (same elements,
+  // same document order) to the DOM engine's querySelectorAll; anything it
+  // cannot express must be declined (null) so the engine answers instead.
+  const { parseHTML } = require('linkedom');
+  const C = require('../backend/src/nx_cascade.js');
+  const edge = '<html><head></head><body class="a"><div id="x" class="a b"><p class="A a b">1</p><section class="b"><p class="a">2</p><div class="b"><span class="c">3</span></div></section></div>'
+    + '<main><section><ul><li class="a">i</li><li>j</li></ul></section></main><div id="x" class="dup">second id</div><P class="up">upper</P></body></html>';
+  const docs = [['edge', edge], ['composed page', pages[DIRS[0]]], ['composed page 2', pages[DIRS[1]]]];
+  const SELS = ['.a', '.A', 'DIV', 'div.a', '#x', '#x.a', '.a .b', '.a > .b', 'section .a .b', '.a>.b>.c', 'p.a.b', '*', 'html body', 'body>*', '.x-1_2', '.b .a', 'div > p', 'main section', 'ul li', 'li', 'P', 'p', '#nope', '.a.b.c', 'body .a', 'body > .a', 'span', 'section .a .b .c', 'div p span em', 'body div section div span', 'body > div > section .b > span', '.a .a', '.a > .a', 'div .b .c', '.b > .b', 'main > section > ul > li.a'];
+  let compared = 0, wrong = [], declined = 0;
+  for (const [name, html] of docs) {
+    const { document } = parseHTML(html);
+    const idx = C.__elementIndex(document);
+    const selectors = name === 'edge' ? SELS : [...new Set(C.nxParseRules([...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n')).map((r) => r.selector))];
+    for (const sel of selectors) {
+      const f = idx(sel);
+      if (f === null) { declined++; continue; }
+      compared++;
+      let e; try { e = [...document.querySelectorAll(sel)]; } catch (err) { e = []; }
+      if (!(e.length === f.length && e.every((el, i) => el === f[i]))) wrong.push(`${name} ${sel}: engine ${e.length} vs index ${f.length}`);
+    }
+    // Everything outside the fast path is declined, never guessed.
+    for (const sel of ['.a:hover', 'a[href]', '.a + .b', '.a ~ .b', 'li:nth-child(2n)', '[dir="rtl"] .a', ':root', '.a::before', 'a:not(.x)', 'input[type="submit"]']) if (idx(sel) !== null) wrong.push(`${name} ${sel}: should be declined`);
+  }
+  check(`fast index ≡ querySelectorAll on every selector it accepts (${compared} selectors across ${docs.length} documents)`, wrong.length === 0, wrong.slice(0, 4).join(' | '));
+  check('selectors outside the fast path are declined to the engine (attribute, pseudo, sibling, :not)', declined > 0 && !wrong.some((w) => /declined/.test(w)));
+  check('duplicate ids all match #id, like the engine', (() => { const { document } = parseHTML(edge); return C.__elementIndex(document)('#x').length === 2; })());
+  check('tag matching is case-insensitive (P ≡ p) and class matching is case-sensitive (.A ≠ .a)', (() => { const { document } = parseHTML(edge); const i = C.__elementIndex(document); const q = (s) => document.querySelectorAll(s).length; return i('P').length === q('p') && i('p').length === q('p') && q('p') === 3 && i('.A').length === q('.A') && q('.A') === 1 && i('.a').length === q('.a') && q('.a') === 5; })());
+}
+
+console.log('\n== PERFORMANCE: one spec-compliant parse per document, never a stale one ==');
+{
+  const A = require('../backend/src/nx_ast.js');
+  const html = pages[DIRS[2]];
+  const ok = A.nxAstSyntaxGate(html);
+  const broken = html.replace('</main>', '</main><p><div>flow inside phrasing');
+  const again = A.nxAstSyntaxGate(broken);
+  check('the parse memo never returns a stale verdict: a changed document is re-parsed and re-judged', ok.ok === true && again.ok === false && again.errors.some((e) => /invalid nesting|unclosed/.test(e)), JSON.stringify(again.errors.slice(0, 2)));
+  const back = A.nxAstSyntaxGate(html);
+  check('switching back to the original document gives the original verdict', back.ok === true && back.errors.length === 0);
+  A.nxAstSyntaxGate(html);
+  const c0 = process.cpuUsage(); for (let i = 0; i < 20; i++) { A.nxAstSyntaxGate(html); A.nxAstDeepAudit(html); } const hit = (process.cpuUsage(c0).user + process.cpuUsage(c0).system) / 1000 / 20;
+  const c1 = process.cpuUsage(); for (let i = 0; i < 5; i++) A.nxAstSyntaxGate(html + '<!-- ' + i + ' -->'); const miss = (process.cpuUsage(c1).user + process.cpuUsage(c1).system) / 1000 / 5;
+  check('re-validating the same document costs a fraction of a fresh parse (memo hit ≪ miss)', hit < miss / 3, `hit ${hit.toFixed(2)} ms vs miss ${miss.toFixed(2)} ms`);
   // Semantics: a cascade shared across viewports gives the same answers as a fresh one.
   const { parseHTML } = require('linkedom');
   const { document } = parseHTML(html);

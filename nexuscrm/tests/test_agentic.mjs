@@ -85,6 +85,45 @@ console.log('\n== A3: AUTOFIX + LOOP ==');
   check('clean blueprint site → pass on first iteration', loopGood.test.status === 'pass' && loopGood.iterations === 1, loopGood.test.status + ' ' + loopGood.test.score);
 }
 
+console.log('\n== A4: THE LOOP CAN ONLY IMPROVE A PAGE (regressions found by measuring every direction) ==');
+{
+  // 1) A CSS comment that mentions a tag name is not a tag. The balance scanner
+  //    used to open a phantom <main> from "/* the <main> landmark */" inside
+  //    <style>, failing "Valid HTML document" on EVERY composed page.
+  const withComment = '<!DOCTYPE html><html lang="en"><head><title>t</title><style>/* Skip link — the <main> landmark existed */ .a{color:red} /* <div> in a comment */</style></head><body><main><h1>x</h1><section><h2>y</h2></section></main><script>/* <section> */ var s = "<div>";</script></body></html>';
+  const d = t.debugSiteHtml(withComment);
+  check('tag names inside CSS/JS comments and strings do not count as open tags', !d.errors.some(e => /Unbalanced|Unclosed/.test(e)), JSON.stringify(d.errors));
+  const stillBroken = t.debugSiteHtml('<!DOCTYPE html><html><head><style>/* <main> */</style></head><body><main><div><h1>x</h1></main></body></html>');
+  check('a genuinely unclosed <div> is still reported', stillBroken.errors.some(e => /Unbalanced|Unclosed/.test(e)), JSON.stringify(stillBroken.errors));
+
+  // 2) The hero-image fix sets an EXPLICIT loading strategy; deleting the
+  //    attribute used to fail the "explicit loading" check it was meant to help.
+  const fixedImg = t.autoFixSite('<!DOCTYPE html><html><head></head><body><img src="a.jpg" loading="lazy" decoding="async"><img src="b.jpg" loading="lazy"></body></html>');
+  check('autoFix turns the first image eager (explicit) and leaves the rest lazy', /<img src="a.jpg" loading="eager"/.test(fixedImg) && /<img src="b.jpg" loading="lazy"/.test(fixedImg), fixedImg.slice(0, 160));
+
+  // 3) The loop never ships a page that scores lower than the one it received.
+  const NX = new Set(); // capture what the loop returns for a page the fixer can only make worse
+  const html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>T</title><meta name="description" content="d"><style>@media(max-width:700px){.x{display:none}}</style></head><body><nav><a href="#s1">a</a><a href="#missing">b</a></nav><main><h1>H</h1><p>lead</p>'
+    + '<section id="s1"><h2>1</h2></section><section id="s2"><h2>2</h2></section><section id="s3"><h2>3</h2></section><section id="s4"><h2>4</h2><form class="nx-form"><input type="email"></form></section></main>'
+    + '<img src="a.jpg" alt="a" width="10" height="10" loading="lazy" decoding="async"><script type="application/ld+json">{}</script></body></html>';
+  const before = t.testSiteHtml(html).score;
+  const loop = await t.runAgenticLoop(async () => html, { maxIterations: 3 });
+  const afterScore = t.testSiteHtml(loop.html).score;
+  check('runAgenticLoop output never scores below its input', afterScore >= before, `${before} → ${afterScore}`);
+  check('a rejected fix is recorded in the trace (rejected:true) instead of silently shipped', loop.trace.every(tr => !tr.rejected || tr.score < before) && loop.test.score >= before, JSON.stringify(loop.trace));
+
+  // 4) End to end: every composed direction leaves the loop at least as good as it entered.
+  const regressions = [];
+  for (const dir of ['editorial-minimal', 'cinematic-immersive', 'luxury-art', 'bold-experimental', 'signal-industrial', 'swiss-structured']) {
+    const r = await call('POST', '/ai/agentic-build', { name: 'Northgate Civil', description: 'Civil engineering for commercial sites.', direction: dir, deterministic: true }, token);
+    if (r.status !== 200 || !r.data || !r.data.test) { regressions.push(dir + ' HTTP ' + r.status); continue; }
+    const tr = r.data.trace || [];
+    if (tr.length && tr[tr.length - 1].score < tr[0].score && !tr[tr.length - 1].rejected) regressions.push(dir + ' ' + tr[0].score + '→' + tr[tr.length - 1].score);
+    if (r.data.test.score < 90) regressions.push(dir + ' final score ' + r.data.test.score);
+  }
+  check('no composed direction regresses through the loop, all finish ≥ 90', regressions.length === 0, regressions.join(' | '));
+}
+
 console.log('\n== B1: AGENTIC BUILD ENDPOINT ==');
 {
   const r = await call('POST', '/ai/agentic-build', { name: 'Joe Plumbing', description: '24/7 emergency plumbing in Cairo. Drain cleaning. Call +20 100 123 4567 or email joe@example.com', deterministic: true }, token);

@@ -147,15 +147,161 @@ function nxComputed(el, prop, rules, vars, memo) {
   return nxResolveValue(winner, vars, 0);
 }
 
+// INVERTED SELECTOR INDEX: element → ascending list of the rule indices that
+// match it. Built in ONE pass (each selector evaluated once with
+// querySelectorAll, pushes happen in source order so "later wins" survives).
+// `computed(el, prop)` then walks the handful of rules that apply to that
+// element instead of scanning every rule of the stylesheet — the layout audit
+// asks ~12 properties × every element × 4 viewports, so the full-scan version
+// was the single largest CPU cost of a build (≈60 ms of a 200 ms page in Node,
+// far more under the Workers 10 ms/request free-plan budget).
+//
+// Most selectors in a generated page are plain compounds (`.c-btn`,
+// `section.c-hero h2`, `#quote .step`). Those are answered from a one-pass
+// class/tag/id index instead of the DOM engine's generic selector matcher,
+// which re-tokenises every element's class attribute for every class test
+// (≈45 ms of a 200 ms build). Anything with attribute selectors, pseudo-
+// classes, sibling combinators or escapes falls back to querySelectorAll, so
+// the answer is always the engine's answer — the fast path only short-cuts
+// the shapes whose semantics are trivial (exact class token, case-insensitive
+// tag, exact id, descendant/child ancestry).
+const __SIMPLE_COMPOUND = /^(?:[a-zA-Z][\w-]*|\*)?(?:#[\w-]+)?(?:\.[\w-]+)*$/;
+
+function __parseCompound(str) {
+  if (!__SIMPLE_COMPOUND.test(str) || !str) return null;
+  const tagM = /^([a-zA-Z][\w-]*|\*)/.exec(str);
+  const tag = tagM && tagM[1] !== '*' ? tagM[1].toLowerCase() : null;
+  const idM = /#([\w-]+)/.exec(str);
+  const classes = [...str.matchAll(/\.([\w-]+)/g)].map((m) => m[1]);
+  return { tag, id: idM ? idM[1] : null, classes };
+}
+
+// `a > b c` → [{compound}, {comb:'>'}, {compound}, {comb:' '}, {compound}]
+function __parseSimpleSelector(selector) {
+  const parts = String(selector).trim().split(/\s*(>)\s*|\s+/).filter((x) => x !== undefined && x !== '');
+  const out = [];
+  let expectCompound = true;
+  for (const p of parts) {
+    if (p === '>') { if (expectCompound) return null; out.push({ comb: '>' }); expectCompound = true; continue; }
+    const c = __parseCompound(p);
+    if (!c) return null;
+    if (!expectCompound) out.push({ comb: ' ' });
+    out.push(c); expectCompound = false;
+  }
+  if (expectCompound || !out.length) return null;
+  return out;
+}
+
+function __elementIndex(document) {
+  const all = document.querySelectorAll('*');
+  const byClass = new Map(), byTag = new Map(), byId = new Map(), info = new WeakMap();
+  for (const el of all) {
+    const tag = el.localName || String(el.tagName || '').toLowerCase();
+    const cls = el.getAttribute ? (el.getAttribute('class') || '') : '';
+    const classes = cls ? cls.split(/\s+/).filter(Boolean) : [];
+    const id = el.getAttribute ? el.getAttribute('id') : null;
+    info.set(el, { tag, classes: new Set(classes), id: id || null });
+    let t = byTag.get(tag); if (!t) byTag.set(tag, t = []); t.push(el);
+    for (const c of classes) { let l = byClass.get(c); if (!l) byClass.set(c, l = []); l.push(el); }
+    if (id) { let l = byId.get(id); if (!l) byId.set(id, l = []); l.push(el); } // duplicate ids all match `#id`, as in querySelectorAll
+  }
+  const matchesCompound = (el, c) => {
+    const i = info.get(el); if (!i) return false;
+    if (c.tag && i.tag !== c.tag) return false;
+    if (c.id && i.id !== c.id) return false;
+    for (const k of c.classes) if (!i.classes.has(k)) return false;
+    return true;
+  };
+  const candidates = (c) => {
+    if (c.id) return (byId.get(c.id) || []).filter((el) => matchesCompound(el, c));
+    if (c.classes.length) {
+      // start from the rarest class
+      let best = null;
+      for (const k of c.classes) { const l = byClass.get(k) || []; if (!best || l.length < best.length) best = l; }
+      return best.filter((el) => matchesCompound(el, c));
+    }
+    if (c.tag) return byTag.get(c.tag) || [];
+    return [...all];
+  };
+  // Standard right-to-left matching with backtracking: `el` must match the
+  // compound at `pos`, and (for pos > 0) some parent/ancestor must match the
+  // rest of the chain. Exact for any mix of ' ' and '>' combinators.
+  const matchChain = (el, chain, pos) => {
+    if (!matchesCompound(el, chain[pos])) return false;
+    if (pos === 0) return true;
+    const direct = chain[pos - 1].comb === '>';
+    let p = el.parentNode;
+    if (direct) return !!(p && p.nodeType === 1 && matchChain(p, chain, pos - 2));
+    while (p && p.nodeType === 1) { if (matchChain(p, chain, pos - 2)) return true; p = p.parentNode; }
+    return false;
+  };
+  // Returns the matched elements in DOCUMENT ORDER (like querySelectorAll) or
+  // null when the selector is outside the fast path.
+  return (selector) => {
+    const chain = __parseSimpleSelector(selector);
+    if (!chain) return null;
+    const lastPos = chain.length - 1;
+    const els = candidates(chain[lastPos]);
+    return lastPos === 0 ? els : els.filter((el) => matchChain(el, chain, lastPos));
+  };
+}
+
+function __ruleIndex(rules, document) {
+  const byEl = new WeakMap();
+  const fast = __elementIndex(document);
+  for (let i = 0; i < rules.length; i++) {
+    if (__UNMATCHABLE.test(rules[i].selector)) continue;
+    let els = fast(rules[i].selector);
+    if (els === null) {
+      try { els = document.querySelectorAll(rules[i].selector); }
+      catch (e) { continue; /* invalid selector: matches nothing, like the browser */ }
+    }
+    for (const el of els) {
+      const list = byEl.get(el);
+      if (list) list.push(i); else byEl.set(el, [i]);
+    }
+  }
+  return byEl;
+}
+
+// Indexed computed value. Same answer as nxComputed(el, prop, rules, vars) —
+// pinned by test_validation_pipeline — with results memoised per (element,
+// property): the cascade is viewport-independent, so the four viewport passes
+// of a layout audit reuse each other's answers.
+function __computedIndexed(el, prop, rules, vars, byEl, cache) {
+  let props = cache.get(el);
+  if (!props) { props = new Map(); cache.set(el, props); }
+  if (props.has(prop)) return props.get(prop);
+  let winner = null;
+  const list = byEl.get(el);
+  if (list) for (let k = 0; k < list.length; k++) {
+    const d = rules[list[k]].decls[prop];
+    if (d !== undefined) winner = d;
+  }
+  const inline = el.getAttribute && el.getAttribute('style');
+  if (inline) {
+    const m = new RegExp('(?:^|;)\\s*' + prop + '\\s*:([^;]+)', 'i').exec(inline);
+    if (m) winner = m[1].trim();
+  }
+  const out = winner == null ? null : nxResolveValue(winner, vars, 0);
+  props.set(prop, out);
+  return out;
+}
+
 // One-shot: parse a document and return a resolver bound to it.
 function nxCascade(html, document) {
   const css = __styleText(html);
   const rules = nxParseRules(css);
   const vars = nxRootVars(rules);
-  const memo = __matchMemo(rules, document);
+  const indexed = !!(document && typeof document.querySelectorAll === 'function');
+  const byEl = indexed ? __ruleIndex(rules, document) : null;
+  const cache = indexed ? new WeakMap() : null;
+  const memo = indexed ? null : __matchMemo(rules, document);
   return {
     rules, vars,
-    computed: (el, prop) => nxComputed(el, prop, rules, vars, memo),
+    computed: indexed
+      ? (el, prop) => __computedIndexed(el, prop, rules, vars, byEl, cache)
+      : (el, prop) => nxComputed(el, prop, rules, vars, memo),
     resolve: (v) => nxResolveValue(v, vars, 0),
     // Every custom property that is referenced but never defined.
     danglingVars() {
@@ -178,4 +324,4 @@ function nxCascade(html, document) {
   };
 }
 
-module.exports = { nxCascade, nxParseRules, nxRootVars, nxResolveValue, nxComputed };
+module.exports = { nxCascade, nxParseRules, nxRootVars, nxResolveValue, nxComputed, __elementIndex };

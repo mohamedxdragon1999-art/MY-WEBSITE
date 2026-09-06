@@ -66,18 +66,33 @@ function __tagCounts(html) {
 
 // ── FAST BLOCKING GATE ────────────────────────────────────────────────────
 // Structure only. Deterministic, no network, no heavy analysis.
+//
+// ONE-ENTRY PARSE MEMO. A build passes the same document through the syntax
+// gate (runAgenticLoop), then the validation gate's syntax gate + deep audit:
+// three spec-compliant parses of one 50 KB string. The memo keeps the last
+// {source → tree, parse errors} so repeats are free. Bounded to a single
+// document, derived purely from its input (no tenant state), never mutated by
+// readers (nxAstAutoClose parses its own copy before serialising).
+let __memo = { src: null, doc: null, errors: null };
+function __parsed(src) {
+  if (__memo.src === src && __memo.doc) return __memo;
+  const errors = [];
+  const doc = parse5.parse(src, { onParseError: (e) => errors.push(e.code) }); // throws → caller handles
+  __memo = { src, doc, errors };
+  return __memo;
+}
 function nxAstSyntaxGate(html) {
   const errors = [], warnings = [];
   const src = String(html == null ? '' : html);
   if (!src.trim()) return { ok: false, errors: ['empty document'], warnings: [], repaired: null, tagBalance: {} };
 
-  let doc = null;
-  try { doc = parse5.parse(src); }
-  catch (e) { return { ok: false, errors: ['unparseable: ' + e.message], warnings: [], repaired: null, tagBalance: {} }; }
-
   // 1. Parser-level errors (catches unterminated <style>/<script>, bad EOF…).
-  const parseErrors = [];
-  try { parse5.parse(src, { onParseError: (e) => parseErrors.push(e.code) }); } catch (e) { /* already handled */ }
+  //    ONE spec-compliant parse serves both "is it parseable at all" and the
+  //    error collection — this gate runs on every build and a second full
+  //    parse of a 50 KB page was ≈7 ms of pure waste per generation.
+  let parseErrors;
+  try { parseErrors = __parsed(src).errors; }
+  catch (e) { return { ok: false, errors: ['unparseable: ' + e.message], warnings: [], repaired: null, tagBalance: {} }; }
   for (const code of [...new Set(parseErrors)]) errors.push('parse error: ' + code);
 
   // 2. Tag-balance diff — the actual unclosed/stray-tag detector. parse5 repairs
@@ -158,7 +173,7 @@ function nxAstDeepAudit(html, opts) {
   const fragment = !!(opts && opts.fragment);
   const issues = [];
   const src = String(html == null ? '' : html);
-  let doc; try { doc = parse5.parse(src); } catch (e) { return { ok: false, issues: ['unparseable'], counts: {} }; }
+  let doc; try { doc = __parsed(src).doc; } catch (e) { return { ok: false, issues: ['unparseable'], counts: {} }; }
 
   const ids = new Map(); const counts = { img: 0, imgNoAlt: 0, headings: 0, landmarks: 0, links: 0, linksNoText: 0 };
   const headingLevels = [];
