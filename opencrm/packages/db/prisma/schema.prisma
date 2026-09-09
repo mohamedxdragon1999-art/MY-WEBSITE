@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Tenancy & Auth ──────────────────────────────────────────
+
+model Agency {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  plan       String   @default("starter")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  subAccounts SubAccount[]
+}
+
+model SubAccount {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  contacts     Contact[]
+  pipelines    Pipeline[]
+  funnels      Funnel[]
+  workflows    Workflow[]
+  campaigns    Campaign[]
+  calendars    Calendar[]
+  integrations Integration[]
+  conversations Conversation[]
+  aiUsages     AiUsage[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         String   @default("STAFF")  // AGENCY_OWNER | AGENCY_ADMIN | ADMIN | STAFF | CLIENT (SQLite: stored as string)
+  subAccountId String?
+  subAccount   SubAccount? @relation(fields: [subAccountId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([subAccountId])
+}
+
+// ─── CRM ─────────────────────────────────────────────────────
+
+model Contact {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  email        String?
+  phone        String?
+  firstName    String?
+  lastName     String?
+  companyName  String?
+  address      String?
+  city         String?
+  country      String?
+  source       String?
+  tags         Tag[]    @relation("ContactTags")
+  customFields String @default("{}")
+  dnd          Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  opportunities Opportunity[]
+  messages      Message[]
+  appointments  Appointment[]
+  notes         Note[]
+
+  @@index([subAccountId, email])
+  @@index([subAccountId, phone])
+}
+
+model Tag {
+  id       String    @id @default(cuid())
+  name     String
+  contacts Contact[] @relation("ContactTags")
+  @@unique([name])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Pipeline {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  name         String
+  stages       Stage[]
+}
+
+model Stage {
+  id          String        @id @default(cuid())
+  pipelineId  String
+  pipeline    Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name        String
+  order       Int
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id        String   @id @default(cuid())
+  stageId   String
+  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  title     String
+  valueCents Int     @default(0)
+  status    String   @default("open")
+  sortOrder Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Messaging ───────────────────────────────────────────────
+
+model Conversation {
+  id           String    @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  contactId    String
+  lastMessageAt DateTime @default(now())
+  unreadCount  Int       @default(0)
+  messages     Message[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id])
+  direction      String   // inbound | outbound
+  channel        String   // email | sms
+  subject        String?
+  body           String
+  status         String   @default("queued")
+  createdAt      DateTime @default(now())
+}
+
+model Campaign {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  name         String
+  channel      String   // email | sms
+  status       String   @default("draft")
+  steps        String // [{subject, body, delayMinutes}]
+  sentCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+// ─── Workflows ───────────────────────────────────────────────
+
+model Workflow {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  name         String
+  status       String   @default("draft")
+  trigger      String     // {type: "tag_added" | "form_submitted" | ..., config: {}}
+  nodes        String     // [{id, type, config, connections}]
+  enrollments  WorkflowEnrollment[]
+}
+
+model WorkflowEnrollment {
+  id             String   @id @default(cuid())
+  workflowId     String
+  workflow       Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contactId      String
+  currentNodeId  String?
+  status         String   @default("active") // active | waiting | done | error
+  resumeAt       DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([status, resumeAt])
+}
+
+// ─── Funnels & Pages ─────────────────────────────────────────
+
+model Funnel {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  name         String
+  path         String   // e.g. "/my-funnel"
+  status       String   @default("draft")
+  pages        Page[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([subAccountId, updatedAt])
+}
+
+model Page {
+  id         String   @id @default(cuid())
+  funnelId   String
+  funnel     Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  title      String
+  slug       String
+  document   String   // PageDocument (blocks tree) serialized as JSON string — see packages/shared
+  seo          String @default("{}")
+  order      Int      @default(0)
+  publishedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  versions   PageVersion[]
+
+  @@index([funnelId, slug])
+  @@index([funnelId, order])
+}
+
+// ─── Page version history (server-side undo for the builder) ────
+
+model PageVersion {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  document  String   // full PageDocument snapshot
+  bytes     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([pageId, createdAt])
+}
+
+// ─── AI usage metering (spend caps per sub-account) ──────────────
+
+model AiUsage {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  kind         String   // generate | edit | test
+  provider     String   @default("")
+  model        String   @default("")
+  createdAt    DateTime @default(now())
+
+  @@index([subAccountId, createdAt])
+}
+
+// ─── Calendars ───────────────────────────────────────────────
+
+model Calendar {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  name         String
+  durationMin  Int      @default(30)
+  availability String     // weekly schedule
+  appointments Appointment[]
+}
+
+model Appointment {
+  id         String   @id @default(cuid())
+  calendarId String
+  calendar   Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id])
+  startsAt   DateTime
+  endsAt     DateTime
+  status     String   @default("scheduled")
+}
+
+// ─── Integrations (encrypted credentials) ────────────────────
+
+model Integration {
+  id           String   @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  provider     String   // twilio | mailgun | resend | stripe | openai | anthropic
+  credentials  String   // AES-256-GCM encrypted JSON
+  enabled      Boolean  @default(true)
+
+  @@unique([subAccountId, provider])
+}

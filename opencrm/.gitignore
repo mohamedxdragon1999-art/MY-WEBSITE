@@ -1,0 +1,10 @@
+node_modules
+dist
+.next
+.env
+.env.local
+*.log
+.turbo
+coverage
+# Self-hosted image library (user uploads, per sub-account)
+apps/api/uploads/

@@ -1,0 +1,9 @@
+{
+    "name":  "@opencrm/shared",
+    "version":  "0.0.0.19",
+    "main":  "./dist/index.js",
+    "types":  "./dist/index.d.ts",
+    "dependencies":  {
+                         "zod":  "^3.23.0"
+                     }
+}

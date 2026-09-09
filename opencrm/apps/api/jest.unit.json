@@ -1,0 +1,9 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "rootDir": ".",
+  "testMatch": ["<rootDir>/test/*.unit-spec.ts"],
+  "moduleNameMapper": {
+    "^@opencrm/shared$": "<rootDir>/../../packages/shared/src/index.ts"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "opencrm-web",
+  "version": "0.0.0.21",
+  "private": true,
+  "description": "OpenCRM web app",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "next dev -p 3001 -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -p 3001 -H 127.0.0.1"
+  },
+  "dependencies": {
+    "@opencrm/shared": "file:../../packages/shared",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.368.0",
+    "next": "14.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "posthog-js": "^1.12.0",
+    "tailwindcss": "^3.4.4",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  }
+}
